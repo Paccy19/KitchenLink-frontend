@@ -91,10 +91,10 @@ export default function VendorPage() {
   if (isError || !vendor) {
     const notFound = error?.status === 404;
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16">
+      <div className="max-w-3xl mx-auto px-4 py-16 animate-fade-in">
         {notFound ? (
           <EmptyState
-            icon={<UtensilsCrossed className="w-8 h-8" />}
+            icon={<UtensilsCrossed className="w-8 h-8 text-[#542813]" />}
             title="Kitchen not found"
             message="This kitchen may have been removed or the link is incorrect."
             actionLabel="Browse nearby kitchens"
@@ -117,22 +117,22 @@ export default function VendorPage() {
   const cartVendorItems = cartItems.filter((item) => item.vendorId === vendor.id);
 
   return (
-    <div className="min-h-screen bg-gray-50/60 pb-28">
+    <div className="min-h-screen bg-[#faf7f4] pb-28 animate-fade-in">
       {/* ── Header banner ─────────────────────────────────────── */}
-      <div className="relative h-56 sm:h-80 w-full bg-stone-900">
+      <div className="relative h-56 sm:h-80 w-full bg-stone-900 overflow-hidden">
         <img
           src={vendor.bannerUrl}
           alt={`${vendor.name} storefront`}
-          className="w-full h-full object-cover opacity-90"
+          className="w-full h-full object-cover opacity-90 scale-100 hover:scale-105 transition-transform duration-700 ease-out"
           loading="eager"
           decoding="async"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/25" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/25" />
 
         <div className="absolute top-5 left-4 sm:left-8 z-10">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/90 hover:bg-white text-gray-900 font-bold text-xs shadow-md backdrop-blur-md transition"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/90 hover:bg-white text-gray-900 font-bold text-xs shadow-md backdrop-blur-md transition-all active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             <span className="hidden sm:inline">Back to Kitchens</span>
@@ -142,16 +142,16 @@ export default function VendorPage() {
 
         <div className="absolute bottom-5 left-4 right-4 sm:left-8 sm:right-8 text-white">
           <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className="px-3 py-1 rounded-full text-xs font-black bg-orange-600 shadow-md">
+            <span className="px-3 py-1 rounded-full text-xs font-black bg-[#2b1206] text-white border border-[#522712] shadow-md">
               {vendor.type}
             </span>
             {vendor.isOpen && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-forest-600">
+              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-forest-600 shadow-md">
                 Open now
               </span>
             )}
             {vendor.deliveryAvailable && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-white/95 text-forest-700 flex items-center gap-1">
+              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-white/95 text-forest-700 flex items-center gap-1 shadow-md">
                 <Bike className="w-3.5 h-3.5" aria-hidden="true" />
                 Delivery available
               </span>
@@ -165,44 +165,44 @@ export default function VendorPage() {
 
       {/* ── Info card ─────────────────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
-        <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border border-gray-100 mb-7">
+        <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border border-stone-200/80 mb-7">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
             <div className="flex items-center gap-1.5 text-sm font-extrabold text-gray-900">
               <Star className="w-4 h-4 fill-amber-400 text-amber-400" aria-hidden="true" />
               {vendor.rating}
               {vendor.reviewsCount > 0 && (
-                <span className="text-xs text-gray-400 font-medium">({vendor.reviewsCount} reviews)</span>
+                <span className="text-xs text-stone-400 font-medium">({vendor.reviewsCount} reviews)</span>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 text-sm font-bold text-gray-700">
-              <Clock className="w-4 h-4 text-orange-500" aria-hidden="true" />
+            <div className="flex items-center gap-1.5 text-sm font-bold text-stone-700">
+              <Clock className="w-4 h-4 text-[#8a5332]" aria-hidden="true" />
               {vendor.prepTime}
-              <span className="text-xs text-gray-400 font-medium">prep</span>
+              <span className="text-xs text-stone-400 font-medium">prep</span>
             </div>
 
-            <div className="flex items-center gap-1.5 text-sm font-bold text-gray-700">
-              <MapPin className="w-4 h-4 text-orange-500" aria-hidden="true" />
+            <div className="flex items-center gap-1.5 text-sm font-bold text-stone-700">
+              <MapPin className="w-4 h-4 text-[#8a5332]" aria-hidden="true" />
               {vendor.neighborhood}
             </div>
 
             {vendor.deliveryFee > 0 && (
-              <div className="flex items-center gap-1.5 text-sm font-bold text-gray-700">
-                <Bike className="w-4 h-4 text-orange-500" aria-hidden="true" />
+              <div className="flex items-center gap-1.5 text-sm font-bold text-stone-700">
+                <Bike className="w-4 h-4 text-[#8a5332]" aria-hidden="true" />
                 {formatRwf(vendor.deliveryFee)} delivery
               </div>
             )}
 
             {vendor.operatingHours && (
-              <div className="flex items-center gap-1.5 text-sm font-bold text-gray-700">
-                <Info className="w-4 h-4 text-gray-400" aria-hidden="true" />
+              <div className="flex items-center gap-1.5 text-sm font-bold text-stone-700">
+                <Info className="w-4 h-4 text-stone-400" aria-hidden="true" />
                 {vendor.operatingHours}
               </div>
             )}
           </div>
 
           {vendor.description && (
-            <p className="text-sm text-gray-600 leading-relaxed mt-4 pt-4 border-t border-gray-100 max-w-3xl">
+            <p className="text-sm text-stone-600 leading-relaxed mt-4 pt-4 border-t border-stone-100 max-w-3xl">
               {vendor.description}
             </p>
           )}
@@ -210,7 +210,7 @@ export default function VendorPage() {
 
         {/* ── Menu category tabs ──────────────────────────────── */}
         <div
-          className="flex items-center gap-2 overflow-x-auto pb-2 mb-5 sticky top-[132px] sm:top-[112px] z-30 bg-gray-50/90 backdrop-blur-md py-2 -mx-1 px-1 rounded-2xl"
+          className="flex items-center gap-2 overflow-x-auto pb-2 mb-5 sticky top-[132px] sm:top-[112px] z-30 bg-[#faf7f4]/90 backdrop-blur-md py-2 -mx-1 px-1 rounded-2xl"
           role="tablist"
           aria-label="Menu categories"
         >
@@ -221,10 +221,10 @@ export default function VendorPage() {
               role="tab"
               aria-selected={activeCategory === category}
               onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition whitespace-nowrap ${
+              className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap active:scale-95 ${
                 activeCategory === category
-                  ? 'bg-orange-600 text-white shadow-md shadow-orange-500/20'
-                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
+                  ? 'bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white shadow-md shadow-[#2b1206]/25'
+                  : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-100 hover:border-[#d9bda6]'
               }`}
             >
               {category}
@@ -238,14 +238,14 @@ export default function VendorPage() {
             <section key={category} aria-label={category}>
               <h2 className="text-lg font-black text-gray-900 mb-3 flex items-center gap-2">
                 {category}
-                <span className="text-xs font-bold text-gray-400">{dishes.length} items</span>
+                <span className="text-xs font-bold text-stone-400">{dishes.length} items</span>
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {dishes.map((dish) => (
                   <article
                     key={dish.id}
-                    className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition flex gap-4 items-start"
+                    className="bg-white rounded-3xl p-4 border border-stone-200/80 shadow-sm hover:shadow-xl hover:border-[#ebd7c5] hover:-translate-y-1 transition-all duration-300 flex gap-4 items-start group/card"
                   >
                     <button
                       type="button"
@@ -259,35 +259,35 @@ export default function VendorPage() {
                             Available
                           </span>
                         ) : (
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">
                             Sold out
                           </span>
                         )}
                         {dish.popular && (
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5]">
                             Popular
                           </span>
                         )}
                         {dish.isPreorder && (
-                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#faf6f2] text-[#542813] border border-[#ebd7c5]">
                             Pre-order
                           </span>
                         )}
                       </div>
 
-                      <h3 className="font-extrabold text-base text-gray-900 group-hover:text-orange-600 transition-colors">
+                      <h3 className="font-extrabold text-base text-gray-900 group-hover:text-[#542813] transition-colors">
                         {dish.name}
                       </h3>
-                      <p className="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed">
+                      <p className="text-xs text-stone-500 line-clamp-2 mt-1 leading-relaxed">
                         {dish.description}
                       </p>
 
                       <div className="flex items-center gap-3 mt-2.5">
-                        <span className="text-base font-black text-orange-600">
+                        <span className="text-base font-black text-[#4e2410]">
                           {formatRwf(dish.price)}
                         </span>
-                        <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1">
-                          <Clock className="w-3 h-3" aria-hidden="true" />
+                        <span className="text-[11px] text-stone-400 font-semibold flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-[#8a5332]" aria-hidden="true" />
                           {dish.prepTime}
                         </span>
                       </div>
@@ -298,15 +298,15 @@ export default function VendorPage() {
                         src={dish.image}
                         alt={dish.name}
                         aspect="aspect-square"
-                        className="w-24 h-24 sm:w-28 sm:h-28"
-                        imgClassName="group-hover:scale-105"
+                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden"
+                        imgClassName="group-hover/card:scale-108 transition-transform duration-500 ease-out"
                       />
                       <button
                         type="button"
                         onClick={() => handleQuickAdd(dish)}
                         disabled={!dish.isAvailable}
                         aria-label={`Add ${dish.name} to cart`}
-                        className="flex items-center gap-1 px-3 py-2 rounded-xl bg-orange-50 hover:bg-orange-600 hover:text-white text-orange-600 font-bold text-xs transition disabled:opacity-40 disabled:hover:bg-orange-50 disabled:hover:text-orange-600"
+                        className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#2b1206] hover:text-white text-[#3d1b0c] border border-[#ebd7c5] hover:border-[#2b1206] font-bold text-xs transition-all active:scale-95 disabled:opacity-40 disabled:hover:bg-[#faf6f2] disabled:hover:text-[#3d1b0c]"
                       >
                         <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                         <span>{dish.options?.length ? 'Select' : 'Add'}</span>
@@ -320,7 +320,7 @@ export default function VendorPage() {
 
           {groupedMenu.length === 0 && (
             <EmptyState
-              icon={<UtensilsCrossed className="w-8 h-8" />}
+              icon={<UtensilsCrossed className="w-8 h-8 text-[#542813]" />}
               title={`No ${activeCategory} dishes right now`}
               message="Check back soon — menus change daily."
               actionLabel="Show full menu"
@@ -331,20 +331,20 @@ export default function VendorPage() {
       </div>
 
       {/* ── Sticky cart CTA ───────────────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 py-3">
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/80 px-4 py-3 shadow-2xl">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="min-w-0">
             {cartVendorItems.length > 0 ? (
               <>
-                <p className="text-xs text-gray-500 font-semibold truncate">
+                <p className="text-xs text-stone-500 font-semibold truncate">
                   {cartVendorItems.length} item{cartVendorItems.length > 1 ? 's' : ''} from{' '}
                   {vendor.name}
                 </p>
-                <p className="text-sm font-black text-gray-900">{formatRwf(subtotal)}</p>
+                <p className="text-sm font-black text-[#4e2410]">{formatRwf(subtotal)}</p>
               </>
             ) : (
               <>
-                <p className="text-xs text-gray-500 font-semibold">Hungry?</p>
+                <p className="text-xs text-stone-500 font-semibold">Hungry?</p>
                 <p className="text-sm font-black text-gray-900">
                   Add dishes from the menu above
                 </p>
@@ -356,9 +356,9 @@ export default function VendorPage() {
             type="button"
             onClick={() => setIsCartOpen(true)}
             disabled={totalItemCount === 0}
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold text-sm shadow-lg shadow-orange-500/25 transition disabled:opacity-40 disabled:shadow-none flex-shrink-0"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-sm shadow-xl shadow-[#2b1206]/25 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-40 disabled:shadow-none flex-shrink-0"
           >
-            <ShoppingBag className="w-4 h-4" aria-hidden="true" />
+            <ShoppingBag className="w-4 h-4 text-[#d9bda6]" aria-hidden="true" />
             <span>View Cart</span>
             {totalItemCount > 0 && (
               <span className="w-5 h-5 rounded-full bg-white/25 text-xs flex items-center justify-center font-black">

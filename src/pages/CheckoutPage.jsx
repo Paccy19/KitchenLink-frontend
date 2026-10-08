@@ -54,15 +54,15 @@ export default function CheckoutPage() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
-        <div className="w-16 h-16 rounded-full bg-orange-100 text-orange-600 mx-auto flex items-center justify-center">
-          <AlertCircle className="w-8 h-8" />
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4 animate-scale-in">
+        <div className="w-16 h-16 rounded-2xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] mx-auto flex items-center justify-center shadow-sm">
+          <AlertCircle className="w-8 h-8 text-[#6d391d]" />
         </div>
         <h2 className="text-2xl font-black text-gray-900">Your basket is currently empty</h2>
-        <p className="text-xs text-gray-500">Add dishes from a kitchen before checking out.</p>
+        <p className="text-xs text-stone-500">Add dishes from a kitchen before checking out.</p>
         <Link
           to="/"
-          className="inline-block px-6 py-3 rounded-2xl bg-orange-600 text-white font-bold text-sm"
+          className="inline-block px-6 py-3 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-sm shadow-md shadow-[#2b1206]/20 transition-all hover:scale-[1.01] active:scale-95"
         >
           Browse Menus
         </Link>
@@ -98,140 +98,156 @@ export default function CheckoutPage() {
       title: 'Current Delivery Location',
       street: 'KG 11 Ave, Kimironko',
       district: 'Kimironko',
-      city: 'Kigali',
-      instructions: 'Deliver to gate'
+      city: 'Kigali'
     };
 
     setIsSubmitting(true);
 
     setTimeout(() => {
-      const orderId = placeOrder({
-        items: cartItems,
-        vendor: activeVendor,
-        deliveryAddress: currentAddr,
-        paymentMethod: {
-          name: paymentMethod === 'mtn_momo' ? 'MTN Mobile Money'
-            : paymentMethod === 'airtel_money' ? 'Airtel Money'
-            : paymentMethod === 'card' ? 'Visa / Mastercard'
-            : paymentMethod === 'ekash' ? 'eKash Rwanda'
-            : 'Cash on Delivery',
-          phone: momoPhone
+      const placedOrder = placeOrder({
+        vendorId: activeVendor?.id || 'vendor-1',
+        vendorName: activeVendor?.name || 'Mama Grace Kitchen',
+        vendorType: activeVendor?.type || 'Home Cook',
+        vendorLocation: activeVendor?.location || 'Kimironko, Kigali',
+        items: cartItems.map((ci) => ({
+          dishId: ci.id,
+          name: ci.name,
+          price: ci.price,
+          quantity: ci.quantity,
+          selectedOptions: ci.selectedOptions || {},
+          image: ci.image
+        })),
+        pricing: {
+          subtotal,
+          deliveryFee,
+          platformFee,
+          total: grandTotal
         },
+        deliveryAddress: currentAddr,
         orderType,
-        scheduledInfo: { date: scheduledDate, time: scheduledTime },
-        pricing: { subtotal, deliveryFee, platformFee, total: grandTotal },
-        specialNotes: orderNotes
+        scheduledDetails: orderType === 'scheduled' ? { date: scheduledDate, time: scheduledTime } : null,
+        payment: {
+          method: paymentMethod === 'mtn_momo' ? 'MTN MoMo' : paymentMethod === 'airtel_money' ? 'Airtel Money' : 'Card',
+          phone: momoPhone,
+          status: 'Authorized Escrow'
+        },
+        notes: orderNotes
       });
 
       clearCart();
       setIsSubmitting(false);
-      navigate(`/track/${orderId}`);
+      navigate(`/track/${placedOrder.id}`);
     }, 1200);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
       
-      {/* Back button */}
+      {/* Back Button */}
       <div className="mb-6">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-orange-600 transition"
+          className="inline-flex items-center gap-2 text-xs font-bold text-stone-600 hover:text-[#542813] transition"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Continue browsing dishes</span>
+          <span>Back to Marketplace</span>
         </Link>
       </div>
 
-      <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mb-8">
-        Checkout & Confirm Order
-      </h1>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+            Checkout & Confirmation
+          </h1>
+          <p className="text-xs text-stone-500 font-medium">
+            Review delivery destination, scheduling and safe escrow payment
+          </p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Left Column: Delivery & Payment Details */}
+        {/* Left Column: Form & Information */}
         <div className="lg:col-span-7 space-y-6">
-          
-          {/* 1. Delivery Address Card */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-4">
+
+          {/* 1. Delivery Location Selection */}
+          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+                <div className="w-8 h-8 rounded-xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center font-black text-xs">
                   1
                 </div>
                 <h3 className="font-extrabold text-gray-900 text-base">
-                  Delivery Address in Kigali
+                  Delivery Destination
                 </h3>
               </div>
 
               {!showNewAddressForm && (
                 <button
-                  type="button"
                   onClick={() => setShowNewAddressForm(true)}
-                  className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                  className="text-xs font-bold text-[#542813] hover:underline flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add New</span>
+                  <span>Add Location</span>
                 </button>
               )}
             </div>
 
-            {/* Saved addresses options */}
             {!showNewAddressForm ? (
               <div className="space-y-2.5">
                 {user.addresses && user.addresses.length > 0 ? (
                   user.addresses.map((addr) => (
                     <label
                       key={addr.id}
-                      className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${
+                      className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition ${
                         selectedAddressId === addr.id
-                          ? 'border-orange-500 bg-orange-50/50 shadow-sm'
-                          : 'border-gray-200 hover:bg-gray-50'
+                          ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
+                          : 'border-stone-200 hover:bg-stone-50'
                       }`}
                     >
                       <input
                         type="radio"
-                        name="address_choice"
+                        name="delivery_address"
                         checked={selectedAddressId === addr.id}
                         onChange={() => setSelectedAddressId(addr.id)}
-                        className="mt-1 text-orange-600 focus:ring-orange-500"
+                        className="mt-1 accent-[#542813]"
                       />
-                      <div className="flex-1 text-xs">
+                      <div className="text-xs">
                         <div className="font-bold text-gray-900 flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                          <MapPin className="w-3.5 h-3.5 text-[#8a5332]" />
                           <span>{addr.title}</span>
                           {addr.isDefault && (
-                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded">
                               Default
                             </span>
                           )}
                         </div>
-                        <p className="text-gray-700 mt-0.5 font-medium">{addr.street}, {addr.district}</p>
+                        <p className="text-stone-700 mt-0.5 font-medium">{addr.street}, {addr.district}</p>
                         {addr.instructions && (
-                          <p className="text-gray-400 italic mt-0.5">Note: {addr.instructions}</p>
+                          <p className="text-stone-400 italic mt-0.5">Note: {addr.instructions}</p>
                         )}
                       </div>
                     </label>
                   ))
                 ) : (
-                  <p className="text-xs text-gray-500">No saved addresses yet. Add one below:</p>
+                  <p className="text-xs text-stone-500">No saved addresses yet. Add one below:</p>
                 )}
               </div>
             ) : (
-              <form onSubmit={handleAddNewAddress} className="p-4 bg-gray-50 rounded-2xl space-y-3">
-                <div className="font-bold text-xs text-gray-800">Add New Delivery Location</div>
+              <form onSubmit={handleAddNewAddress} className="p-4 bg-stone-50 rounded-2xl space-y-3 border border-stone-200">
+                <div className="font-bold text-xs text-stone-800">Add New Delivery Location</div>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder="Label (e.g. Home, Work)"
-                    className="p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                    className="p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
                   />
                   <select
                     value={newDistrict}
                     onChange={(e) => setNewDistrict(e.target.value)}
-                    className="p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                    className="p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
                   >
                     <option value="Kimironko, Gasabo">Kimironko, Gasabo</option>
                     <option value="Remera, Gasabo">Remera, Gasabo</option>
@@ -246,26 +262,26 @@ export default function CheckoutPage() {
                   value={newStreet}
                   onChange={(e) => setNewStreet(e.target.value)}
                   placeholder="Street / Landmark (e.g. KG 11 Ave, near Simba Supermarket)"
-                  className="w-full p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                  className="w-full p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
                 />
                 <input
                   type="text"
                   value={newInstructions}
                   onChange={(e) => setNewInstructions(e.target.value)}
                   placeholder="Delivery instructions for rider (e.g. Gate color, floor number)"
-                  className="w-full p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                  className="w-full p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
                 />
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-bold"
+                    className="px-4 py-2 bg-gradient-to-r from-[#2b1206] to-[#542813] text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95"
                   >
                     Save Address
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowNewAddressForm(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs font-bold"
+                    className="px-4 py-2 bg-stone-200 text-stone-700 rounded-xl text-xs font-bold hover:bg-stone-300 transition"
                   >
                     Cancel
                   </button>
@@ -275,9 +291,9 @@ export default function CheckoutPage() {
           </div>
 
           {/* 2. Timing confirmation */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-3">
+          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+              <div className="w-8 h-8 rounded-xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center font-black text-xs">
                 2
               </div>
               <h3 className="font-extrabold text-gray-900 text-base">
@@ -285,13 +301,13 @@ export default function CheckoutPage() {
               </h3>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/60 flex items-center gap-3">
-              <Clock className="w-5 h-5 text-amber-700 flex-shrink-0" />
+            <div className="p-3.5 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] flex items-center gap-3">
+              <Clock className="w-5 h-5 text-[#8a5332] flex-shrink-0" />
               <div className="text-xs">
-                <span className="font-bold text-amber-900">
+                <span className="font-bold text-[#3d1b0c]">
                   {orderType === 'immediate' ? 'Immediate Delivery' : 'Scheduled Pre-Order'}
                 </span>
-                <p className="text-amber-800">
+                <p className="text-stone-600 mt-0.5">
                   {orderType === 'immediate'
                     ? 'Estimated delivery time: 25–35 minutes after kitchen preparation'
                     : `Scheduled to arrive: ${scheduledDate} at ${scheduledTime}`}
@@ -301,9 +317,9 @@ export default function CheckoutPage() {
           </div>
 
           {/* 3. Payment Method */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-4">
+          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+              <div className="w-8 h-8 rounded-xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center font-black text-xs">
                 3
               </div>
               <h3 className="font-extrabold text-gray-900 text-base">
@@ -316,8 +332,8 @@ export default function CheckoutPage() {
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
                   paymentMethod === 'mtn_momo'
-                    ? 'border-orange-500 bg-orange-50/50'
-                    : 'border-gray-200 hover:bg-gray-50'
+                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
+                    : 'border-stone-200 hover:bg-stone-50'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -326,7 +342,7 @@ export default function CheckoutPage() {
                     name="pay_method"
                     checked={paymentMethod === 'mtn_momo'}
                     onChange={() => setPaymentMethod('mtn_momo')}
-                    className="text-orange-600"
+                    className="accent-[#542813]"
                   />
                   <div>
                     <div className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
@@ -334,18 +350,18 @@ export default function CheckoutPage() {
                       <span>MTN Mobile Money</span>
                       <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.2 rounded font-bold">Recommended</span>
                     </div>
-                    <p className="text-[11px] text-gray-500">Instant push prompt on your Rwandan phone</p>
+                    <p className="text-[11px] text-stone-500">Instant push prompt on your Rwandan phone</p>
                   </div>
                 </div>
-                <Smartphone className="w-5 h-5 text-gray-400" />
+                <Smartphone className="w-5 h-5 text-stone-400" />
               </label>
 
               {/* Airtel Money */}
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
                   paymentMethod === 'airtel_money'
-                    ? 'border-orange-500 bg-orange-50/50'
-                    : 'border-gray-200 hover:bg-gray-50'
+                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
+                    : 'border-stone-200 hover:bg-stone-50'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -354,25 +370,25 @@ export default function CheckoutPage() {
                     name="pay_method"
                     checked={paymentMethod === 'airtel_money'}
                     onChange={() => setPaymentMethod('airtel_money')}
-                    className="text-orange-600"
+                    className="accent-[#542813]"
                   />
                   <div>
                     <div className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
                       <span>Airtel Money</span>
                     </div>
-                    <p className="text-[11px] text-gray-500">Pay via Airtel Money wallet</p>
+                    <p className="text-[11px] text-stone-500">Pay via Airtel Money wallet</p>
                   </div>
                 </div>
-                <Smartphone className="w-5 h-5 text-gray-400" />
+                <Smartphone className="w-5 h-5 text-stone-400" />
               </label>
 
               {/* Debit / Credit Card */}
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
                   paymentMethod === 'card'
-                    ? 'border-orange-500 bg-orange-50/50'
-                    : 'border-gray-200 hover:bg-gray-50'
+                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
+                    : 'border-stone-200 hover:bg-stone-50'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -381,22 +397,22 @@ export default function CheckoutPage() {
                     name="pay_method"
                     checked={paymentMethod === 'card'}
                     onChange={() => setPaymentMethod('card')}
-                    className="text-orange-600"
+                    className="accent-[#542813]"
                   />
                   <div>
                     <div className="font-bold text-xs text-gray-900">Visa / Mastercard</div>
-                    <p className="text-[11px] text-gray-500">Debit or Credit Card</p>
+                    <p className="text-[11px] text-stone-500">Debit or Credit Card</p>
                   </div>
                 </div>
-                <CreditCard className="w-5 h-5 text-gray-400" />
+                <CreditCard className="w-5 h-5 text-stone-400" />
               </label>
 
               {/* eKash / Wallet */}
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
                   paymentMethod === 'ekash'
-                    ? 'border-orange-500 bg-orange-50/50'
-                    : 'border-gray-200 hover:bg-gray-50'
+                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
+                    : 'border-stone-200 hover:bg-stone-50'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -405,21 +421,21 @@ export default function CheckoutPage() {
                     name="pay_method"
                     checked={paymentMethod === 'ekash'}
                     onChange={() => setPaymentMethod('ekash')}
-                    className="text-orange-600"
+                    className="accent-[#542813]"
                   />
                   <div>
                     <div className="font-bold text-xs text-gray-900">eKash Rwanda / Platform Wallet</div>
-                    <p className="text-[11px] text-gray-500">Interoperable instant mobile wallet</p>
+                    <p className="text-[11px] text-stone-500">Interoperable instant mobile wallet</p>
                   </div>
                 </div>
-                <Wallet className="w-5 h-5 text-gray-400" />
+                <Wallet className="w-5 h-5 text-stone-400" />
               </label>
             </div>
 
             {/* Mobile Money Phone Input if momo chosen */}
             {(paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && (
               <div className="pt-2">
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-bold text-stone-700 mb-1">
                   Payment Phone Number
                 </label>
                 <input
@@ -427,9 +443,9 @@ export default function CheckoutPage() {
                   value={momoPhone}
                   onChange={(e) => setMomoPhone(e.target.value)}
                   placeholder="+250 788 123 456"
-                  className="w-full p-3 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:border-orange-500"
+                  className="w-full p-3 rounded-xl border border-stone-200 text-xs font-bold outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition"
                 />
-                <span className="text-[11px] text-gray-400 mt-1 block">
+                <span className="text-[11px] text-stone-400 mt-1 block">
                   A USSD prompt will be sent to this phone to enter PIN and authorize {grandTotal.toLocaleString()} RWF.
                 </span>
               </div>
@@ -437,8 +453,8 @@ export default function CheckoutPage() {
           </div>
 
           {/* 4. Notes for Kitchen or Rider */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-stone-600">
               Order Notes / Delivery Instructions
             </label>
             <textarea
@@ -446,7 +462,7 @@ export default function CheckoutPage() {
               onChange={(e) => setOrderNotes(e.target.value)}
               placeholder="Any special notes for the kitchen or delivery driver..."
               rows={2}
-              className="w-full text-xs p-3 rounded-xl border border-gray-200 outline-none focus:border-orange-500"
+              className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition resize-none"
             />
           </div>
 
@@ -454,16 +470,16 @@ export default function CheckoutPage() {
 
         {/* Right Column: Order Summary & Placement */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-lg sticky top-24 space-y-6">
+          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xl sticky top-24 space-y-6">
             
-            <div className="border-b border-gray-100 pb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600">
+            <div className="border-b border-stone-100 pb-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#542813]">
                 Order Review
               </span>
               <h3 className="font-black text-lg text-gray-900 mt-0.5">
                 From: {activeVendor?.name}
               </h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-stone-500">
                 {activeVendor?.type} · {activeVendor?.location}
               </p>
             </div>
@@ -477,12 +493,12 @@ export default function CheckoutPage() {
                       {item.quantity}x {item.name}
                     </div>
                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                      <div className="text-[10px] text-gray-400 truncate">
+                      <div className="text-[10px] text-stone-400 truncate">
                         {Object.values(item.selectedOptions).join(', ')}
                       </div>
                     )}
                   </div>
-                  <div className="font-extrabold text-gray-800 flex-shrink-0">
+                  <div className="font-extrabold text-stone-800 flex-shrink-0">
                     {(item.price * item.quantity).toLocaleString()} RWF
                   </div>
                 </div>
@@ -490,22 +506,22 @@ export default function CheckoutPage() {
             </div>
 
             {/* Price Breakdown */}
-            <div className="space-y-2 pt-4 border-t border-gray-100 text-xs">
-              <div className="flex justify-between text-gray-600">
+            <div className="space-y-2 pt-4 border-t border-stone-100 text-xs">
+              <div className="flex justify-between text-stone-600">
                 <span>Items Subtotal</span>
                 <span className="font-bold">{subtotal.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-stone-600">
                 <span>Rider Delivery Fee</span>
                 <span className="font-bold">{deliveryFee.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-stone-600">
                 <span>Platform Service Fee</span>
                 <span className="font-bold">{platformFee.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
+              <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-stone-200">
                 <span>Total Due</span>
-                <span className="text-orange-600">{grandTotal.toLocaleString()} RWF</span>
+                <span className="text-[#4e2410]">{grandTotal.toLocaleString()} RWF</span>
               </div>
             </div>
 
@@ -519,7 +535,7 @@ export default function CheckoutPage() {
             <button
               onClick={handleConfirmOrder}
               disabled={isSubmitting}
-              className={`w-full py-4 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-black text-sm shadow-xl shadow-orange-500/25 flex items-center justify-center gap-2 transition ${
+              className={`w-full py-4 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-black text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 ${
                 isSubmitting ? 'opacity-75 cursor-wait' : ''
               }`}
             >
@@ -527,7 +543,7 @@ export default function CheckoutPage() {
                 <span>Authorizing Payment & Sending Order...</span>
               ) : (
                 <>
-                  <CheckCircle2 className="w-5 h-5" />
+                  <CheckCircle2 className="w-5 h-5 text-[#d9bda6]" />
                   <span>Confirm & Pay {grandTotal.toLocaleString()} RWF</span>
                 </>
               )}

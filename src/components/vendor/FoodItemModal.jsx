@@ -31,28 +31,28 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="relative bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl animate-scale-in border border-stone-100">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-md text-gray-700 hover:text-black flex items-center justify-center shadow-md transition"
+          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-md text-stone-700 hover:text-black flex items-center justify-center shadow-md transition active:scale-95"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Modal Header Image */}
-        <div className="relative h-56 w-full bg-gray-100">
+        <div className="relative h-56 w-full bg-stone-100">
           <img
             src={item.image}
             alt={item.name}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           
           <div className="absolute bottom-4 left-4 right-4 text-white">
-            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-orange-600 text-white inline-block mb-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#2b1206] to-[#542813] text-white border border-white/20 inline-block mb-1.5 shadow-sm">
               {item.category}
             </span>
             <h3 className="text-xl sm:text-2xl font-black leading-snug drop-shadow-sm">
@@ -64,31 +64,31 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
         {/* Modal Body */}
         <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
           {/* Price & Prep Time */}
-          <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+          <div className="flex items-center justify-between pb-4 border-b border-stone-100">
             <div>
-              <div className="text-2xl font-black text-orange-600">
+              <div className="text-2xl font-black text-[#4e2410]">
                 {item.price.toLocaleString()} RWF
               </div>
-              <div className="text-xs text-gray-500 font-medium">
+              <div className="text-xs text-stone-500 font-medium">
                 from {vendor.name} ({vendor.type})
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-xl">
-              <Clock className="w-3.5 h-3.5 text-orange-500" />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-700 bg-stone-100 px-3 py-1.5 rounded-xl">
+              <Clock className="w-3.5 h-3.5 text-[#8a5332]" />
               <span>{item.prepTime}</span>
             </div>
           </div>
 
           {/* Description */}
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="text-sm text-stone-600 leading-relaxed">
             {item.description}
           </p>
 
           {/* Pre-order notification badge */}
           {item.isPreorder && (
-            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <div className="p-3.5 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] text-[#3d1b0c] text-xs font-medium flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#8a5332] flex-shrink-0" />
               <div>
                 <span className="font-bold">Scheduled Pre-Order Special: </span>
                 {item.preorderCutoff || 'Prepared specially for tomorrow'}
@@ -99,12 +99,12 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
           {/* Options & Customizations */}
           {item.options && item.options.length > 0 && (
             <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-stone-400">
                 Customize Your Dish
               </h4>
               {item.options.map((option, idx) => (
                 <div key={idx} className="space-y-2">
-                  <label className="text-xs font-bold text-gray-800">
+                  <label className="text-xs font-bold text-stone-800">
                     {option.name}:
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -115,10 +115,10 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
                           key={cIdx}
                           type="button"
                           onClick={() => handleOptionChange(option.name, choice)}
-                          className={`text-left text-xs px-3 py-2 rounded-xl border transition ${
+                          className={`text-left text-xs px-3 py-2 rounded-xl border transition-all active:scale-95 ${
                             isSelected
-                              ? 'border-orange-500 bg-orange-50 font-bold text-orange-700'
-                              : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100 text-gray-700'
+                              ? 'border-[#542813] bg-[#faf6f2] font-bold text-[#3d1b0c] shadow-sm'
+                              : 'border-stone-200 bg-stone-50/50 hover:bg-stone-100 text-stone-700'
                           }`}
                         >
                           {choice}
@@ -133,7 +133,7 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
 
           {/* Special Cooking Instructions */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-400">
+            <label className="text-xs font-bold uppercase tracking-wider text-stone-400">
               Special Instructions
             </label>
             <textarea
@@ -141,18 +141,18 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
               onChange={(e) => setInstructions(e.target.value)}
               placeholder="E.g. Extra spicy Akabanga, sauce on the side, no onions, etc."
               rows={2}
-              className="w-full text-xs p-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none resize-none"
+              className="w-full text-xs p-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 outline-none resize-none transition"
             />
           </div>
         </div>
 
         {/* Footer with Quantity & Add Button */}
-        <div className="p-4 sm:p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 bg-stone-50 border-t border-stone-100 flex items-center justify-between gap-4">
           {/* Quantity selector */}
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
+          <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-2xl p-1 shadow-sm">
             <button
               onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 transition"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 transition"
               disabled={quantity <= 1}
             >
               <Minus className="w-3.5 h-3.5" />
@@ -162,7 +162,7 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
             </span>
             <button
               onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 transition"
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 transition"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -171,9 +171,9 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
           {/* Add to cart submit */}
           <button
             onClick={handleAddToCart}
-            className="flex-1 py-3 px-5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-bold text-sm shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition"
+            className="flex-1 py-3 px-5 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95"
           >
-            <ShoppingBag className="w-4 h-4" />
+            <ShoppingBag className="w-4 h-4 text-[#d9bda6]" />
             <span>Add to Cart · {(item.price * quantity).toLocaleString()} RWF</span>
           </button>
         </div>

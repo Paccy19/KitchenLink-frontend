@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import clsx from 'clsx';
+import { Utensils } from 'lucide-react';
 
 /**
  * Lazy image with a blurred shimmer placeholder and fade-in.
@@ -22,10 +23,10 @@ export default function LazyImage({
   const [status, setStatus] = useState(src ? 'loading' : 'error');
 
   return (
-    <div className={clsx('relative overflow-hidden bg-gray-100', aspect, rounded, className)}>
+    <div className={clsx('relative overflow-hidden bg-stone-100', aspect, rounded, className)}>
       {/* Shimmer placeholder sits underneath while the image loads */}
       {status !== 'ready' && (
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200" aria-hidden="true" />
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200" aria-hidden="true" />
       )}
 
       {status !== 'error' && (
@@ -45,8 +46,8 @@ export default function LazyImage({
       )}
 
       {status === 'error' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-300" role="img" aria-label={alt}>
-          {fallback ?? <span className="text-3xl" aria-hidden="true">🍴</span>}
+        <div className="absolute inset-0 flex items-center justify-center bg-stone-100 text-stone-300" role="img" aria-label={alt}>
+          {fallback ?? <Utensils className="w-8 h-8 text-stone-300" aria-hidden="true" />}
         </div>
       )}
     </div>

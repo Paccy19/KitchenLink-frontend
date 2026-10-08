@@ -42,27 +42,27 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl p-6 sm:p-8 relative animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl p-6 sm:p-8 relative animate-scale-in border border-stone-100">
         
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-2"
+          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 p-2 transition"
         >
           <X className="w-5 h-5" />
         </button>
 
         {authStep === 'phone' ? (
           <div>
-            <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mb-5">
-              <Phone className="w-7 h-7" />
+            <div className="w-14 h-14 rounded-2xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center mb-5 shadow-sm">
+              <Phone className="w-7 h-7 text-[#6d391d]" />
             </div>
 
             <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">
               Welcome to Food Kitchen
             </h3>
-            <p className="text-xs text-gray-500 mb-6 font-medium">
+            <p className="text-xs text-stone-500 mb-6 font-medium">
               Enter your phone number to sign in or create your customer account
             </p>
 
@@ -74,7 +74,7 @@ export default function AuthModal() {
 
             <form onSubmit={handlePhoneSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
                   Full Name
                 </label>
                 <input
@@ -83,12 +83,12 @@ export default function AuthModal() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your Full Name"
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-sm font-semibold outline-none"
+                  className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 text-sm font-semibold outline-none transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
                   Phone Number (MTN / Airtel)
                 </label>
                 <input
@@ -97,39 +97,39 @@ export default function AuthModal() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+250 788 000 000"
                   required
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-sm font-semibold outline-none"
+                  className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 text-sm font-semibold outline-none transition"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3.5 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-sm shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-extrabold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95"
               >
                 <span>Continue & Send OTP</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 text-[#d9bda6]" />
               </button>
             </form>
           </div>
         ) : (
           <div>
-            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-5">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-5 shadow-sm">
               <ShieldCheck className="w-7 h-7" />
             </div>
 
             <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">
               Verify OTP Code
             </h3>
-            <p className="text-xs text-gray-500 mb-4 font-medium">
+            <p className="text-xs text-stone-500 mb-4 font-medium">
               We sent a verification SMS to <span className="font-bold text-gray-800">{pendingPhone}</span>
             </p>
 
             {/* Test hint for convenience */}
-            <div className="p-3 mb-4 rounded-xl bg-orange-50 border border-orange-200 text-orange-800 text-xs flex items-center justify-between">
+            <div className="p-3 mb-4 rounded-xl bg-[#faf6f2] border border-[#ebd7c5] text-[#3d1b0c] text-xs flex items-center justify-between">
               <span>Demo Quick Code:</span>
               <button
                 type="button"
                 onClick={() => setOtpCode('1234')}
-                className="font-black underline text-orange-600"
+                className="font-black underline text-[#542813]"
               >
                 Insert 1234
               </button>
@@ -143,7 +143,7 @@ export default function AuthModal() {
 
             <form onSubmit={handleOtpSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">
+                <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
                   Enter 4-Digit Code
                 </label>
                 <input
@@ -153,15 +153,15 @@ export default function AuthModal() {
                   onChange={(e) => setOtpCode(e.target.value)}
                   placeholder="••••"
                   autoFocus
-                  className="w-full text-center tracking-[1em] text-2xl font-black py-3 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none"
+                  className="w-full text-center tracking-[1em] text-2xl font-black py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 outline-none transition"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-extrabold text-sm shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-extrabold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95"
               >
-                <UserCheck className="w-4 h-4" />
+                <UserCheck className="w-4 h-4 text-[#d9bda6]" />
                 <span>Verify & Sign In</span>
               </button>
             </form>

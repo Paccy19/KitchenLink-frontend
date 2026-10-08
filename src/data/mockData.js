@@ -1,27 +1,27 @@
 export const CATEGORIES = [
-  { id: 'all', name: 'All Cuisines', icon: '🍽️', count: 48 },
-  { id: 'local', name: 'Local Food', icon: '🍲', count: 18, description: 'Traditional Rwandan meals: Isombe, Ugali, Matooke, Brochettes' },
-  { id: 'african', name: 'African Food', icon: '🥘', count: 14, description: 'Rich pan-African specialties & spiced stews' },
-  { id: 'fast_food', name: 'Fast Food', icon: '🍔', count: 22, description: 'Burgers, crispy chicken, fries & wraps' },
-  { id: 'healthy', name: 'Healthy & Meal-Prep', icon: '🥗', count: 12, description: 'Nutrient-rich bowls, keto, high-protein portions' },
-  { id: 'bakery', name: 'Bakery & Pastries', icon: '🥐', count: 15, description: 'Fresh loaves, croissants, custom cakes & snacks' },
-  { id: 'breakfast', name: 'Breakfast & Brunch', icon: '☕', count: 16, description: 'Pancakes, omelets, Rwandan spiced tea & coffee' },
-  { id: 'lunch', name: 'Lunch Specials', icon: '🍛', count: 29, description: 'Quick hearty midday combos & lunch boxes' },
-  { id: 'dinner', name: 'Dinner & Grill', icon: '🥩', count: 24, description: 'Grilled steaks, fish, BBQ & family platters' },
-  { id: 'drinks', name: 'Juices & Drinks', icon: '🍹', count: 19, description: 'Fresh tropical juices, iced teas, mocktails' },
-  { id: 'desserts', name: 'Desserts & Sweets', icon: '🍰', count: 11, description: 'Cakes, tarts, ice cream & sweet bites' },
+  { id: 'all', name: 'All Cuisines', icon: 'utensils', count: 48 },
+  { id: 'local', name: 'Local Food', icon: 'soup', count: 18, description: 'Traditional Rwandan meals: Isombe, Ugali, Matooke, Brochettes' },
+  { id: 'african', name: 'African Food', icon: 'flame', count: 14, description: 'Rich pan-African specialties & spiced stews' },
+  { id: 'fast_food', name: 'Fast Food', icon: 'sandwich', count: 22, description: 'Burgers, crispy chicken, fries & wraps' },
+  { id: 'healthy', name: 'Healthy & Meal-Prep', icon: 'salad', count: 12, description: 'Nutrient-rich bowls, keto, high-protein portions' },
+  { id: 'bakery', name: 'Bakery & Pastries', icon: 'croissant', count: 15, description: 'Fresh loaves, croissants, custom cakes & snacks' },
+  { id: 'breakfast', name: 'Breakfast & Brunch', icon: 'coffee', count: 16, description: 'Pancakes, omelets, Rwandan spiced tea & coffee' },
+  { id: 'lunch', name: 'Lunch Specials', icon: 'clock', count: 29, description: 'Quick hearty midday combos & lunch boxes' },
+  { id: 'dinner', name: 'Dinner & Grill', icon: 'beef', count: 24, description: 'Grilled steaks, fish, BBQ & family platters' },
+  { id: 'drinks', name: 'Juices & Drinks', icon: 'cup-soda', count: 19, description: 'Fresh tropical juices, iced teas, mocktails' },
+  { id: 'desserts', name: 'Desserts & Sweets', icon: 'cake', count: 11, description: 'Cakes, tarts, ice cream & sweet bites' },
 ];
 
 export const VENDOR_TYPES = [
-  { id: 'all', label: 'All Kitchens', badgeColor: 'bg-gray-100 text-gray-800' },
-  { id: 'Home Cook', label: 'Home Cooks 👩‍🍳', badgeColor: 'bg-amber-100 text-amber-800 border-amber-300' },
-  { id: 'Restaurant', label: 'Restaurants 🏢', badgeColor: 'bg-blue-100 text-blue-800 border-blue-300' },
-  { id: 'Café', label: 'Cafés ☕', badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  { id: 'Bakery', label: 'Bakeries 🥐', badgeColor: 'bg-pink-100 text-pink-800 border-pink-300' },
-  { id: 'Food Truck', label: 'Food Trucks 🚚', badgeColor: 'bg-purple-100 text-purple-800 border-purple-300' },
-  { id: 'Professional Chef', label: 'Private Chefs ⭐', badgeColor: 'bg-rose-100 text-rose-800 border-rose-300' },
-  { id: 'Caterer', label: 'Caterers & Meal Prep 🍱', badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-  { id: 'Juice Bar', label: 'Juice & Beverages 🥤', badgeColor: 'bg-cyan-100 text-cyan-800 border-cyan-300' }
+  { id: 'all', label: 'All Kitchens', badgeColor: 'bg-stone-100 text-stone-800' },
+  { id: 'Home Cook', label: 'Home Cooks', badgeColor: 'bg-[#f5ebe1] text-[#3d1b0c] border-[#ebd7c5]' },
+  { id: 'Restaurant', label: 'Restaurants', badgeColor: 'bg-stone-100 text-stone-800 border-stone-300' },
+  { id: 'Café', label: 'Cafés', badgeColor: 'bg-[#faf6f2] text-[#542813] border-[#d9bda6]' },
+  { id: 'Bakery', label: 'Bakeries', badgeColor: 'bg-amber-50 text-amber-900 border-amber-200' },
+  { id: 'Food Truck', label: 'Food Trucks', badgeColor: 'bg-stone-100 text-stone-700 border-stone-200' },
+  { id: 'Professional Chef', label: 'Private Chefs', badgeColor: 'bg-[#2b1206] text-white border-[#2b1206]' },
+  { id: 'Caterer', label: 'Caterers & Meal Prep', badgeColor: 'bg-[#ebd7c5] text-[#3d1b0c] border-[#d9bda6]' },
+  { id: 'Juice Bar', label: 'Juice & Beverages', badgeColor: 'bg-emerald-50 text-emerald-900 border-emerald-200' }
 ];
 
 export const VENDORS = [

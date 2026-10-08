@@ -28,16 +28,16 @@ const VENDOR_COORDS = {
 
 /** The 10 categories required by the product spec. */
 export const HOME_CATEGORIES = [
-  { id: 'local', name: 'Local Food', icon_url: '🍲', description: 'Isombe, Ugali, Akabenz & other Rwandan classics' },
-  { id: 'fast-food', name: 'Fast Food', icon_url: '🍔', description: 'Burgers, fries, wraps & quick bites' },
-  { id: 'african', name: 'African Food', icon_url: '🥘', description: 'Pan-African stews, grills & spiced dishes' },
-  { id: 'healthy', name: 'Healthy Food', icon_url: '🥗', description: 'Balanced bowls, meal-prep & light bites' },
-  { id: 'bakery', name: 'Bakery', icon_url: '🥐', description: 'Bread, pastries, cakes & snacks' },
-  { id: 'breakfast', name: 'Breakfast', icon_url: '🍳', description: 'Eggs, pancakes, tea & coffee' },
-  { id: 'lunch', name: 'Lunch', icon_url: '🍛', description: 'Hearty midday meals & lunch combos' },
-  { id: 'dinner', name: 'Dinner', icon_url: '🍽️', description: 'Grills, family platters & evening meals' },
-  { id: 'drinks', name: 'Drinks', icon_url: '🧃', description: 'Fresh juices, smoothies & beverages' },
-  { id: 'desserts', name: 'Desserts', icon_url: '🍰', description: 'Cakes, sweets & after-meal treats' },
+  { id: 'local', name: 'Local Food', icon_url: 'soup', description: 'Isombe, Ugali, Akabenz & other Rwandan classics' },
+  { id: 'fast-food', name: 'Fast Food', icon_url: 'sandwich', description: 'Burgers, fries, wraps & quick bites' },
+  { id: 'african', name: 'African Food', icon_url: 'flame', description: 'Pan-African stews, grills & spiced dishes' },
+  { id: 'healthy', name: 'Healthy Food', icon_url: 'salad', description: 'Balanced bowls, meal-prep & light bites' },
+  { id: 'bakery', name: 'Bakery', icon_url: 'croissant', description: 'Bread, pastries, cakes & snacks' },
+  { id: 'breakfast', name: 'Breakfast', icon_url: 'coffee', description: 'Eggs, pancakes, tea & coffee' },
+  { id: 'lunch', name: 'Lunch', icon_url: 'clock', description: 'Hearty midday meals & lunch combos' },
+  { id: 'dinner', name: 'Dinner', icon_url: 'beef', description: 'Grills, family platters & evening meals' },
+  { id: 'drinks', name: 'Drinks', icon_url: 'cup-soda', description: 'Fresh juices, smoothies & beverages' },
+  { id: 'desserts', name: 'Desserts', icon_url: 'cake', description: 'Cakes, sweets & after-meal treats' },
 ];
 
 export const SEARCH_SUGGESTIONS = ['Isombe', 'Pizza', 'Burger', 'Chicken', 'Brochettes', 'Juice'];

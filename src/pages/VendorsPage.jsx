@@ -18,10 +18,10 @@ function Chip({ active, onClick, children, label }) {
       onClick={onClick}
       aria-pressed={active}
       aria-label={label}
-      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition border ${
+      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 ${
         active
-          ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
-          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-gray-900'
+          ? 'bg-gradient-to-r from-[#2b1206] to-[#4e2410] text-white border-[#2b1206] shadow-md shadow-[#2b1206]/20'
+          : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300 hover:text-stone-900 hover:bg-stone-50'
       }`}
     >
       {children}
@@ -81,13 +81,13 @@ export default function VendorsPage() {
   const firstLoad = query.isPending;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20 animate-fade-in">
       <Link
         to="/"
-        className="inline-flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-orange-600 transition mb-4"
+        className="inline-flex items-center gap-2 text-xs font-bold text-stone-500 hover:text-[#542813] transition mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to home
+        <span>Back to home</span>
       </Link>
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
@@ -95,11 +95,11 @@ export default function VendorsPage() {
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
             {activeCategory ? activeCategory.name : 'Kitchens Near You'}
           </h1>
-          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5 flex-wrap">
-            <MapPin className="w-3.5 h-3.5 text-orange-500" aria-hidden="true" />
+          <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
+            <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
             Within {radius} km of {currentLocation}
             {!firstLoad && !query.isError && (
-              <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-extrabold">
+              <span className="bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] px-2.5 py-0.5 rounded-full font-extrabold text-[11px]">
                 {total} found
               </span>
             )}
@@ -107,7 +107,7 @@ export default function VendorsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
             <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
             Sort
           </span>
@@ -126,7 +126,7 @@ export default function VendorsPage() {
 
       {/* Radius control */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 flex-shrink-0">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 flex-shrink-0">
           Radius
         </span>
         {RADIUS_OPTIONS.map((value) => (
@@ -167,7 +167,7 @@ export default function VendorsPage() {
         />
       ) : vendors.length === 0 ? (
         <EmptyState
-          icon={<ChefHat className="w-8 h-8" />}
+          icon={<ChefHat className="w-8 h-8 text-[#542813]" />}
           title="No kitchens in this radius"
           message={
             activeCategory
@@ -181,7 +181,7 @@ export default function VendorsPage() {
             <button
               type="button"
               onClick={() => setParam('category', null)}
-              className="text-xs font-bold text-orange-600 hover:underline"
+              className="text-xs font-bold text-[#542813] hover:underline"
             >
               Clear category filter
             </button>
@@ -207,13 +207,13 @@ export default function VendorsPage() {
                 type="button"
                 onClick={fetchNextPage}
                 disabled={isFetchingNextPage}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-gray-200 text-sm font-bold text-gray-700 hover:border-orange-300 hover:text-orange-700 transition disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-stone-200 text-sm font-bold text-stone-700 hover:border-[#d9bda6] hover:text-[#542813] transition disabled:opacity-60 shadow-sm active:scale-95"
               >
-                {isFetchingNextPage && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isFetchingNextPage && <Loader2 className="w-4 h-4 animate-spin text-[#542813]" />}
                 Load more kitchens
               </button>
             ) : (
-              <p className="text-xs text-gray-400 font-semibold">
+              <p className="text-xs text-stone-400 font-semibold">
                 You have seen all {total} kitchens within {radius} km
               </p>
             )}

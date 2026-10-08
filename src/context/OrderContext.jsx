@@ -4,15 +4,15 @@ import { INITIAL_ORDERS } from '../data/mockData';
 const OrderContext = createContext(null);
 
 export const ORDER_STATUSES = [
-  { id: 'Pending', label: 'Order Received', icon: '📝', description: 'Your order was sent to the kitchen.' },
-  { id: 'Accepted', label: 'Order Accepted', icon: '✅', description: 'The kitchen accepted your order.' },
-  { id: 'Preparing', label: 'Cooking & Preparing', icon: '🍳', description: 'Fresh ingredients are being cooked.' },
-  { id: 'Ready for Pickup', label: 'Ready for Pickup', icon: '🛍️', description: 'Food packed, waiting for delivery partner.' },
-  { id: 'Assigned to Driver', label: 'Driver Assigned', icon: '🛵', description: 'Delivery partner is heading to the kitchen.' },
-  { id: 'Picked Up', label: 'Food Picked Up', icon: '📦', description: 'Driver has picked up your food package.' },
-  { id: 'Out for Delivery', label: 'On The Way', icon: '🚀', description: 'Driver is en route to your address.' },
-  { id: 'Delivered', label: 'Arrived & Delivered', icon: '🎉', description: 'Enjoy your hot meal!' },
-  { id: 'Completed', label: 'Completed', icon: '⭐', description: 'Order successfully finished.' }
+  { id: 'Pending', label: 'Order Received', icon: 'clipboard', description: 'Your order was sent to the kitchen.' },
+  { id: 'Accepted', label: 'Order Accepted', icon: 'check-circle', description: 'The kitchen accepted your order.' },
+  { id: 'Preparing', label: 'Cooking & Preparing', icon: 'chef-hat', description: 'Fresh ingredients are being cooked.' },
+  { id: 'Ready for Pickup', label: 'Ready for Pickup', icon: 'shopping-bag', description: 'Food packed, waiting for delivery partner.' },
+  { id: 'Assigned to Driver', label: 'Driver Assigned', icon: 'bike', description: 'Delivery partner is heading to the kitchen.' },
+  { id: 'Picked Up', label: 'Food Picked Up', icon: 'package', description: 'Driver has picked up your food package.' },
+  { id: 'Out for Delivery', label: 'On The Way', icon: 'send', description: 'Driver is en route to your address.' },
+  { id: 'Delivered', label: 'Arrived & Delivered', icon: 'award', description: 'Enjoy your hot meal!' },
+  { id: 'Completed', label: 'Completed', icon: 'check', description: 'Order successfully finished.' }
 ];
 
 export const OrderProvider = ({ children }) => {

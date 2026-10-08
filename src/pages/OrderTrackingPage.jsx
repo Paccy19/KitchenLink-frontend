@@ -14,9 +14,29 @@ import {
   RefreshCw,
   FastForward,
   Check,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  ClipboardList,
+  PackageCheck,
+  Send,
+  Award,
+  ShoppingBag
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES } from '../context/OrderContext';
+
+function StepIcon({ iconKey, className = "w-4 h-4" }) {
+  switch (iconKey) {
+    case 'clipboard': return <ClipboardList className={className} />;
+    case 'check-circle': return <CheckCircle2 className={className} />;
+    case 'chef-hat': return <ChefHat className={className} />;
+    case 'shopping-bag': return <ShoppingBag className={className} />;
+    case 'bike': return <Bike className={className} />;
+    case 'package': return <PackageCheck className={className} />;
+    case 'send': return <Send className={className} />;
+    case 'award': return <Award className={className} />;
+    default: return <Check className={className} />;
+  }
+}
 
 export default function OrderTrackingPage() {
   const { orderId } = useParams();
@@ -47,7 +67,7 @@ export default function OrderTrackingPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
         <h2 className="text-xl font-black text-gray-900">No active order found</h2>
-        <Link to="/" className="px-5 py-2.5 bg-orange-600 text-white rounded-xl font-bold text-xs">
+        <Link to="/" className="px-5 py-2.5 bg-gradient-to-r from-[#2b1206] to-[#542813] text-white rounded-xl font-bold text-xs shadow-md">
           Return to Marketplace
         </Link>
       </div>
@@ -76,40 +96,40 @@ export default function OrderTrackingPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
       
       {/* Top Navigation */}
       <div className="flex items-center justify-between mb-6">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-orange-600 transition"
+          className="inline-flex items-center gap-2 text-xs font-bold text-stone-600 hover:text-[#542813] transition"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
         </Link>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 font-medium">Order ID:</span>
-          <span className="font-extrabold text-xs text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg">
+          <span className="text-xs text-stone-500 font-medium">Order ID:</span>
+          <span className="font-extrabold text-xs text-stone-900 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
             {order.id}
           </span>
         </div>
       </div>
 
       {/* Simulator Control Bar for instant testing */}
-      <div className="bg-gradient-to-r from-stone-900 via-gray-900 to-stone-950 text-white rounded-3xl p-4 sm:p-5 mb-8 shadow-xl border border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] text-white rounded-3xl p-4 sm:p-5 mb-8 shadow-2xl border border-[#522712]/70 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold text-xs">
-            ⚡
+          <div className="w-9 h-9 rounded-xl bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 flex items-center justify-center font-bold text-xs shadow-sm">
+            <Zap className="w-4 h-4 text-[#d9bda6]" />
           </div>
           <div>
             <div className="text-xs font-bold text-white flex items-center gap-2">
               <span>Interactive Status Simulator</span>
-              <span className="text-[10px] bg-orange-500/30 text-orange-300 px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 px-2 py-0.5 rounded-full font-bold">
                 Frontend Demo
               </span>
             </div>
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-stone-300">
               Test every step of the order lifecycle live in real-time
             </p>
           </div>
@@ -119,7 +139,7 @@ export default function OrderTrackingPage() {
           <button
             onClick={() => advanceOrderStatus(order.id)}
             disabled={order.status === 'Completed'}
-            className="px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition"
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#8a5332] to-[#6d391d] hover:from-[#a0633e] hover:to-[#824424] disabled:opacity-50 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
           >
             <FastForward className="w-3.5 h-3.5" />
             <span>Advance to Next Status</span>
@@ -128,7 +148,7 @@ export default function OrderTrackingPage() {
           <select
             value={order.status}
             onChange={(e) => setOrderStatus(order.id, e.target.value)}
-            className="bg-stone-800 text-white text-xs font-semibold px-3 py-2 rounded-xl border border-stone-700 outline-none cursor-pointer"
+            className="bg-[#2b1206] text-stone-200 text-xs font-semibold px-3 py-2 rounded-xl border border-[#522712] outline-none cursor-pointer"
           >
             {ORDER_STATUSES.map((s) => (
               <option key={s.id} value={s.id}>
@@ -140,29 +160,29 @@ export default function OrderTrackingPage() {
       </div>
 
       {/* Main Status Header Card */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200/80 shadow-md mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-md mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-100">
           <div>
-            <span className="text-xs font-black uppercase tracking-wider text-orange-600">
+            <span className="text-xs font-black uppercase tracking-wider text-[#542813]">
               Live Order Status
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-1">
               {ORDER_STATUSES[currentStatusIndex]?.label || order.status}
             </h1>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1 font-medium">
+            <p className="text-xs sm:text-sm text-stone-600 mt-1 font-medium">
               {ORDER_STATUSES[currentStatusIndex]?.description}
             </p>
           </div>
 
           <div className="text-left sm:text-right">
-            <span className="text-[10px] uppercase font-bold text-gray-400 block">
+            <span className="text-[10px] uppercase font-bold text-stone-400 block">
               Estimated Delivery
             </span>
-            <div className="text-lg font-black text-gray-900 flex items-center sm:justify-end gap-1.5 text-orange-600">
-              <Clock className="w-4 h-4" />
+            <div className="text-lg font-black text-[#4e2410] flex items-center sm:justify-end gap-1.5">
+              <Clock className="w-4 h-4 text-[#8a5332]" />
               <span>{order.estimatedDeliveryTime || '20–30 min'}</span>
             </div>
-            <span className="text-xs text-gray-500 font-medium">
+            <span className="text-xs text-stone-500 font-medium">
               {order.vendorName} ({order.vendorLocation})
             </span>
           </div>
@@ -172,9 +192,9 @@ export default function OrderTrackingPage() {
         <div className="pt-8 pb-4">
           <div className="relative">
             {/* Progress line */}
-            <div className="hidden sm:block absolute top-1/2 left-4 right-4 h-1 bg-gray-200 -translate-y-1/2 z-0" />
+            <div className="hidden sm:block absolute top-1/2 left-4 right-4 h-1 bg-stone-200 -translate-y-1/2 z-0" />
             <div
-              className="hidden sm:block absolute top-1/2 left-4 h-1 bg-orange-500 -translate-y-1/2 z-0 transition-all duration-500"
+              className="hidden sm:block absolute top-1/2 left-4 h-1 bg-gradient-to-r from-[#2b1206] to-[#6d391d] -translate-y-1/2 z-0 transition-all duration-500"
               style={{
                 width: `${Math.min(100, Math.max(0, (currentStatusIndex / (ORDER_STATUSES.length - 2)) * 100))}%`
               }}
@@ -191,25 +211,25 @@ export default function OrderTrackingPage() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 shadow-sm ${
                         isCurrent
-                          ? 'bg-orange-600 text-white ring-4 ring-orange-200 scale-110'
+                          ? 'bg-gradient-to-br from-[#2b1206] to-[#542813] text-white ring-4 ring-[#ebd7c5] scale-110 shadow-lg shadow-[#2b1206]/35'
                           : isPassed
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-white border-2 border-gray-200 text-gray-400'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-white border-2 border-stone-200 text-stone-400'
                       }`}
                     >
                       {isPassed && !isCurrent ? (
                         <Check className="w-5 h-5 stroke-[2.5]" />
                       ) : (
-                        <span>{step.icon}</span>
+                        <StepIcon iconKey={step.icon} className="w-4 h-4" />
                       )}
                     </div>
                     <span
                       className={`text-[11px] font-bold mt-2 max-w-[90px] leading-tight ${
                         isCurrent
-                          ? 'text-orange-600 font-black'
+                          ? 'text-[#542813] font-black'
                           : isPassed
                           ? 'text-gray-900'
-                          : 'text-gray-400'
+                          : 'text-stone-400'
                       }`}
                     >
                       {step.label}
@@ -230,24 +250,24 @@ export default function OrderTrackingPage() {
           
           {/* Driver Card */}
           {order.driver && (
-            <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                 Assigned Delivery Partner
               </span>
 
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center font-black text-base">
-                    <Bike className="w-6 h-6" />
+                  <div className="w-12 h-12 rounded-2xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center font-black text-base shadow-sm">
+                    <Bike className="w-6 h-6 text-[#6d391d]" />
                   </div>
                   <div>
                     <h3 className="font-extrabold text-gray-900 text-sm sm:text-base">
                       {order.driver.name}
                     </h3>
-                    <p className="text-xs text-gray-500 font-medium">
+                    <p className="text-xs text-stone-500 font-medium">
                       {order.driver.vehicle}
                     </p>
-                    <div className="flex items-center gap-1 text-[11px] text-amber-500 font-bold mt-0.5">
+                    <div className="flex items-center gap-1 text-[11px] text-amber-600 font-bold mt-0.5">
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                       <span>{order.driver.rating} rating</span>
                     </div>
@@ -256,9 +276,9 @@ export default function OrderTrackingPage() {
 
                 <a
                   href={`tel:${order.driver.phone}`}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold text-xs transition"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
                 >
-                  <Phone className="w-3.5 h-3.5" />
+                  <Phone className="w-3.5 h-3.5 text-[#6d391d]" />
                   <span>Call Rider</span>
                 </a>
               </div>
@@ -266,33 +286,33 @@ export default function OrderTrackingPage() {
           )}
 
           {/* Delivery Simulation Map Graphic */}
-          <div className="bg-gradient-to-br from-stone-100 to-amber-50 rounded-3xl p-6 border border-gray-200/80 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-stone-50 to-[#faf6f2] rounded-3xl p-6 border border-stone-200/80 relative overflow-hidden">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold uppercase text-gray-500 flex items-center gap-1">
-                <MapPin className="w-4 h-4 text-orange-500" />
+              <span className="text-xs font-bold uppercase text-stone-500 flex items-center gap-1">
+                <MapPin className="w-4 h-4 text-[#8a5332]" />
                 <span>Live Route Simulation</span>
               </span>
-              <span className="text-xs font-extrabold text-orange-600">
+              <span className="text-xs font-extrabold text-[#542813]">
                 Kimironko Sector
               </span>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-md rounded-2xl p-4 border border-white shadow-sm space-y-3">
+            <div className="bg-white/85 backdrop-blur-md rounded-2xl p-4 border border-stone-100 shadow-sm space-y-3">
               <div className="flex items-start gap-3">
-                <div className="w-3 h-3 rounded-full bg-orange-500 mt-1 flex-shrink-0 ring-4 ring-orange-200" />
+                <div className="w-3 h-3 rounded-full bg-[#542813] mt-1 flex-shrink-0 ring-4 ring-[#ebd7c5]" />
                 <div className="text-xs">
                   <span className="font-bold text-gray-900">Kitchen Pickup:</span>
-                  <p className="text-gray-600">{order.vendorName} ({order.vendorLocation})</p>
+                  <p className="text-stone-600">{order.vendorName} ({order.vendorLocation})</p>
                 </div>
               </div>
 
-              <div className="w-0.5 h-6 bg-dashed border-l border-dashed border-gray-400 ml-1.5" />
+              <div className="w-0.5 h-6 bg-dashed border-l border-dashed border-stone-300 ml-1.5" />
 
               <div className="flex items-start gap-3">
-                <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1 flex-shrink-0 ring-4 ring-emerald-200" />
+                <div className="w-3 h-3 rounded-full bg-emerald-600 mt-1 flex-shrink-0 ring-4 ring-emerald-200" />
                 <div className="text-xs">
                   <span className="font-bold text-gray-900">Customer Drop-off:</span>
-                  <p className="text-gray-600">{order.deliveryAddress?.street || 'Kimironko KG 11 Ave'}</p>
+                  <p className="text-stone-600">{order.deliveryAddress?.street || 'Kimironko KG 11 Ave'}</p>
                 </div>
               </div>
             </div>
@@ -300,24 +320,24 @@ export default function OrderTrackingPage() {
 
           {/* Post-Delivery Actions: Review & Complaint buttons */}
           {isDeliveredOrDone && (
-            <div className="p-6 bg-white rounded-3xl border border-gray-200/80 shadow-sm space-y-3">
+            <div className="p-6 bg-white rounded-3xl border border-stone-200/80 shadow-sm space-y-3">
               <h4 className="font-black text-gray-900 text-sm">Order Completed</h4>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-stone-600">
                 How was your meal from {order.vendorName}? Help them grow with your feedback.
               </p>
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   onClick={() => setIsReviewModalOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm"
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-[#2b1206]/20 active:scale-95"
                 >
-                  <Star className="w-3.5 h-3.5" />
+                  <Star className="w-3.5 h-3.5 text-[#d9bda6]" />
                   <span>Rate & Review Kitchen</span>
                 </button>
 
                 <button
                   onClick={() => setIsComplaintModalOpen(true)}
-                  className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-600 font-bold text-xs flex items-center gap-1.5 transition"
+                  className="px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-red-50 text-stone-700 hover:text-red-600 font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
                 >
                   <AlertCircle className="w-3.5 h-3.5" />
                   <span>Report an Issue / Complaint</span>
@@ -325,8 +345,9 @@ export default function OrderTrackingPage() {
               </div>
 
               {order.rated && (
-                <div className="p-3 bg-amber-50 rounded-xl text-xs text-amber-900 font-medium">
-                  ⭐ You rated this order {order.rating} stars: "{order.review}"
+                <div className="p-3 bg-[#faf6f2] border border-[#ebd7c5] rounded-xl text-xs text-[#3d1b0c] font-medium flex items-center gap-1.5">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  <span>You rated this order {order.rating} stars: "{order.review}"</span>
                 </div>
               )}
             </div>
@@ -336,8 +357,8 @@ export default function OrderTrackingPage() {
 
         {/* Right Column: Order Items Summary */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-4">
-            <h3 className="font-black text-base text-gray-900 border-b border-gray-100 pb-3">
+          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-4">
+            <h3 className="font-black text-base text-gray-900 border-b border-stone-100 pb-3">
               Order Receipt
             </h3>
 
@@ -347,39 +368,39 @@ export default function OrderTrackingPage() {
                   <div>
                     <span className="font-bold text-gray-900">{item.quantity}x {item.name}</span>
                     {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                      <p className="text-[10px] text-gray-400">
+                      <p className="text-[10px] text-stone-400">
                         {Object.values(item.selectedOptions).join(', ')}
                       </p>
                     )}
                   </div>
-                  <span className="font-bold text-gray-800">
+                  <span className="font-bold text-stone-800">
                     {(item.price * item.quantity).toLocaleString()} RWF
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="pt-3 border-t border-gray-100 space-y-1.5 text-xs">
-              <div className="flex justify-between text-gray-600">
+            <div className="pt-3 border-t border-stone-100 space-y-1.5 text-xs">
+              <div className="flex justify-between text-stone-600">
                 <span>Subtotal</span>
                 <span>{order.pricing.subtotal.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-stone-600">
                 <span>Delivery Fee</span>
                 <span>{order.pricing.deliveryFee.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-stone-600">
                 <span>Platform Service</span>
                 <span>{order.pricing.platformFee.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-sm font-black text-gray-900 pt-2 border-t border-gray-200">
+              <div className="flex justify-between text-sm font-black text-gray-900 pt-2 border-t border-stone-200">
                 <span>Total Paid</span>
-                <span className="text-orange-600">{order.pricing.total.toLocaleString()} RWF</span>
+                <span className="text-[#4e2410]">{order.pricing.total.toLocaleString()} RWF</span>
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-xl text-[11px] text-gray-500 font-medium">
-              Payment via <span className="font-bold text-gray-700">{order.payment.method}</span> · Status: <span className="font-bold text-emerald-600">{order.payment.status}</span>
+            <div className="p-3 bg-stone-50 rounded-xl text-[11px] text-stone-500 font-medium border border-stone-100">
+              Payment via <span className="font-bold text-stone-700">{order.payment.method}</span> · Status: <span className="font-bold text-emerald-600">{order.payment.status}</span>
             </div>
 
           </div>
@@ -389,18 +410,19 @@ export default function OrderTrackingPage() {
 
       {/* Review Modal */}
       {isReviewModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in border border-stone-100">
             <h3 className="font-black text-xl text-gray-900">
               Rate {order.vendorName}
             </h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-stone-500">
               Your honest feedback helps food cooks maintain top quality and reputation.
             </p>
 
             {reviewSubmitted ? (
-              <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-bold text-center">
-                🎉 Thank you for your review!
+              <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-bold text-center flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Thank you for your review!</span>
               </div>
             ) : (
               <form onSubmit={handleReviewSubmit} className="space-y-4">
@@ -410,13 +432,13 @@ export default function OrderTrackingPage() {
                       type="button"
                       key={star}
                       onClick={() => setRatingVal(star)}
-                      className="p-1 hover:scale-110 transition"
+                      className="p-1 hover:scale-110 transition active:scale-95"
                     >
                       <Star
                         className={`w-8 h-8 ${
                           star <= ratingVal
                             ? 'fill-amber-400 text-amber-400'
-                            : 'text-gray-300'
+                            : 'text-stone-300'
                         }`}
                       />
                     </button>
@@ -424,7 +446,7 @@ export default function OrderTrackingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
                     Your Comments
                   </label>
                   <textarea
@@ -432,21 +454,21 @@ export default function OrderTrackingPage() {
                     onChange={(e) => setReviewComment(e.target.value)}
                     placeholder="Tell us what you loved about the food..."
                     rows={3}
-                    className="w-full text-xs p-3 rounded-xl border border-gray-200 outline-none focus:border-orange-500"
+                    className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition"
                   />
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 py-3 bg-orange-600 text-white rounded-xl font-bold text-xs"
+                    className="flex-1 py-3 bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white rounded-xl font-bold text-xs shadow-md shadow-[#2b1206]/20 transition-all hover:scale-[1.01] active:scale-95"
                   >
                     Submit Review
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsReviewModalOpen(false)}
-                    className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs"
+                    className="px-4 py-3 bg-stone-100 text-stone-700 rounded-xl font-bold text-xs hover:bg-stone-200 transition"
                   >
                     Cancel
                   </button>
@@ -459,29 +481,30 @@ export default function OrderTrackingPage() {
 
       {/* Complaint Modal */}
       {isComplaintModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-in border border-stone-100">
             <h3 className="font-black text-xl text-gray-900">
               Submit Complaint & Support Request
             </h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-stone-500">
               Our support team reviews customer issues promptly with vendor escrow guarantees.
             </p>
 
             {complaintSubmitted ? (
-              <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-bold text-center">
-                ✅ Complaint registered! An agent is assigned to your ticket.
+              <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-xs font-bold text-center flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Complaint registered! An agent is assigned to your ticket.</span>
               </div>
             ) : (
               <form onSubmit={handleComplaintSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
                     Select Issue Type
                   </label>
                   <select
                     value={issueType}
                     onChange={(e) => setIssueType(e.target.value)}
-                    className="w-full text-xs p-3 rounded-xl border border-gray-200 bg-white outline-none"
+                    className="w-full text-xs p-3 rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
                   >
                     <option value="Wrong food">Wrong food delivered</option>
                     <option value="Missing food">Missing food / item</option>
@@ -493,7 +516,7 @@ export default function OrderTrackingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
                     Description
                   </label>
                   <textarea
@@ -502,21 +525,21 @@ export default function OrderTrackingPage() {
                     placeholder="Describe what occurred with your order..."
                     rows={3}
                     required
-                    className="w-full text-xs p-3 rounded-xl border border-gray-200 outline-none focus:border-orange-500"
+                    className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition"
                   />
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-xs"
+                    className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs shadow-md transition-all active:scale-95"
                   >
                     Send Ticket to Support
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsComplaintModalOpen(false)}
-                    className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs"
+                    className="px-4 py-3 bg-stone-100 text-stone-700 rounded-xl font-bold text-xs hover:bg-stone-200 transition"
                   >
                     Cancel
                   </button>

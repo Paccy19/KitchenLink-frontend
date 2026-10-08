@@ -27,17 +27,18 @@ const SEARCH_DEBOUNCE_MS = 350;
 
 function SectionHeader({ title, subtitle, to, linkLabel = 'See all' }) {
   return (
-    <div className="flex items-end justify-between gap-3 mb-3">
+    <div className="flex items-end justify-between gap-3 mb-3.5">
       <div>
         <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">{title}</h2>
-        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-stone-500 mt-0.5">{subtitle}</p>}
       </div>
       {to && (
         <Link
           to={to}
-          className="text-xs font-black text-orange-600 hover:text-orange-700 whitespace-nowrap flex items-center gap-1"
+          className="text-xs font-black text-[#542813] hover:text-[#2b1206] whitespace-nowrap flex items-center gap-1 group transition-colors"
         >
-          {linkLabel} →
+          <span>{linkLabel}</span>
+          <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
         </Link>
       )}
     </div>
@@ -119,7 +120,7 @@ export default function HomeFeed() {
             onClick={pull.refresh}
             aria-label="Refresh homepage feed"
             disabled={pull.refreshing}
-            className="w-9 h-9 rounded-full bg-white border border-gray-200 text-gray-500 hover:text-orange-600 hover:border-orange-200 flex items-center justify-center transition disabled:opacity-60"
+            className="w-9 h-9 rounded-full bg-white border border-stone-200 text-stone-500 hover:text-[#542813] hover:border-[#d9bda6] hover:bg-[#faf6f2] flex items-center justify-center transition disabled:opacity-60 shadow-sm active:scale-95"
           >
             <RefreshCw className={`w-4 h-4 ${pull.refreshing ? 'animate-spin' : ''}`} />
           </button>

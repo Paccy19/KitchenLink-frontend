@@ -13,16 +13,16 @@ function TabButton({ active, onClick, count, children }) {
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`px-4 py-2.5 rounded-2xl text-sm font-bold transition whitespace-nowrap ${
+      className={`px-4 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap active:scale-95 ${
         active
-          ? 'bg-orange-600 text-white shadow-md shadow-orange-500/20'
-          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          ? 'bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white shadow-md shadow-[#2b1206]/20'
+          : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
       }`}
     >
       {children}
       <span
         className={`ml-2 text-xs font-black px-1.5 py-0.5 rounded-full ${
-          active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+          active ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-500'
         }`}
       >
         {count}
@@ -77,7 +77,7 @@ export default function SearchResults({ query, onSuggest }) {
   if (!hasResults) {
     return (
       <EmptyState
-        icon={<SearchX className="w-8 h-8" />}
+        icon={<SearchX className="w-8 h-8 text-[#542813]" />}
         title={`No matches for “${debouncedQuery || query}”`}
         message="Double-check the spelling or try one of these popular cravings:"
       >
@@ -87,7 +87,7 @@ export default function SearchResults({ query, onSuggest }) {
               key={suggestion}
               type="button"
               onClick={() => onSuggest?.(suggestion)}
-              className="px-3.5 py-2 rounded-full bg-orange-50 text-orange-700 border border-orange-100 text-xs font-bold hover:bg-orange-100 transition"
+              className="px-3.5 py-2 rounded-full bg-[#faf6f2] text-[#3d1b0c] border border-[#ebd7c5] text-xs font-bold hover:bg-[#f5ebe1] transition active:scale-95"
             >
               Try “{suggestion}”
             </button>
@@ -120,7 +120,7 @@ export default function SearchResults({ query, onSuggest }) {
             </div>
           ) : (
             <EmptyState
-              icon={<ChefHat className="w-8 h-8" />}
+              icon={<ChefHat className="w-8 h-8 text-[#542813]" />}
               title="No dishes matched"
               message="Kitchens matched your search — check the Kitchens tab."
               actionLabel="Show kitchens"
@@ -135,7 +135,7 @@ export default function SearchResults({ query, onSuggest }) {
           </div>
         ) : (
           <EmptyState
-            icon={<ChefHat className="w-8 h-8" />}
+            icon={<ChefHat className="w-8 h-8 text-[#542813]" />}
             title="No kitchens matched"
             message="Dishes matched your search — check the Dishes tab."
             actionLabel="Show dishes"
@@ -150,7 +150,7 @@ export default function SearchResults({ query, onSuggest }) {
 function SkeletonHeading({ query }) {
   return (
     <h2 className="text-lg font-black text-gray-900">
-      Results for <span className="text-orange-600">“{query}”</span>
+      Results for <span className="text-[#542813]">“{query}”</span>
     </h2>
   );
 }
