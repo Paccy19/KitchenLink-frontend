@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext(null);
+const MAX_CART_QUANTITY = 99;
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState(() => {
@@ -27,13 +28,15 @@ export const CartProvider = ({ children }) => {
   }, [cartItems, activeVendor]);
 
   const addToCart = (dish, vendor, selectedOptions = {}, quantity = 1, specialInstructions = '') => {
+    const safeQuantity = Math.max(1, Math.min(MAX_CART_QUANTITY, Math.floor(Number(quantity) || 1)));
+
     // Check if adding from different vendor
     if (activeVendor && activeVendor.id !== vendor.id && cartItems.length > 0) {
       setVendorConflict({
         incomingDish: dish,
         incomingVendor: vendor,
         incomingOptions: selectedOptions,
-        incomingQuantity: quantity,
+        incomingQuantity: safeQuantity,
         incomingInstructions: specialInstructions,
         currentVendor: activeVendor
       });
@@ -56,7 +59,10 @@ export const CartProvider = ({ children }) => {
       const existingIndex = prev.findIndex(item => item.itemKey === itemKey);
       if (existingIndex > -1) {
         const updated = [...prev];
-        updated[existingIndex].quantity += quantity;
+        updated[existingIndex].quantity = Math.min(
+          MAX_CART_QUANTITY,
+          updated[existingIndex].quantity + safeQuantity,
+        );
         if (specialInstructions) {
           updated[existingIndex].specialInstructions = specialInstructions;
         }
@@ -70,7 +76,7 @@ export const CartProvider = ({ children }) => {
             name: dish.name,
             price: dish.price,
             image: dish.image,
-            quantity,
+            quantity: safeQuantity,
             selectedOptions,
             specialInstructions,
             vendorId: vendor.id,
@@ -126,8 +132,9 @@ export const CartProvider = ({ children }) => {
       removeFromCart(itemKey);
       return;
     }
+    const safeQuantity = Math.min(MAX_CART_QUANTITY, Math.floor(Number(newQuantity)));
     setCartItems(prev =>
-      prev.map(item => item.itemKey === itemKey ? { ...item, quantity: newQuantity } : item)
+      prev.map(item => item.itemKey === itemKey ? { ...item, quantity: safeQuantity } : item)
     );
   };
 
@@ -147,9 +154,8 @@ export const CartProvider = ({ children }) => {
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const deliveryFee = activeVendor ? activeVendor.deliveryFee : 0;
-  const platformFee = cartItems.length > 0 ? 500 : 0; // 500 RWF service charge
-  const grandTotal = subtotal + deliveryFee + platformFee;
+  const deliveryFee = !cartItems.length ? 0 : subtotal >= 15000 ? 0 : 1000;
+  const grandTotal = subtotal + deliveryFee;
   const totalItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
@@ -164,7 +170,6 @@ export const CartProvider = ({ children }) => {
       clearCart,
       subtotal,
       deliveryFee,
-      platformFee,
       grandTotal,
       totalItemCount,
       orderType,

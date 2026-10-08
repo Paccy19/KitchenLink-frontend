@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Bike,
   Clock,
+  Heart,
   Info,
   MapPin,
   Plus,
@@ -18,6 +19,7 @@ import LazyImage from '../components/common/LazyImage';
 import FoodItemModal from '../components/vendor/FoodItemModal';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../components/common/Toast';
+import { useWishlist } from '../context/WishlistContext';
 import { formatRwf } from '../api/normalize';
 
 /**
@@ -30,6 +32,7 @@ export default function VendorPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const { addToCart, setIsCartOpen, cartItems, subtotal, totalItemCount } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const { data: vendor, isPending, isError, error, refetch, isFetching } =
     useVendorStorefront(vendorId);
@@ -301,6 +304,24 @@ export default function VendorPage() {
                         className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden"
                         imgClassName="group-hover/card:scale-108 transition-transform duration-500 ease-out"
                       />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isInWishlist(dish.id)) {
+                            removeFromWishlist(dish.id);
+                            toast.info(`${dish.name} removed from your wishlist`);
+                          } else {
+                            addToWishlist(dish, { ...vendor, location: vendor.neighborhood });
+                            toast.success(`${dish.name} saved for later`);
+                          }
+                        }}
+                        aria-label={isInWishlist(dish.id) ? `Remove ${dish.name} from wishlist` : `Save ${dish.name} to wishlist`}
+                        aria-pressed={isInWishlist(dish.id)}
+                        className="w-full inline-flex items-center justify-center gap-1 rounded-xl border border-rose-100 bg-white px-3 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${isInWishlist(dish.id) ? 'fill-rose-500' : ''}`} />
+                        <span>{isInWishlist(dish.id) ? 'Saved' : 'Save'}</span>
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleQuickAdd(dish)}

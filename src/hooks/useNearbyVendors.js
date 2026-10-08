@@ -5,11 +5,10 @@ import { useLocation } from '../context/LocationContext';
 
 const round = (value) => Number(Number(value).toFixed(4));
 
-export const DEFAULT_RADIUS_KM = 7;
+export const DEFAULT_RADIUS_KM = 5;
 export const SORT_OPTIONS = [
   { id: 'distance', label: 'Distance' },
   { id: 'rating', label: 'Rating' },
-  { id: 'prep_time', label: 'Prep Time' },
 ];
 
 /**
@@ -40,11 +39,19 @@ export default function useNearbyVendors({
         category_id: categoryId ?? undefined,
         sort,
         page: pageParam,
-        per_page: perPage,
+        limit: perPage,
       }),
     initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage?.meta?.has_more ? lastPage.meta.page + 1 : undefined,
+    getNextPageParam: (lastPage) => {
+      const meta = lastPage?.meta ?? {};
+      if (typeof meta.has_more === 'boolean') {
+        return meta.has_more ? (meta.page ?? 1) + 1 : undefined;
+      }
+      const page = Number(meta.page ?? 1);
+      const limit = Number(meta.limit ?? perPage);
+      const total = Number(meta.total ?? 0);
+      return page * limit < total ? page + 1 : undefined;
+    },
     staleTime: 45_000,
     refetchOnWindowFocus: false,
     placeholderData: (previous) => previous,
@@ -57,7 +64,10 @@ export default function useNearbyVendors({
         vendors,
         total: meta.total ?? vendors.length,
         radiusKm: meta.radius_km ?? radius,
-        hasMore: Boolean(meta.has_more),
+        hasMore:
+          typeof meta.has_more === 'boolean'
+            ? meta.has_more
+            : Number(meta.page ?? 1) * Number(meta.limit ?? perPage) < Number(meta.total ?? 0),
       };
     },
   });

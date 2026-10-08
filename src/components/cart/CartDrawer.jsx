@@ -27,7 +27,6 @@ export default function CartDrawer() {
     clearCart,
     subtotal,
     deliveryFee,
-    platformFee,
     grandTotal,
     totalItemCount,
     orderType,
@@ -269,15 +268,11 @@ export default function CartDrawer() {
                 <span>Items Subtotal</span>
                 <span className="font-bold">{subtotal.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Delivery Fee</span>
+              <div className="flex justify-between text-gray-600">
+                <span>Delivery fee (free over 15,000 RWF)</span>
                 <span className="font-bold">{deliveryFee.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Platform Service Fee</span>
-                <span className="font-bold">{platformFee.toLocaleString()} RWF</span>
-              </div>
-              <div className="flex justify-between text-base font-black text-gray-900 pt-2 border-t border-stone-200">
+              <div className="flex justify-between text-base font-black text-gray-900 pt-2 border-t border-gray-200">
                 <span>Total Amount</span>
                 <span className="text-[#4e2410]">{grandTotal.toLocaleString()} RWF</span>
               </div>

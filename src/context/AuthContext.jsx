@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const verifyOtp = (code, name = '') => {
-    if (code === '1234' || code.length === 4) {
+    if (code === '123456') {
       const updatedUser = {
         ...user,
         phone: pendingPhone || user.phone,

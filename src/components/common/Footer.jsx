@@ -103,20 +103,17 @@ export default function Footer() {
               Supported Payments
             </h4>
             <p className="text-xs text-stone-400 mb-3">
-              Instant mobile payment & bank cards verified by safe escrow:
+              Pay with MTN Mobile Money, a bank card, or cash on delivery:
             </p>
             <div className="flex flex-wrap gap-2 text-xs font-bold">
               <span className="px-2.5 py-1 rounded-md bg-yellow-400/20 text-yellow-300 border border-yellow-400/30">
                 MTN MoMo
               </span>
-              <span className="px-2.5 py-1 rounded-md bg-red-400/20 text-red-300 border border-red-400/30">
-                Airtel Money
-              </span>
               <span className="px-2.5 py-1 rounded-md bg-blue-400/20 text-blue-300 border border-blue-400/30">
                 Visa / Cards
               </span>
               <span className="px-2.5 py-1 rounded-md bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
-                eKash
+                Cash on Delivery
               </span>
             </div>
           </div>

@@ -16,6 +16,7 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrdersHistoryPage = lazy(() => import('./pages/OrdersHistoryPage'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="/track/:orderId" element={<OrderTrackingPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/orders" element={<OrdersHistoryPage />} />
+              <Route path="/wishlist" element={<WishlistPage />} />
               <Route path="*" element={<HomePage />} />
             </Routes>
           </Suspense>

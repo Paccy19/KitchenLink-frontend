@@ -75,6 +75,7 @@ const toVendorSummary = (vendor, lat, lng) => {
     estimated_prep_time: vendor.prepTime,
     delivery_available: vendor.isOpen,
     is_open: vendor.isOpen,
+    banner_image_url: vendor.coverImage,
     banner_url: vendor.coverImage,
     avatar_url: vendor.avatarImage,
     neighborhood: vendor.location,
@@ -151,13 +152,13 @@ export function handleFeed(params = {}) {
 
 export function handleNearbyVendors(params = {}) {
   const { lat, lng } = readCoords(params);
-  const radius = Number(params.radius) > 0 ? Number(params.radius) : 7;
+  const radius = Number(params.radius) > 0 ? Number(params.radius) : 5;
   const categoryId = params.category_id ? String(params.category_id) : '';
-  const sort = ['distance', 'rating', 'prep_time'].includes(params.sort)
+  const sort = ['distance', 'rating'].includes(params.sort)
     ? params.sort
     : 'distance';
   const page = Math.max(1, Number(params.page) || 1);
-  const perPage = Math.max(1, Number(params.per_page) || 6);
+  const limit = Math.min(50, Math.max(1, Number(params.limit) || 20));
 
   let vendors = VENDORS.map((vendor) => toVendorSummary(vendor, lat, lng));
 
@@ -169,25 +170,20 @@ export function handleNearbyVendors(params = {}) {
 
   if (sort === 'rating') {
     vendors.sort((a, b) => b.rating - a.rating || a.distance_km - b.distance_km);
-  } else if (sort === 'prep_time') {
-    const minutes = (value) => {
-      const matches = String(value).match(/\d+/g);
-      return matches ? Number(matches[matches.length - 1]) : 0;
-    };
-    vendors.sort((a, b) => minutes(a.estimated_prep_time) - minutes(b.estimated_prep_time));
   } else {
     vendors.sort((a, b) => a.distance_km - b.distance_km);
   }
 
   const total = vendors.length;
-  const start = (page - 1) * perPage;
-  const paged = vendors.slice(start, start + perPage);
+  const start = (page - 1) * limit;
+  const paged = vendors.slice(start, start + limit);
 
   return {
     vendors: paged,
     meta: {
       page,
-      per_page: perPage,
+      limit,
+      offset: start,
       total,
       has_more: start + paged.length < total,
       radius_km: radius,
@@ -245,6 +241,16 @@ export function handleVendorDetail(params = {}, vendorId) {
     throw error;
   }
 
+  const menu = [...new Set(vendor.menu.map((dish) => dish.category))].map((category) => ({
+    category,
+    items: vendor.menu
+      .filter((dish) => dish.category === category)
+      .map((dish) => ({
+        ...toDish(dish, vendor),
+        category,
+      })),
+  }));
+
   return {
     ...toVendorSummary(vendor, KIGALI_CENTER.lat, KIGALI_CENTER.lng),
     description: vendor.description,
@@ -252,8 +258,14 @@ export function handleVendorDetail(params = {}, vendorId) {
     address: vendor.address,
     accepts_preorder: vendor.acceptsPreorder,
     preorder_notice: vendor.specialPreorderNotice,
+    location: {
+      neighborhood: vendor.location,
+      address: vendor.address,
+      latitude: VENDOR_COORDS[vendor.id]?.lat ?? KIGALI_CENTER.lat,
+      longitude: VENDOR_COORDS[vendor.id]?.lng ?? KIGALI_CENTER.lng,
+    },
     menu_categories: [...new Set(vendor.menu.map((dish) => dish.category))],
-    menu: vendor.menu.map((dish) => toDish(dish, vendor)),
+    menu,
   };
 }
 

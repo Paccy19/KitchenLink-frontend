@@ -563,7 +563,7 @@ export const INITIAL_ORDERS = [
     vendorLocation: 'Kimironko',
     vendorAvatar: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=150&q=80',
     orderType: 'Immediate',
-    status: 'Delivered', // Pending | Accepted | Preparing | Ready for Pickup | Assigned to Driver | Picked Up | Out for Delivery | Delivered | Completed | Cancelled
+    status: 'delivered',
     items: [
       { id: 'dish-101', name: 'Isombe & Ugali with Beef Broth', price: 3500, quantity: 2, selectedOptions: { 'Spice Level': 'Medium (Akabanga touch)' } },
       { id: 'dish-105', name: 'Fresh Passion Fruit Juice (1L Bottle)', price: 2500, quantity: 1, selectedOptions: { 'Sugar Preference': 'Light Sugar' } }
@@ -571,12 +571,12 @@ export const INITIAL_ORDERS = [
     pricing: {
       subtotal: 9500,
       deliveryFee: 1000,
-      platformFee: 500,
-      total: 11000
+      total: 10500
     },
     payment: {
       method: 'MTN Mobile Money',
-      status: 'Paid',
+      methodCode: 'momo',
+      status: 'paid',
       transactionId: 'TXN-MOMO-883910'
     },
     deliveryAddress: {
@@ -602,7 +602,7 @@ export const INITIAL_ORDERS = [
     vendorLocation: 'Remera',
     vendorAvatar: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=150&q=80',
     orderType: 'Immediate',
-    status: 'Out for Delivery', // Active order for live tracking!
+    status: 'out_for_delivery',
     items: [
       { id: 'dish-301', name: 'French Butter Croissants (Box of 2)', price: 3000, quantity: 2, selectedOptions: { 'Filling': 'Chocolate Ganache (+500 RWF)' } },
       { id: 'dish-302', name: 'Spiced Beef Meat Pie', price: 2000, quantity: 2, selectedOptions: {} }
@@ -610,12 +610,12 @@ export const INITIAL_ORDERS = [
     pricing: {
       subtotal: 10000,
       deliveryFee: 1000,
-      platformFee: 500,
-      total: 11500
+      total: 11000
     },
     payment: {
       method: 'MTN Mobile Money',
-      status: 'Paid',
+      methodCode: 'momo',
+      status: 'paid',
       transactionId: 'TXN-MOMO-994122'
     },
     deliveryAddress: {

@@ -45,6 +45,7 @@ export default function OrderTrackingPage() {
     activeTrackingOrderId, 
     advanceOrderStatus, 
     setOrderStatus, 
+    cancelOrder,
     rateOrder, 
     submitComplaint 
   } = useOrders();
@@ -75,7 +76,10 @@ export default function OrderTrackingPage() {
   }
 
   const currentStatusIndex = ORDER_STATUSES.findIndex((s) => s.id === order.status);
-  const isDeliveredOrDone = order.status === 'Delivered' || order.status === 'Completed';
+  const isDeliveredOrDone = order.status === 'delivered';
+  const isCancelled = order.status === 'cancelled';
+  const canCancel = ['placed', 'confirmed', 'preparing', 'ready'].includes(order.status);
+  const progressStatuses = ORDER_STATUSES.filter((status) => status.id !== 'cancelled');
 
   const handleReviewSubmit = (e) => {
     e.preventDefault();
@@ -138,7 +142,7 @@ export default function OrderTrackingPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => advanceOrderStatus(order.id)}
-            disabled={order.status === 'Completed'}
+            disabled={isDeliveredOrDone || isCancelled}
             className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#8a5332] to-[#6d391d] hover:from-[#a0633e] hover:to-[#824424] disabled:opacity-50 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
           >
             <FastForward className="w-3.5 h-3.5" />
@@ -150,12 +154,23 @@ export default function OrderTrackingPage() {
             onChange={(e) => setOrderStatus(order.id, e.target.value)}
             className="bg-[#2b1206] text-stone-200 text-xs font-semibold px-3 py-2 rounded-xl border border-[#522712] outline-none cursor-pointer"
           >
-            {ORDER_STATUSES.map((s) => (
+            {ORDER_STATUSES.filter((status) => (
+              status.id !== 'cancelled' || canCancel || isCancelled
+            )).map((s) => (
               <option key={s.id} value={s.id}>
                 Jump to: {s.label}
               </option>
             ))}
           </select>
+          {canCancel && (
+            <button
+              type="button"
+              onClick={() => cancelOrder(order.id, 'Cancelled from order tracking')}
+              className="px-3.5 py-2 rounded-xl border border-red-400/40 text-red-200 hover:bg-red-500/15 font-bold text-xs transition"
+            >
+              Cancel order
+            </button>
+          )}
         </div>
       </div>
 
@@ -164,10 +179,10 @@ export default function OrderTrackingPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-100">
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-[#542813]">
-              Live Order Status
+              {isDeliveredOrDone ? 'Order complete' : isCancelled ? 'Order cancelled' : 'Order status'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-1">
-              {ORDER_STATUSES[currentStatusIndex]?.label || order.status}
+              {ORDER_STATUSES[currentStatusIndex]?.label || order.status.replaceAll('_', ' ')}
             </h1>
             <p className="text-xs sm:text-sm text-stone-600 mt-1 font-medium">
               {ORDER_STATUSES[currentStatusIndex]?.description}
@@ -189,6 +204,11 @@ export default function OrderTrackingPage() {
         </div>
 
         {/* Step-by-Step Progress Tracker */}
+        {isCancelled ? (
+          <div className="mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+            This order was cancelled. {order.cancelReason || ''}
+          </div>
+        ) : (
         <div className="pt-8 pb-4">
           <div className="relative">
             {/* Progress line */}
@@ -196,13 +216,13 @@ export default function OrderTrackingPage() {
             <div
               className="hidden sm:block absolute top-1/2 left-4 h-1 bg-gradient-to-r from-[#2b1206] to-[#6d391d] -translate-y-1/2 z-0 transition-all duration-500"
               style={{
-                width: `${Math.min(100, Math.max(0, (currentStatusIndex / (ORDER_STATUSES.length - 2)) * 100))}%`
+                width: `${Math.min(100, Math.max(0, (currentStatusIndex / (progressStatuses.length - 1)) * 100))}%`
               }}
             />
 
             {/* Stepper nodes */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 relative z-10">
-              {ORDER_STATUSES.slice(0, 7).map((step, idx) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 relative z-10">
+              {progressStatuses.map((step, idx) => {
                 const isPassed = idx <= currentStatusIndex;
                 const isCurrent = idx === currentStatusIndex;
 
@@ -240,6 +260,7 @@ export default function OrderTrackingPage() {
             </div>
           </div>
         </div>
+        )}
 
       </div>
 
@@ -249,7 +270,7 @@ export default function OrderTrackingPage() {
         <div className="lg:col-span-7 space-y-6">
           
           {/* Driver Card */}
-          {order.driver && (
+          {order.driver && ['out_for_delivery', 'delivered'].includes(order.status) && (
             <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                 Assigned Delivery Partner
@@ -389,10 +410,6 @@ export default function OrderTrackingPage() {
                 <span>Delivery Fee</span>
                 <span>{order.pricing.deliveryFee.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Platform Service</span>
-                <span>{order.pricing.platformFee.toLocaleString()} RWF</span>
-              </div>
               <div className="flex justify-between text-sm font-black text-gray-900 pt-2 border-t border-stone-200">
                 <span>Total Paid</span>
                 <span className="text-[#4e2410]">{order.pricing.total.toLocaleString()} RWF</span>
@@ -400,7 +417,10 @@ export default function OrderTrackingPage() {
             </div>
 
             <div className="p-3 bg-stone-50 rounded-xl text-[11px] text-stone-500 font-medium border border-stone-100">
-              Payment via <span className="font-bold text-stone-700">{order.payment.method}</span> · Status: <span className="font-bold text-emerald-600">{order.payment.status}</span>
+              Payment via <span className="font-bold text-gray-700">{order.payment.method}</span> · Status:{' '}
+              <span className={`font-bold ${order.payment.status === 'paid' ? 'text-emerald-600' : order.payment.status === 'refunded' ? 'text-blue-600' : 'text-amber-600'}`}>
+                {order.payment.status}
+              </span>
             </div>
 
           </div>

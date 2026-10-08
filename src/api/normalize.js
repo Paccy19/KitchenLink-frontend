@@ -82,10 +82,17 @@ export function normalizeVendor(raw = {}) {
     deliveryAvailable: toBool(raw.delivery_available ?? raw.delivery, true),
     isOpen: toBool(raw.is_open ?? raw.open ?? raw.is_open_now, true),
     bannerUrl: toText(
-      raw.banner_url, raw.cover_image, raw.coverImage, raw.image_url, raw.banner,
+      raw.banner_image_url, raw.banner_url, raw.cover_image, raw.coverImage, raw.image_url, raw.banner,
     ),
     avatarUrl: toText(raw.avatar_url, raw.logo_url, raw.avatarImage, raw.avatar),
-    neighborhood: toText(raw.neighborhood, raw.location, raw.area, raw.address, 'Kigali'),
+    neighborhood: toText(
+      raw.neighborhood,
+      raw.location?.neighborhood,
+      typeof raw.location === 'string' ? raw.location : '',
+      raw.area,
+      raw.address,
+      'Kigali',
+    ),
     description: toText(raw.description, raw.tagline, raw.summary),
     deliveryFee: toNumber(raw.delivery_fee ?? raw.deliveryFee, 0),
     minimumOrder: toNumber(raw.minimum_order ?? raw.minOrder, 0),
@@ -95,6 +102,8 @@ export function normalizeVendor(raw = {}) {
       : Array.isArray(raw.tags) ? raw.tags : [],
     coordinates: raw.coordinates
       ? { lat: toNumber(raw.coordinates.lat), lng: toNumber(raw.coordinates.lng) }
+      : raw.location && (raw.location.latitude != null || raw.location.longitude != null)
+        ? { lat: toNumber(raw.location.latitude), lng: toNumber(raw.location.longitude) }
       : null,
   };
 }
@@ -114,9 +123,12 @@ export function normalizeDish(raw = {}, vendorRef = null) {
           type: toText(rawVendor.vendor_type, rawVendor.type, 'Food Vendor'),
         }
       : {
-          id: toText(typeof rawVendor === 'string' ? rawVendor : vendorRef?.id),
+          id: toText(
+            typeof rawVendor === 'string' ? rawVendor : vendorRef?.id,
+            raw.vendor_id,
+          ),
           name: toText(typeof rawVendor === 'string' ? '' : vendorRef?.name, raw.vendor_name),
-          type: toText(vendorRef?.type, 'Food Vendor'),
+          type: toText(vendorRef?.type, raw.vendor_type, 'Food Vendor'),
         };
 
   return {
@@ -125,7 +137,7 @@ export function normalizeDish(raw = {}, vendorRef = null) {
     description: toText(raw.description, raw.summary),
     price: toNumber(raw.price_rwf ?? raw.price ?? raw.amount, 0),
     image: toText(raw.image_url, raw.image, raw.photo_url, raw.photo),
-    category: toText(raw.category, raw.menu_category, raw.section, 'Menu'),
+    category: toText(raw.category, raw.category_name, raw.menu_category, raw.section, 'Menu'),
     isAvailable: toBool(raw.is_available ?? raw.available, true),
     prepTime: formatPrepTime(raw.estimated_prep_time ?? raw.prep_time ?? raw.prepTime),
     isPreorder: toBool(raw.is_preorder ?? raw.isPreorder, false),
@@ -151,8 +163,15 @@ export function normalizeDish(raw = {}, vendorRef = null) {
  */
 export function normalizeVendorDetail(raw = {}) {
   const vendor = normalizeVendor(raw);
-  const rawMenu = Array.isArray(raw.menu) ? raw.menu : (raw.items ?? []);
-  const menu = rawMenu.map((dish) => normalizeDish(dish, vendor));
+  const menuGroups = Array.isArray(raw.menu) ? raw.menu : [];
+  const rawMenu = menuGroups.flatMap((group) =>
+    Array.isArray(group?.items)
+      ? group.items.map((item) => ({ ...item, category: item.category ?? group.category }))
+      : [group],
+  );
+  const menu = (rawMenu.length ? rawMenu : (raw.items ?? [])).map((dish) =>
+    normalizeDish(dish, vendor),
+  );
 
   const categories = Array.isArray(raw.menu_categories) && raw.menu_categories.length
     ? raw.menu_categories

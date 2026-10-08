@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Optional dev proxy: set VITE_API_PROXY=http://localhost:8000 to forward
-// /api/* requests to a local backend while developing.
+// The API proxy is opt-in: set VITE_USE_MOCK=auto and VITE_API_PROXY to
+// forward /api/* requests to a local backend during integration work.
 const proxyTarget = process.env.VITE_API_PROXY;
 
 export default defineConfig({

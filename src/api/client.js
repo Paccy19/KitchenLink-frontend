@@ -3,13 +3,12 @@
  *
  * - Reads the base URL from `VITE_API_BASE_URL`
  * - Applies request timeouts and normalises errors into `ApiError`
- * - Falls back to the built-in mock server when the backend is unreachable
- *   (unless `VITE_USE_MOCK=false`), so the frontend is fully usable while the
- *   backend is still being built.
+ * - Uses local mock handlers by default so the frontend stays disconnected
+ *   from the backend until API mode is explicitly enabled.
  *
  * Mock modes (VITE_USE_MOCK):
- *   - unset / "auto" → try the real API first, fall back to mocks on failure
- *   - "true"         → always use mocks (fast local development)
+ *   - unset / "true" → use local mocks without contacting the backend
+ *   - "auto"         → try the real API first, fall back to mocks on failure
  *   - "false"        → never use mocks, surface network errors
  *
  * @module api/client
@@ -17,7 +16,7 @@
 
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 const BASE_URL = String(RAW_BASE).replace(/\/+$/, '');
-const MOCK_MODE = (import.meta.env.VITE_USE_MOCK ?? 'auto').toLowerCase();
+const MOCK_MODE = (import.meta.env.VITE_USE_MOCK ?? 'true').toLowerCase();
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT ?? 8000);
 
 export class ApiError extends Error {

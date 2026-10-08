@@ -38,7 +38,7 @@ export default function VendorsPage() {
   const { currentLocation } = useLocation();
 
   const categoryId = searchParams.get('category');
-  const sort = ['distance', 'rating', 'prep_time'].includes(searchParams.get('sort'))
+  const sort = ['distance', 'rating'].includes(searchParams.get('sort'))
     ? searchParams.get('sort')
     : 'distance';
   const radius = RADIUS_OPTIONS.includes(Number(searchParams.get('radius')))

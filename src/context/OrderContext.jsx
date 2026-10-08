@@ -4,21 +4,42 @@ import { INITIAL_ORDERS } from '../data/mockData';
 const OrderContext = createContext(null);
 
 export const ORDER_STATUSES = [
-  { id: 'Pending', label: 'Order Received', icon: 'clipboard', description: 'Your order was sent to the kitchen.' },
-  { id: 'Accepted', label: 'Order Accepted', icon: 'check-circle', description: 'The kitchen accepted your order.' },
-  { id: 'Preparing', label: 'Cooking & Preparing', icon: 'chef-hat', description: 'Fresh ingredients are being cooked.' },
-  { id: 'Ready for Pickup', label: 'Ready for Pickup', icon: 'shopping-bag', description: 'Food packed, waiting for delivery partner.' },
-  { id: 'Assigned to Driver', label: 'Driver Assigned', icon: 'bike', description: 'Delivery partner is heading to the kitchen.' },
-  { id: 'Picked Up', label: 'Food Picked Up', icon: 'package', description: 'Driver has picked up your food package.' },
-  { id: 'Out for Delivery', label: 'On The Way', icon: 'send', description: 'Driver is en route to your address.' },
-  { id: 'Delivered', label: 'Arrived & Delivered', icon: 'award', description: 'Enjoy your hot meal!' },
-  { id: 'Completed', label: 'Completed', icon: 'check', description: 'Order successfully finished.' }
+  { id: 'placed', label: 'Order placed', icon: '📝', description: 'Your order was sent to the kitchen.' },
+  { id: 'confirmed', label: 'Confirmed by kitchen', icon: '✅', description: 'The kitchen accepted your order.' },
+  { id: 'preparing', label: 'Preparing your food', icon: '🍳', description: 'Fresh ingredients are being cooked.' },
+  { id: 'ready', label: 'Ready for pickup', icon: '🛍️', description: 'Food packed and waiting for delivery.' },
+  { id: 'out_for_delivery', label: 'Out for delivery', icon: '🛵', description: 'Your order is on the way.' },
+  { id: 'delivered', label: 'Delivered', icon: '🎉', description: 'Enjoy your meal!' },
+  { id: 'cancelled', label: 'Cancelled', icon: '×', description: 'This order has been cancelled.' },
 ];
+
+const LEGACY_STATUSES = {
+  Pending: 'placed',
+  Accepted: 'confirmed',
+  Preparing: 'preparing',
+  'Ready for Pickup': 'ready',
+  'Assigned to Driver': 'out_for_delivery',
+  'Picked Up': 'out_for_delivery',
+  'Out for Delivery': 'out_for_delivery',
+  Delivered: 'delivered',
+  Completed: 'delivered',
+  Cancelled: 'cancelled',
+};
+
+const normalizeStoredOrders = (orders) =>
+  Array.isArray(orders)
+    ? orders.map((order) => ({ ...order, status: LEGACY_STATUSES[order.status] ?? order.status }))
+    : INITIAL_ORDERS;
 
 export const OrderProvider = ({ children }) => {
   const [orders, setOrders] = useState(() => {
     const saved = localStorage.getItem('ofk_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    if (!saved) return normalizeStoredOrders(INITIAL_ORDERS);
+    try {
+      return normalizeStoredOrders(JSON.parse(saved));
+    } catch {
+      return normalizeStoredOrders(INITIAL_ORDERS);
+    }
   });
 
   const [activeTrackingOrderId, setActiveTrackingOrderId] = useState(() => {
@@ -60,12 +81,13 @@ export const OrderProvider = ({ children }) => {
       vendorLocation: vendor.location,
       orderType: orderType === 'scheduled' ? 'Scheduled' : 'Immediate',
       scheduledInfo: orderType === 'scheduled' ? scheduledInfo : null,
-      status: 'Pending',
+      status: 'placed',
       items: [...items],
       pricing,
       payment: {
-        method: paymentMethod.name,
-        status: 'Paid',
+        method: paymentMethod.label,
+        methodCode: paymentMethod.code,
+        status: paymentMethod.code === 'cash_on_delivery' ? 'pending' : 'paid',
         phone: paymentMethod.phone || '',
         transactionId: `TXN-${Math.floor(100000 + Math.random() * 900000)}`
       },
@@ -87,11 +109,11 @@ export const OrderProvider = ({ children }) => {
   };
 
   const advanceOrderStatus = (orderId) => {
-    const statusOrder = ['Pending', 'Accepted', 'Preparing', 'Ready for Pickup', 'Picked Up', 'Out for Delivery', 'Delivered', 'Completed'];
+    const statusOrder = ORDER_STATUSES.filter((status) => status.id !== 'cancelled').map((status) => status.id);
     setOrders(prev => prev.map(ord => {
       if (ord.id === orderId) {
         const currentIndex = statusOrder.indexOf(ord.status);
-        if (currentIndex < statusOrder.length - 1) {
+        if (currentIndex >= 0 && currentIndex < statusOrder.length - 1) {
           return {
             ...ord,
             status: statusOrder[currentIndex + 1]
@@ -109,6 +131,25 @@ export const OrderProvider = ({ children }) => {
       }
       return ord;
     }));
+  };
+
+  const cancelOrder = (orderId, reason = '') => {
+    const cancellable = ['placed', 'confirmed', 'preparing', 'ready'];
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === orderId && cancellable.includes(order.status)
+          ? {
+              ...order,
+              status: 'cancelled',
+              cancelReason: reason,
+              payment:
+                order.payment.status === 'paid'
+                  ? { ...order.payment, status: 'refunded' }
+                  : order.payment,
+            }
+          : order,
+      ),
+    );
   };
 
   const rateOrder = (orderId, rating, reviewText) => {
@@ -148,6 +189,7 @@ export const OrderProvider = ({ children }) => {
       placeOrder,
       advanceOrderStatus,
       setOrderStatus,
+      cancelOrder,
       rateOrder,
       submitComplaint,
       complaints,

@@ -21,7 +21,14 @@ export default function useHomeFeed() {
     select: (data) => ({
       location: data?.location ?? { ...coords, label },
       categories: pickList(data, 'categories').map(normalizeCategory),
-      featuredVendors: pickList(data, 'featured_vendors', 'featuredVendors', 'vendors').map(normalizeVendor),
+      featuredVendors: pickList(
+        data,
+        'featured_vendors',
+        'featuredVendors',
+        'nearby_vendors',
+        'nearbyVendors',
+        'vendors',
+      ).map(normalizeVendor),
       nearbyVendors: pickList(data, 'nearby_vendors', 'nearbyVendors').map(normalizeVendor),
       popularDishes: pickList(data, 'popular_dishes', 'popularDishes', 'dishes').map((dish) =>
         normalizeDish(dish),

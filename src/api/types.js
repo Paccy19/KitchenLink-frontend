@@ -33,6 +33,7 @@
  * @property {number|string} [estimated_prep_time]  e.g. 25 or "20–30 min"
  * @property {boolean} [delivery_available]
  * @property {boolean} [is_open]
+ * @property {string} [banner_image_url]
  * @property {string} [banner_url]
  * @property {string} [avatar_url]
  * @property {string} [neighborhood]
@@ -55,10 +56,13 @@
  * @property {number|string} [price_rwf]
  * @property {string} [image_url]
  * @property {string} [category]
+ * @property {string} [category_name]
  * @property {boolean} [is_available]
  * @property {number|string} [estimated_prep_time]
  * @property {RawDishOption[]} [options]
  * @property {Object|RawVendorSummary|string} [vendor]  Vendor ref (summary, id or name)
+ * @property {string|number} [vendor_id]
+ * @property {string} [vendor_name]
  * @property {number} [price]
  * @property {string} [image]
  * @property {boolean} [is_preorder]
@@ -84,11 +88,10 @@
  */
 
 /**
- * GET /home/vendors/nearby?lat&lng&radius&category_id&sort&page&per_page
+ * GET /home/vendors/nearby?lat&lng&radius&category_id&sort&page&limit
  * @typedef {Object} RawNearbyVendors
  * @property {RawVendorSummary[]} [vendors]
- * @property {{page:number, per_page:number, total:number, has_more:boolean}} [meta]
- * @property {{current_page:number, last_page:number, per_page:number, total:number}} [pagination]
+ * @property {{limit:number, page:number, offset:number, total:number, radius_km:number}} [meta]
  */
 
 /**
@@ -110,6 +113,7 @@
  * @property {number} [reviews_count]
  * @property {number|string} [estimated_prep_time]
  * @property {boolean} [delivery_available]
+ * @property {string} [banner_image_url]
  * @property {string} [banner_url]
  * @property {string} [avatar_url]
  * @property {string} [neighborhood]
@@ -117,10 +121,10 @@
  * @property {string} [operating_hours]
  * @property {number} [delivery_fee]
  * @property {number} [minimum_order]
- * @property {RawDish[]} [menu]
+ * @property {{category:string, items:RawDish[]}[]} [menu]
  * @property {string[]} [menu_categories]
  * @property {RawDish[]} [items]
- * @property {{lat:number,lng:number}} [coordinates]
+ * @property {{neighborhood?:string,address?:string,latitude?:number,longitude?:number}} [location]
  */
 
 export {};

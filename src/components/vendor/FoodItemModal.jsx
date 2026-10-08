@@ -1,22 +1,42 @@
-import React, { useState } from 'react';
-import { X, Plus, Minus, ShoppingBag, Clock, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Plus, Minus, ShoppingBag, Clock, Sparkles, Heart } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
+import { useToast } from '../common/Toast';
 
 export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
-  if (!isOpen || !item) return null;
-
   const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const toast = useToast();
   const [quantity, setQuantity] = useState(1);
-  const [selectedOptions, setSelectedOptions] = useState(() => {
+  const [selectedOptions, setSelectedOptions] = useState({});
+  const [instructions, setInstructions] = useState('');
+
+  useEffect(() => {
+    if (!item || !isOpen) return;
     const defaults = {};
     if (item.options) {
       item.options.forEach((opt) => {
         defaults[opt.name] = opt.choices[0];
       });
     }
-    return defaults;
-  });
-  const [instructions, setInstructions] = useState('');
+    setQuantity(1);
+    setSelectedOptions(defaults);
+    setInstructions('');
+  }, [item, isOpen]);
+
+  if (!isOpen || !item) return null;
+
+  const isSaved = isInWishlist(item.id);
+  const handleWishlistToggle = () => {
+    if (isSaved) {
+      removeFromWishlist(item.id);
+      toast.info(`${item.name} removed from your wishlist`);
+    } else {
+      addToWishlist(item, vendor);
+      toast.success(`${item.name} saved for later`);
+    }
+  };
 
   const handleOptionChange = (optionName, choice) => {
     setSelectedOptions((prev) => ({
@@ -161,21 +181,33 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
               {quantity}
             </span>
             <button
-              onClick={() => setQuantity((q) => q + 1)}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 transition"
+              onClick={() => setQuantity((q) => Math.min(99, q + 1))}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 transition"
+              disabled={quantity >= 99}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Add to cart submit */}
-          <button
-            onClick={handleAddToCart}
-            className="flex-1 py-3 px-5 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95"
-          >
-            <ShoppingBag className="w-4 h-4 text-[#d9bda6]" />
-            <span>Add to Cart · {(item.price * quantity).toLocaleString()} RWF</span>
-          </button>
+          <div className="flex flex-1 gap-2">
+            <button
+              type="button"
+              onClick={handleWishlistToggle}
+              aria-pressed={isSaved}
+              className="px-3 rounded-2xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
+              aria-label={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
+              title={isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
+            >
+              <Heart className={`w-5 h-5 ${isSaved ? 'fill-rose-500' : ''}`} />
+            </button>
+            <button
+              onClick={handleAddToCart}
+              className="flex-1 py-3 px-5 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95"
+            >
+              <ShoppingBag className="w-4 h-4 text-[#d9bda6]" />
+              <span>Add to Cart · {(item.price * quantity).toLocaleString()} RWF</span>
+            </button>
+          </div>
         </div>
 
       </div>

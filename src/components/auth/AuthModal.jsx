@@ -31,13 +31,13 @@ export default function AuthModal() {
 
   const handleOtpSubmit = (e) => {
     e.preventDefault();
-    if (!otpCode || otpCode.length < 4) {
-      setError('Please enter the 4-digit OTP code');
+    if (!/^\d{6}$/.test(otpCode)) {
+      setError('Please enter the 6-digit OTP code');
       return;
     }
     const success = verifyOtp(otpCode, name);
     if (!success) {
-      setError('Invalid code. Please use 1234.');
+      setError('Invalid code. Please use the demo code 123456.');
     }
   };
 
@@ -128,10 +128,10 @@ export default function AuthModal() {
               <span>Demo Quick Code:</span>
               <button
                 type="button"
-                onClick={() => setOtpCode('1234')}
+                onClick={() => setOtpCode('123456')}
                 className="font-black underline text-[#542813]"
               >
-                Insert 1234
+                Insert 123456
               </button>
             </div>
 
@@ -143,12 +143,12 @@ export default function AuthModal() {
 
             <form onSubmit={handleOtpSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-                  Enter 4-Digit Code
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">
+                  Enter 6-Digit Code
                 </label>
                 <input
                   type="text"
-                  maxLength={4}
+                  maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
                   placeholder="••••"

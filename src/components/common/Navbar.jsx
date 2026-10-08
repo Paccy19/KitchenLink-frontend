@@ -11,17 +11,20 @@ import {
   LogOut, 
   ListOrdered,
   CalendarDays,
+  Heart,
   Menu,
   X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLocation } from '../../context/LocationContext';
+import { useWishlist } from '../../context/WishlistContext';
 
 export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal, logout } = useAuth();
   const { totalItemCount, setIsCartOpen } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const { currentLocation, setIsLocationModalOpen, neighborhoods, selectLocation } = useLocation();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -138,6 +141,20 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               )}
             </button>
 
+            <Link
+              to="/wishlist"
+              aria-label={`Saved dishes${wishlistItems.length ? `, ${wishlistItems.length} ${wishlistItems.length === 1 ? 'item' : 'items'}` : ''}`}
+              title="Saved dishes"
+              className="relative p-2.5 rounded-xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
+            >
+              <Heart className="w-4 h-4" />
+              {wishlistItems.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full bg-rose-600 text-white text-[9px] flex items-center justify-center font-bold">
+                  {wishlistItems.length}
+                </span>
+              )}
+            </Link>
+
             {/* User Account / Login */}
             {isAuthenticated ? (
               <div className="relative">
@@ -179,6 +196,15 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                     >
                       <ListOrdered className="w-4 h-4 text-stone-400" />
                       <span>Order History</span>
+                    </Link>
+
+                    <Link
+                      to="/wishlist"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition"
+                    >
+                      <Heart className="w-4 h-4 text-rose-500" />
+                      <span>Saved Dishes</span>
                     </Link>
 
                     <Link
@@ -253,6 +279,14 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
             >
               Order History
+            </Link>
+            <Link
+              to="/wishlist"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-orange-50 rounded-lg"
+            >
+              <Heart className="w-4 h-4 text-rose-500" />
+              Saved Dishes
             </Link>
             <Link
               to="/track"

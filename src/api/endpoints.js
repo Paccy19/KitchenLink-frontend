@@ -38,13 +38,13 @@ export function fetchCategories() {
 }
 
 /**
- * GET /home/vendors/nearby?lat&lng&radius&category_id&sort&page&per_page
+ * GET /home/vendors/nearby?lat&lng&radius&category_id&sort&page&limit
  *
  * @param {{
  *   lat:number|string, lng:number|string,
  *   radius?:number, category_id?:string,
- *   sort?:'distance'|'rating'|'prep_time',
- *   page?:number, per_page?:number
+ *   sort?:'distance'|'rating',
+ *   page?:number, limit?:number
  * }} params
  * @returns {Promise<import('./types').RawNearbyVendors>}
  */

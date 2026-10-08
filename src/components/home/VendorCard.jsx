@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { Bike, Clock, MapPin, Star } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
-import { formatRwf } from '../../api/normalize';
 
 const TYPE_STYLES = {
   'Home Cook': 'bg-[#3d1b0c] text-white',

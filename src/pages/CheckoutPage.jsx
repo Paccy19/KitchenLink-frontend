@@ -10,7 +10,6 @@ import {
   ShieldCheck, 
   AlertCircle,
   Plus,
-  Wallet
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -23,7 +22,6 @@ export default function CheckoutPage() {
     activeVendor, 
     subtotal, 
     deliveryFee, 
-    platformFee, 
     grandTotal, 
     clearCart,
     orderType,
@@ -46,7 +44,7 @@ export default function CheckoutPage() {
   const [newInstructions, setNewInstructions] = useState('');
 
   // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState('mtn_momo');
+  const [paymentMethod, setPaymentMethod] = useState('momo');
   const [momoPhone, setMomoPhone] = useState(user.phone || '+250 788 123 456');
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,39 +102,26 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     setTimeout(() => {
-      const placedOrder = placeOrder({
-        vendorId: activeVendor?.id || 'vendor-1',
-        vendorName: activeVendor?.name || 'Mama Grace Kitchen',
-        vendorType: activeVendor?.type || 'Home Cook',
-        vendorLocation: activeVendor?.location || 'Kimironko, Kigali',
-        items: cartItems.map((ci) => ({
-          dishId: ci.id,
-          name: ci.name,
-          price: ci.price,
-          quantity: ci.quantity,
-          selectedOptions: ci.selectedOptions || {},
-          image: ci.image
-        })),
-        pricing: {
-          subtotal,
-          deliveryFee,
-          platformFee,
-          total: grandTotal
-        },
+      const orderId = placeOrder({
+        items: cartItems,
+        vendor: activeVendor,
         deliveryAddress: currentAddr,
-        orderType,
-        scheduledDetails: orderType === 'scheduled' ? { date: scheduledDate, time: scheduledTime } : null,
-        payment: {
-          method: paymentMethod === 'mtn_momo' ? 'MTN MoMo' : paymentMethod === 'airtel_money' ? 'Airtel Money' : 'Card',
-          phone: momoPhone,
-          status: 'Authorized Escrow'
+        paymentMethod: {
+          code: paymentMethod,
+          label: paymentMethod === 'momo' ? 'MTN Mobile Money'
+            : paymentMethod === 'card' ? 'Visa / Mastercard'
+            : 'Cash on Delivery',
+          phone: paymentMethod === 'momo' ? momoPhone : '',
         },
-        notes: orderNotes
+        orderType,
+        scheduledInfo: { date: scheduledDate, time: scheduledTime },
+        pricing: { subtotal, deliveryFee, total: grandTotal },
+        specialNotes: orderNotes
       });
 
       clearCart();
       setIsSubmitting(false);
-      navigate(`/track/${placedOrder.id}`);
+      navigate(`/track/${orderId}`);
     }, 1200);
   };
 
@@ -331,7 +316,7 @@ export default function CheckoutPage() {
               {/* MTN MoMo */}
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
-                  paymentMethod === 'mtn_momo'
+                  paymentMethod === 'momo'
                     ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
                     : 'border-stone-200 hover:bg-stone-50'
                 }`}
@@ -340,8 +325,8 @@ export default function CheckoutPage() {
                   <input
                     type="radio"
                     name="pay_method"
-                    checked={paymentMethod === 'mtn_momo'}
-                    onChange={() => setPaymentMethod('mtn_momo')}
+                    checked={paymentMethod === 'momo'}
+                    onChange={() => setPaymentMethod('momo')}
                     className="accent-[#542813]"
                   />
                   <div>
@@ -351,33 +336,6 @@ export default function CheckoutPage() {
                       <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.2 rounded font-bold">Recommended</span>
                     </div>
                     <p className="text-[11px] text-stone-500">Instant push prompt on your Rwandan phone</p>
-                  </div>
-                </div>
-                <Smartphone className="w-5 h-5 text-stone-400" />
-              </label>
-
-              {/* Airtel Money */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
-                  paymentMethod === 'airtel_money'
-                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
-                    : 'border-stone-200 hover:bg-stone-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="pay_method"
-                    checked={paymentMethod === 'airtel_money'}
-                    onChange={() => setPaymentMethod('airtel_money')}
-                    className="accent-[#542813]"
-                  />
-                  <div>
-                    <div className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
-                      <span>Airtel Money</span>
-                    </div>
-                    <p className="text-[11px] text-stone-500">Pay via Airtel Money wallet</p>
                   </div>
                 </div>
                 <Smartphone className="w-5 h-5 text-stone-400" />
@@ -407,10 +365,10 @@ export default function CheckoutPage() {
                 <CreditCard className="w-5 h-5 text-stone-400" />
               </label>
 
-              {/* eKash / Wallet */}
+              {/* Cash on delivery */}
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
-                  paymentMethod === 'ekash'
+                  paymentMethod === 'cash_on_delivery'
                     ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
                     : 'border-stone-200 hover:bg-stone-50'
                 }`}
@@ -419,21 +377,21 @@ export default function CheckoutPage() {
                   <input
                     type="radio"
                     name="pay_method"
-                    checked={paymentMethod === 'ekash'}
-                    onChange={() => setPaymentMethod('ekash')}
+                    checked={paymentMethod === 'cash_on_delivery'}
+                    onChange={() => setPaymentMethod('cash_on_delivery')}
                     className="accent-[#542813]"
                   />
                   <div>
-                    <div className="font-bold text-xs text-gray-900">eKash Rwanda / Platform Wallet</div>
-                    <p className="text-[11px] text-stone-500">Interoperable instant mobile wallet</p>
+                    <div className="font-bold text-xs text-gray-900">Cash on Delivery</div>
+                    <p className="text-[11px] text-stone-500">Pay your rider when the order arrives</p>
                   </div>
                 </div>
-                <Wallet className="w-5 h-5 text-stone-400" />
+                <Clock className="w-5 h-5 text-stone-400" />
               </label>
             </div>
 
             {/* Mobile Money Phone Input if momo chosen */}
-            {(paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && (
+            {paymentMethod === 'momo' && (
               <div className="pt-2">
                 <label className="block text-xs font-bold text-stone-700 mb-1">
                   Payment Phone Number
@@ -511,15 +469,11 @@ export default function CheckoutPage() {
                 <span>Items Subtotal</span>
                 <span className="font-bold">{subtotal.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Rider Delivery Fee</span>
+              <div className="flex justify-between text-gray-600">
+                <span>Delivery fee (free over 15,000 RWF)</span>
                 <span className="font-bold">{deliveryFee.toLocaleString()} RWF</span>
               </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Platform Service Fee</span>
-                <span className="font-bold">{platformFee.toLocaleString()} RWF</span>
-              </div>
-              <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-stone-200">
+              <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
                 <span>Total Due</span>
                 <span className="text-[#4e2410]">{grandTotal.toLocaleString()} RWF</span>
               </div>
@@ -528,7 +482,7 @@ export default function CheckoutPage() {
             {/* Trust badge */}
             <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-[11px] text-emerald-800 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span>Payments held safely in escrow until your food is delivered.</span>
+              <span>Checkout is simulated locally. No payment provider is connected yet.</span>
             </div>
 
             {/* Submit Button */}
@@ -540,11 +494,11 @@ export default function CheckoutPage() {
               }`}
             >
               {isSubmitting ? (
-                <span>Authorizing Payment & Sending Order...</span>
+                <span>Placing your order...</span>
               ) : (
                 <>
-                  <CheckCircle2 className="w-5 h-5 text-[#d9bda6]" />
-                  <span>Confirm & Pay {grandTotal.toLocaleString()} RWF</span>
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span>Place Order · {grandTotal.toLocaleString()} RWF</span>
                 </>
               )}
             </button>

@@ -10,7 +10,7 @@ import {
   ShoppingBag, 
   ChefHat 
 } from 'lucide-react';
-import { useOrders } from '../context/OrderContext';
+import { ORDER_STATUSES, useOrders } from '../context/OrderContext';
 import { useCart } from '../context/CartContext';
 import { VENDORS } from '../data/mockData';
 
@@ -89,7 +89,7 @@ export default function OrdersHistoryPage() {
       ) : (
         <div className="space-y-6">
           {orders.map((order) => {
-            const isLive = order.status !== 'Delivered' && order.status !== 'Completed' && order.status !== 'Cancelled';
+            const isLive = !['delivered', 'cancelled'].includes(order.status);
 
             return (
               <div
@@ -117,12 +117,12 @@ export default function OrdersHistoryPage() {
                       className={`text-xs font-black px-3 py-1 rounded-full ${
                         isLive
                           ? 'bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] animate-pulse'
-                          : order.status === 'Cancelled'
+                          : order.status === 'cancelled'
                           ? 'bg-red-100 text-red-800'
                           : 'bg-emerald-100 text-emerald-800'
                       }`}
                     >
-                      ● {order.status}
+                      ● {ORDER_STATUSES.find((status) => status.id === order.status)?.label ?? order.status}
                     </span>
 
                     {isLive && (
