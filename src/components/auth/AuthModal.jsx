@@ -9,7 +9,10 @@ export default function AuthModal() {
     authStep,
     sendOtp,
     verifyOtp,
-    pendingPhone
+    pendingPhone,
+    pendingName,
+    otpPreview,
+    authError
   } = useAuth();
 
   const [phone, setPhone] = useState('+250 788 123 456');
@@ -26,7 +29,9 @@ export default function AuthModal() {
       return;
     }
     setError('');
-    sendOtp(phone);
+    sendOtp(phone, name).catch((requestError) => {
+      setError(requestError.message);
+    });
   };
 
   const handleOtpSubmit = (e) => {
@@ -35,10 +40,11 @@ export default function AuthModal() {
       setError('Please enter the 6-digit OTP code');
       return;
     }
-    const success = verifyOtp(otpCode, name);
-    if (!success) {
-      setError('Invalid code. Please use the demo code 123456.');
-    }
+    verifyOtp(otpCode, pendingName || name)
+      .then((success) => {
+        if (!success) setError('Invalid verification code.');
+      })
+      .catch((requestError) => setError(requestError.message));
   };
 
   return (
@@ -66,9 +72,9 @@ export default function AuthModal() {
               Enter your phone number to sign in or create your customer account
             </p>
 
-            {error && (
+            {(error || authError) && (
               <div className="p-3 mb-4 rounded-xl bg-red-50 text-red-600 text-xs font-semibold">
-                {error}
+                {error || authError}
               </div>
             )}
 
@@ -120,24 +126,25 @@ export default function AuthModal() {
               Verify OTP Code
             </h3>
             <p className="text-xs text-stone-500 mb-4 font-medium">
-              We sent a verification SMS to <span className="font-bold text-gray-800">{pendingPhone}</span>
+              We sent a verification code to <span className="font-bold text-gray-800">{pendingPhone}</span>
             </p>
 
-            {/* Test hint for convenience */}
-            <div className="p-3 mb-4 rounded-xl bg-[#faf6f2] border border-[#ebd7c5] text-[#3d1b0c] text-xs flex items-center justify-between">
-              <span>Demo Quick Code:</span>
-              <button
-                type="button"
-                onClick={() => setOtpCode('123456')}
-                className="font-black underline text-[#542813]"
-              >
-                Insert 123456
-              </button>
-            </div>
+            {otpPreview && (
+              <div className="p-3 mb-4 rounded-xl bg-[#faf6f2] border border-[#ebd7c5] text-[#3d1b0c] text-xs flex items-center justify-between">
+                <span>Development OTP: {otpPreview}</span>
+                <button
+                  type="button"
+                  onClick={() => setOtpCode(otpPreview)}
+                  className="font-black underline text-[#542813]"
+                >
+                  Insert code
+                </button>
+              </div>
+            )}
 
-            {error && (
+            {(error || authError) && (
               <div className="p-3 mb-4 rounded-xl bg-red-50 text-red-600 text-xs font-semibold">
-                {error}
+                {error || authError}
               </div>
             )}
 

@@ -10,17 +10,21 @@ import { formatRwf } from '../api/normalize';
 
 export default function WishlistPage() {
   const navigate = useNavigate();
-  const { items, removeFromWishlist } = useWishlist();
+  const { items, removeFromWishlist, apiError } = useWishlist();
   const { addToCart } = useCart();
   const toast = useToast();
 
-  const handleAddToCart = ({ dish, vendor }) => {
+  const handleRemove = (dishId) => {
+    removeFromWishlist(dishId).catch((error) => toast.error(error.message));
+  };
+
+  const handleAddToCart = async ({ dish, vendor }) => {
     if (dish.options?.length) {
       navigate(`/vendor/${vendor.id}?dish=${encodeURIComponent(dish.id)}`);
       return;
     }
-    addToCart(dish, vendor, {}, 1);
-    toast.success(`${dish.name} added to your cart`);
+    const added = await addToCart(dish, vendor, {}, 1);
+    if (added) toast.success(`${dish.name} added to your cart`);
   };
 
   return (
@@ -45,6 +49,12 @@ export default function WishlistPage() {
         </div>
         <Heart className="hidden sm:block w-10 h-10 text-rose-500 fill-rose-100" aria-hidden="true" />
       </div>
+
+      {apiError && (
+        <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {apiError}
+        </div>
+      )}
 
       {items.length === 0 ? (
         <EmptyState
@@ -82,7 +92,7 @@ export default function WishlistPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => removeFromWishlist(dish.id)}
+                    onClick={() => handleRemove(dish.id)}
                     aria-label={`Remove ${dish.name} from wishlist`}
                     className="p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
                   >

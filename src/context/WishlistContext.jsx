@@ -1,4 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { addWishlistItem, fetchWishlist, removeWishlistItem } from '../api/endpoints';
+import { isMockMode } from '../api/client';
+import { useAuth } from './AuthContext';
 
 const WishlistContext = createContext(null);
 const STORAGE_KEY = 'ofk_wishlist';
@@ -14,23 +17,94 @@ const readWishlist = () => {
   }
 };
 
+const normalizeWishlist = (payload) => (payload.items ?? []).map((item) => ({
+  dish: {
+    id: item.menu_item_id,
+    name: item.name,
+    price: item.price_rwf,
+    image: item.image_url ?? '',
+    isAvailable: item.is_available,
+    options: [],
+  },
+  vendor: {
+    id: item.vendor_id,
+    name: item.vendor_name || 'Kitchen',
+    type: item.vendor_type || 'Food Vendor',
+    location: item.vendor_neighborhood || '',
+    deliveryFee: 1000,
+  },
+  addedAt: item.added_at,
+}));
+
 export function WishlistProvider({ children }) {
+  const { accessToken } = useAuth();
   const [items, setItems] = useState(readWishlist);
+  const [apiError, setApiError] = useState('');
+  const previousAccessToken = useRef(accessToken);
+  const guestWishlistForSync = useRef(items);
+
+  useEffect(() => {
+    if (!accessToken) {
+      if (previousAccessToken.current && !isMockMode) setItems([]);
+      previousAccessToken.current = null;
+      return;
+    }
+    previousAccessToken.current = accessToken;
+    if (isMockMode) return;
+    fetchWishlist()
+      .then(async (payload) => {
+        let wishlist = payload;
+        if (!(payload.items ?? []).length && guestWishlistForSync.current.length) {
+          for (const entry of guestWishlistForSync.current) {
+            wishlist = await addWishlistItem(entry.dish.id);
+          }
+        }
+        guestWishlistForSync.current = [];
+        setItems(normalizeWishlist(wishlist));
+        setApiError('');
+      })
+      .catch((error) => setApiError(error.message));
+  }, [accessToken]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
-  const addToWishlist = useCallback((dish, vendor) => {
+  useEffect(() => {
+    if (!accessToken && !isMockMode) guestWishlistForSync.current = items;
+  }, [items, accessToken]);
+
+  const addToWishlist = useCallback(async (dish, vendor) => {
+    if (accessToken && !isMockMode) {
+      setApiError('');
+      try {
+        const payload = await addWishlistItem(dish.id);
+        setItems(normalizeWishlist(payload));
+      } catch (error) {
+        setApiError(error.message);
+        throw error;
+      }
+      return;
+    }
     setItems((current) => {
       if (current.some((entry) => entry.dish.id === dish.id)) return current;
       return [...current, { dish, vendor, addedAt: new Date().toISOString() }];
     });
-  }, []);
+  }, [accessToken]);
 
-  const removeFromWishlist = useCallback((dishId) => {
+  const removeFromWishlist = useCallback(async (dishId) => {
+    if (accessToken && !isMockMode) {
+      setApiError('');
+      try {
+        setItems(normalizeWishlist(await removeWishlistItem(dishId)));
+      } catch (error) {
+        setApiError(error.message);
+        throw error;
+      }
+      return;
+    }
     setItems((current) => current.filter((entry) => entry.dish.id !== dishId));
-  }, []);
+  }, [accessToken]);
 
   const isInWishlist = useCallback(
     (dishId) => items.some((entry) => entry.dish.id === dishId),
@@ -38,8 +112,8 @@ export function WishlistProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ items, addToWishlist, removeFromWishlist, isInWishlist }),
-    [items, addToWishlist, removeFromWishlist, isInWishlist],
+    () => ({ items, apiError, addToWishlist, removeFromWishlist, isInWishlist }),
+    [items, apiError, addToWishlist, removeFromWishlist, isInWishlist],
   );
 
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;

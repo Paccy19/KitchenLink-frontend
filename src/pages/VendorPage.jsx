@@ -73,14 +73,28 @@ export default function VendorPage() {
     return [...groups.entries()];
   }, [vendor, activeCategory]);
 
-  const handleQuickAdd = (dish) => {
+  const handleQuickAdd = async (dish) => {
     if (!vendor) return;
     if (dish.options?.length) {
       setModalDish(dish);
       return;
     }
-    addToCart({ ...dish }, { ...vendor, location: vendor.neighborhood }, {}, 1);
-    toast.success(`${dish.name} added to cart`);
+    const added = await addToCart({ ...dish }, { ...vendor, location: vendor.neighborhood }, {}, 1);
+    if (added) toast.success(`${dish.name} added to cart`);
+  };
+
+  const handleWishlistToggle = async (dish) => {
+    try {
+      if (isInWishlist(dish.id)) {
+        await removeFromWishlist(dish.id);
+        toast.info(`${dish.name} removed from your wishlist`);
+      } else {
+        await addToWishlist(dish, { ...vendor, location: vendor.neighborhood });
+        toast.success(`${dish.name} saved for later`);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   if (isPending) {
@@ -306,15 +320,7 @@ export default function VendorPage() {
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          if (isInWishlist(dish.id)) {
-                            removeFromWishlist(dish.id);
-                            toast.info(`${dish.name} removed from your wishlist`);
-                          } else {
-                            addToWishlist(dish, { ...vendor, location: vendor.neighborhood });
-                            toast.success(`${dish.name} saved for later`);
-                          }
-                        }}
+                        onClick={() => handleWishlistToggle(dish)}
                         aria-label={isInWishlist(dish.id) ? `Remove ${dish.name} from wishlist` : `Save ${dish.name} to wishlist`}
                         aria-pressed={isInWishlist(dish.id)}
                         className="w-full inline-flex items-center justify-center gap-1 rounded-xl border border-rose-100 bg-white px-3 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50"

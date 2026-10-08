@@ -8,7 +8,7 @@
  * @module api/endpoints
  */
 
-import { apiRequest } from './client';
+import { apiJson, apiRequest } from './client';
 import {
   handleCategories,
   handleFeed,
@@ -75,3 +75,49 @@ export function fetchVendorStorefront(vendorId) {
     (params) => handleVendorDetail(params, vendorId),
   );
 }
+
+export const sendOtp = (phoneNumber, name) =>
+  apiJson('POST', '/auth/send-otp', {
+    phone_number: phoneNumber,
+    ...(name ? { name } : {}),
+  });
+
+export const verifyOtp = (phoneNumber, code, name) =>
+  apiJson('POST', '/auth/verify-otp', {
+    phone_number: phoneNumber,
+    code,
+    ...(name ? { name } : {}),
+  });
+
+export const fetchCurrentCustomer = () => apiJson('GET', '/auth/me');
+
+export const fetchCart = () => apiJson('GET', '/cart');
+export const addCartItem = (menuItemId, quantity = 1) =>
+  apiJson('POST', '/cart', { menu_item_id: menuItemId, quantity });
+export const updateCartItem = (menuItemId, quantity) =>
+  apiJson('PATCH', `/cart/${encodeURIComponent(menuItemId)}`, { quantity });
+export const removeCartItem = (menuItemId) =>
+  apiJson('DELETE', `/cart/${encodeURIComponent(menuItemId)}`);
+export const clearRemoteCart = () => apiJson('DELETE', '/cart');
+export const replaceRemoteCart = (items) => apiJson('PUT', '/cart', { items });
+
+export const fetchWishlist = () => apiJson('GET', '/wishlist');
+export const addWishlistItem = (menuItemId) =>
+  apiJson('POST', '/wishlist', { menu_item_id: menuItemId });
+export const removeWishlistItem = (menuItemId) =>
+  apiJson('DELETE', `/wishlist/${encodeURIComponent(menuItemId)}`);
+export const moveWishlistItemToCart = (menuItemId, quantity = 1) =>
+  apiJson('POST', `/wishlist/${encodeURIComponent(menuItemId)}/move-to-cart`, { quantity });
+
+export const fetchOrders = (params = {}) =>
+  apiRequest('/orders', params, null);
+export const fetchOrder = (orderId) =>
+  apiJson('GET', `/orders/${encodeURIComponent(orderId)}`);
+export const fetchOrderTracking = (orderId) =>
+  apiJson('GET', `/orders/${encodeURIComponent(orderId)}/track`);
+export const createOrder = (payload) => apiJson('POST', '/orders/checkout', payload);
+export const cancelRemoteOrder = (orderId, reason = '') =>
+  apiJson('POST', `/orders/${encodeURIComponent(orderId)}/cancel`, { reason });
+export const payRemoteOrder = (orderId, payload = {}) =>
+  apiJson('POST', `/orders/${encodeURIComponent(orderId)}/pay`, payload);
+export const fetchPaymentMethods = () => apiJson('GET', '/orders/payment-methods');

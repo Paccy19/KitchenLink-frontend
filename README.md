@@ -25,22 +25,26 @@ Copy `.env.example` to `.env.local`:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `VITE_API_BASE_URL` | `/api/v1` | Base URL for every API call (`/home/feed`, `/home/categories`, `/home/vendors/nearby`, `/home/search`, `/vendors/{id}`). |
-| `VITE_USE_MOCK` | `auto` | `auto` = call the real API first, fall back to the built-in mock server when it is unreachable. `true` = always mock. `false` = never mock. |
+| `VITE_API_BASE_URL` | `/api/v1` | Base URL for all API calls. In development, Vite proxies `/api` to `http://localhost:4000`; set `VITE_API_PROXY` to override the backend host. |
+| `VITE_USE_MOCK` | `false` | `true` = use local discovery/auth/order demos; `auto` = allow discovery calls to fall back to mocks when the backend is unavailable; `false` or unset = use the backend and surface errors. |
 | `VITE_API_TIMEOUT` | `8000` | Request timeout in ms. |
 
-> The backend is still under construction, so the app ships with a mock server
-> (`src/api/mock/mockServer.js`) that returns the exact JSON contracts the
-> backend will return — including realistic Kigali coordinates, so distance,
-> radius filtering and sorting all behave like production.
+Start the backend and MongoDB alongside Vite to use the connected API. Customer
+OTP authentication, cart, wishlist, checkout, order history, tracking, and
+cancellation use authenticated `/api/v1` endpoints. The development OTP is
+returned by the backend only outside production. Set `VITE_USE_MOCK=true` to
+explicitly use the local demo flows instead.
+
+Scheduled checkout, saved addresses, ratings, and complaints remain local
+demo-only features because the current backend does not expose those APIs.
 
 ## Architecture
 
 ```
 src/
 ├── api/                  API service layer (no React)
-│   ├── client.js         fetch wrapper + timeout + mock fallback
-│   ├── endpoints.js      one function per backend endpoint
+│   ├── client.js         authenticated fetch wrapper + timeout + explicit mock mode
+│   ├── endpoints.js      discovery and customer endpoint functions
 │   ├── types.js          JSDoc typedefs of the raw JSON contracts
 │   ├── normalize.js      snake_case payloads → camelCase view-models
 │   └── mock/             offline mock server (contract-accurate)
@@ -80,6 +84,11 @@ endpoints.js (raw JSON contract)
 | `GET /api/v1/home/vendors/nearby?lat&lng&radius&category_id&sort&page` | Filtered/sorted nearby kitchens with pagination | `useNearbyVendors` |
 | `GET /api/v1/home/search?q&lat&lng` | Global search (dishes + kitchens) | `useSearch` |
 | `GET /api/v1/vendors/{vendor_id}` | Full storefront with categorised menu | `useVendorStorefront` |
+| `POST /api/v1/auth/send-otp`, `POST /api/v1/auth/verify-otp` | Customer OTP sign-in and bearer-token session |
+| `GET/POST/PATCH/DELETE/PUT /api/v1/cart` | Authenticated cart management |
+| `GET/POST/DELETE /api/v1/wishlist` | Authenticated saved dishes |
+| `POST /api/v1/orders/checkout`, `GET /api/v1/orders` | Checkout and customer order history |
+| `GET /api/v1/orders/{id}`, `GET /api/v1/orders/{id}/track`, `POST /api/v1/orders/{id}/cancel` | Order detail, tracking, and cancellation |
 
 Field mapping between the raw contracts (snake_case) and the UI view-models
 (camelCase) lives in `src/api/normalize.js` — e.g. `price_rwf → price`,

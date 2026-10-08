@@ -14,6 +14,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
+import { useLocation } from '../context/LocationContext';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -24,12 +25,16 @@ export default function CheckoutPage() {
     deliveryFee, 
     grandTotal, 
     clearCart,
+    clearAfterCheckout,
+    apiError: cartApiError,
+    isSyncing,
     orderType,
     scheduledDate,
     scheduledTime
   } = useCart();
   const { user, isAuthenticated, openAuthModal, addAddress } = useAuth();
-  const { placeOrder } = useOrders();
+  const { placeOrder, apiEnabled, apiError, clearApiError } = useOrders();
+  const { coords } = useLocation();
 
   // Selected address state
   const [selectedAddressId, setSelectedAddressId] = useState(() => {
@@ -86,13 +91,21 @@ export default function CheckoutPage() {
     setErrorMsg('');
   };
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
+    if (isSyncing) {
+      setErrorMsg('Please wait while your basket syncs with your account.');
+      return;
+    }
     if (!isAuthenticated) {
       openAuthModal();
       return;
     }
+    if (apiEnabled && orderType === 'scheduled') {
+      setErrorMsg('Scheduled delivery is not available through the backend yet. Change the order to immediate delivery in your basket.');
+      return;
+    }
 
-    const currentAddr = user.addresses.find((a) => a.id === selectedAddressId) || user.addresses[0] || {
+    const currentAddr = user.addresses?.find((a) => a.id === selectedAddressId) || user.addresses?.[0] || {
       title: 'Current Delivery Location',
       street: 'KG 11 Ave, Kimironko',
       district: 'Kimironko',
@@ -100,12 +113,20 @@ export default function CheckoutPage() {
     };
 
     setIsSubmitting(true);
-
-    setTimeout(() => {
-      const orderId = placeOrder({
+    setErrorMsg('');
+    clearApiError();
+    try {
+      const orderId = await placeOrder({
         items: cartItems,
         vendor: activeVendor,
         deliveryAddress: currentAddr,
+        deliveryLocation: {
+          address: currentAddr.street || 'Kimironko, Kigali',
+          neighborhood: currentAddr.district || 'Kimironko',
+          latitude: coords.lat,
+          longitude: coords.lng,
+          note: [currentAddr.instructions, orderNotes].filter(Boolean).join(' | '),
+        },
         paymentMethod: {
           code: paymentMethod,
           label: paymentMethod === 'momo' ? 'MTN Mobile Money'
@@ -119,10 +140,14 @@ export default function CheckoutPage() {
         specialNotes: orderNotes
       });
 
-      clearCart();
-      setIsSubmitting(false);
+      if (apiEnabled) clearAfterCheckout();
+      else await clearCart();
       navigate(`/track/${orderId}`);
-    }, 1200);
+    } catch (error) {
+      setErrorMsg(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -299,6 +324,16 @@ export default function CheckoutPage() {
                 </p>
               </div>
             </div>
+            {apiEnabled && orderType === 'scheduled' && (
+              <p role="alert" className="text-xs font-semibold text-amber-800">
+                Scheduled orders are not supported by the connected API. Switch to immediate delivery in your basket.
+              </p>
+            )}
+            {apiEnabled && orderType === 'scheduled' && (
+              <p role="alert" className="text-xs font-semibold text-amber-800">
+                Scheduled orders are not supported by the connected API. Switch to immediate delivery in your basket.
+              </p>
+            )}
           </div>
 
           {/* 3. Payment Method */}
@@ -486,9 +521,14 @@ export default function CheckoutPage() {
             </div>
 
             {/* Submit Button */}
+            {(errorMsg || apiError || cartApiError) && (
+              <div role="alert" className="mb-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                {errorMsg || apiError || cartApiError}
+              </div>
+            )}
             <button
               onClick={handleConfirmOrder}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSyncing}
               className={`w-full py-4 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-black text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 ${
                 isSubmitting ? 'opacity-75 cursor-wait' : ''
               }`}

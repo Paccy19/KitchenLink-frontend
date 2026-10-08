@@ -13,13 +13,15 @@ import {
 import { ORDER_STATUSES, useOrders } from '../context/OrderContext';
 import { useCart } from '../context/CartContext';
 import { VENDORS } from '../data/mockData';
+import { useToast } from '../components/common/Toast';
 
 export default function OrdersHistoryPage() {
   const navigate = useNavigate();
-  const { orders, setActiveTrackingOrderId } = useOrders();
+  const { orders, setActiveTrackingOrderId, apiError, refreshOrders } = useOrders();
   const { addToCart } = useCart();
+  const toast = useToast();
 
-  const handleReorder = (order) => {
+  const handleReorder = async (order) => {
     const vendor = VENDORS.find((v) => v.id === order.vendorId) || {
       id: order.vendorId,
       name: order.vendorName,
@@ -28,14 +30,18 @@ export default function OrdersHistoryPage() {
       deliveryFee: order.pricing.deliveryFee
     };
 
-    order.items.forEach((item) => {
-      addToCart(
+    for (const item of order.items) {
+      const added = await addToCart(
         { id: item.id || item.dishId, name: item.name, price: item.price, image: item.image || vendor.coverImage },
         vendor,
         item.selectedOptions || {},
         item.quantity || 1
       );
-    });
+      if (!added) {
+        toast.error('Could not add the complete order to your basket.');
+        return;
+      }
+    }
 
     navigate('/checkout');
   };
@@ -69,6 +75,15 @@ export default function OrdersHistoryPage() {
           </p>
         </div>
       </div>
+
+      {apiError && (
+        <div role="alert" className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <span>{apiError}</span>
+          <button type="button" onClick={refreshOrders} className="font-bold underline">
+            Retry
+          </button>
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-stone-200/80 shadow-sm space-y-4 animate-scale-in">

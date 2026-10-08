@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -47,11 +47,20 @@ export default function OrderTrackingPage() {
     setOrderStatus, 
     cancelOrder,
     rateOrder, 
-    submitComplaint 
+    submitComplaint,
+    apiEnabled,
+    apiError,
+    refreshOrder,
   } = useOrders();
 
   const targetOrderId = orderId || activeTrackingOrderId;
-  const order = orders.find((o) => o.id === targetOrderId) || orders[0];
+  const order = targetOrderId
+    ? orders.find((existingOrder) => existingOrder.id === targetOrderId)
+    : orders[0];
+
+  useEffect(() => {
+    if (apiEnabled && orderId && !order) refreshOrder(orderId);
+  }, [apiEnabled, orderId, order?.id]);
 
   // Modals
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -67,7 +76,10 @@ export default function OrderTrackingPage() {
   if (!order) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
-        <h2 className="text-xl font-black text-gray-900">No active order found</h2>
+        <h2 className="text-xl font-black text-gray-900">
+          {apiError ? 'Unable to load this order' : 'No active order found'}
+        </h2>
+        {apiError && <p role="alert" className="text-sm text-red-700">{apiError}</p>}
         <Link to="/" className="px-5 py-2.5 bg-gradient-to-r from-[#2b1206] to-[#542813] text-white rounded-xl font-bold text-xs shadow-md">
           Return to Marketplace
         </Link>
@@ -121,58 +133,76 @@ export default function OrderTrackingPage() {
       </div>
 
       {/* Simulator Control Bar for instant testing */}
-      <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] text-white rounded-3xl p-4 sm:p-5 mb-8 shadow-2xl border border-[#522712]/70 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 flex items-center justify-center font-bold text-xs shadow-sm">
-            <Zap className="w-4 h-4 text-[#d9bda6]" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-white flex items-center gap-2">
-              <span>Interactive Status Simulator</span>
-              <span className="text-[10px] bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 px-2 py-0.5 rounded-full font-bold">
-                Frontend Demo
-              </span>
+      {!apiEnabled && (
+        <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] text-white rounded-3xl p-4 sm:p-5 mb-8 shadow-2xl border border-[#522712]/70 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 flex items-center justify-center font-bold text-xs shadow-sm">
+              <Zap className="w-4 h-4 text-[#d9bda6]" />
             </div>
-            <p className="text-[11px] text-stone-300">
-              Test every step of the order lifecycle live in real-time
-            </p>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-2">
+                <span>Interactive Status Simulator</span>
+                <span className="text-[10px] bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 px-2 py-0.5 rounded-full font-bold">
+                  Frontend Demo
+                </span>
+              </div>
+              <p className="text-[11px] text-stone-300">
+                Test every step of the order lifecycle live in real-time
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => advanceOrderStatus(order.id)}
+              disabled={isDeliveredOrDone || isCancelled}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#8a5332] to-[#6d391d] hover:from-[#a0633e] hover:to-[#824424] disabled:opacity-50 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
+            >
+              <FastForward className="w-3.5 h-3.5" />
+              <span>Advance to Next Status</span>
+            </button>
+
+            <select
+              value={order.status}
+              onChange={(e) => setOrderStatus(order.id, e.target.value)}
+              className="bg-[#2b1206] text-stone-200 text-xs font-semibold px-3 py-2 rounded-xl border border-[#522712] outline-none cursor-pointer"
+            >
+              {ORDER_STATUSES.filter((status) => (
+                status.id !== 'cancelled' || canCancel || isCancelled
+              )).map((status) => (
+                <option key={status.id} value={status.id}>
+                  Jump to: {status.label}
+                </option>
+              ))}
+            </select>
+            {canCancel && (
+              <button
+                type="button"
+                onClick={() => cancelOrder(order.id, 'Cancelled from order tracking')}
+                className="px-3.5 py-2 rounded-xl border border-red-400/40 text-red-200 hover:bg-red-500/15 font-bold text-xs transition"
+              >
+                Cancel order
+              </button>
+            )}
           </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => advanceOrderStatus(order.id)}
-            disabled={isDeliveredOrDone || isCancelled}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#8a5332] to-[#6d391d] hover:from-[#a0633e] hover:to-[#824424] disabled:opacity-50 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md transition active:scale-95"
-          >
-            <FastForward className="w-3.5 h-3.5" />
-            <span>Advance to Next Status</span>
-          </button>
-
-          <select
-            value={order.status}
-            onChange={(e) => setOrderStatus(order.id, e.target.value)}
-            className="bg-[#2b1206] text-stone-200 text-xs font-semibold px-3 py-2 rounded-xl border border-[#522712] outline-none cursor-pointer"
-          >
-            {ORDER_STATUSES.filter((status) => (
-              status.id !== 'cancelled' || canCancel || isCancelled
-            )).map((s) => (
-              <option key={s.id} value={s.id}>
-                Jump to: {s.label}
-              </option>
-            ))}
-          </select>
-          {canCancel && (
-            <button
-              type="button"
-              onClick={() => cancelOrder(order.id, 'Cancelled from order tracking')}
-              className="px-3.5 py-2 rounded-xl border border-red-400/40 text-red-200 hover:bg-red-500/15 font-bold text-xs transition"
-            >
-              Cancel order
-            </button>
-          )}
+      {apiError && (
+        <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {apiError}
         </div>
-      </div>
+      )}
+
+      {apiEnabled && canCancel && (
+        <button
+          type="button"
+          onClick={() => cancelOrder(order.id, 'Cancelled by customer')}
+          className="mb-6 px-4 py-2 rounded-xl border border-red-200 bg-white text-red-700 hover:bg-red-50 font-bold text-xs transition"
+        >
+          Cancel order
+        </button>
+      )}
 
       {/* Main Status Header Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-md mb-8">
@@ -286,12 +316,12 @@ export default function OrderTrackingPage() {
                       {order.driver.name}
                     </h3>
                     <p className="text-xs text-stone-500 font-medium">
-                      {order.driver.vehicle}
+                      {order.driver.vehicle || 'Delivery partner'}
                     </p>
-                    <div className="flex items-center gap-1 text-[11px] text-amber-600 font-bold mt-0.5">
+                    {order.driver.rating && <div className="flex items-center gap-1 text-[11px] text-amber-600 font-bold mt-0.5">
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                       <span>{order.driver.rating} rating</span>
-                    </div>
+                    </div>}
                   </div>
                 </div>
 

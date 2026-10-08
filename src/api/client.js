@@ -3,20 +3,20 @@
  *
  * - Reads the base URL from `VITE_API_BASE_URL`
  * - Applies request timeouts and normalises errors into `ApiError`
- * - Uses local mock handlers by default so the frontend stays disconnected
- *   from the backend until API mode is explicitly enabled.
+ * - Uses the backend by default; local mocks are an explicit development
+ *   option through `VITE_USE_MOCK=true`.
  *
  * Mock modes (VITE_USE_MOCK):
- *   - unset / "true" → use local mocks without contacting the backend
+ *   - "true"         → use local mocks without contacting the backend
  *   - "auto"         → try the real API first, fall back to mocks on failure
- *   - "false"        → never use mocks, surface network errors
+ *   - unset / "false"→ never use mocks, surface network errors
  *
  * @module api/client
  */
 
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 const BASE_URL = String(RAW_BASE).replace(/\/+$/, '');
-const MOCK_MODE = (import.meta.env.VITE_USE_MOCK ?? 'true').toLowerCase();
+const MOCK_MODE = (import.meta.env.VITE_USE_MOCK ?? 'false').toLowerCase();
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT ?? 8000);
 
 export class ApiError extends Error {
@@ -40,16 +40,25 @@ export function buildUrl(path, params = {}) {
   return `${BASE_URL}${path}${qs ? `?${qs}` : ''}`;
 }
 
-async function http(path, params) {
+async function http(path, params = {}, { method = 'GET', body, headers = {} } = {}) {
   const url = buildUrl(path, params);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   let response;
   try {
+    const requestHeaders = {
+      Accept: 'application/json',
+      ...headers,
+    };
+    const token = localStorage.getItem('ofk_access_token');
+    if (token) requestHeaders.Authorization = `Bearer ${token}`;
+    if (body !== undefined) requestHeaders['Content-Type'] = 'application/json';
+
     response = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
+      method,
+      headers: requestHeaders,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
       signal: controller.signal,
     });
   } catch (error) {
@@ -64,10 +73,17 @@ async function http(path, params) {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('ofk_access_token');
+      window.dispatchEvent(new Event('ofk:unauthorized'));
+    }
     let detail = '';
     try {
       const body = await response.json();
-      detail = body?.message || body?.error || '';
+      detail =
+        body?.message ||
+        body?.error?.message ||
+        (typeof body?.error === 'string' ? body.error : '');
     } catch {
       /* ignore malformed error bodies */
     }
@@ -120,6 +136,7 @@ export async function apiRequest(path, params = {}, mockHandler = null) {
       // eslint-disable-next-line no-console
       console.warn(`[api] ${path} unavailable (${error.message}) — serving mock response.`);
     }
+
   }
 
   if (!mockHandler) {
@@ -129,3 +146,10 @@ export async function apiRequest(path, params = {}, mockHandler = null) {
   await new Promise((resolve) => setTimeout(resolve, 260 + Math.random() * 240));
   return mockHandler(params);
 }
+
+/** Make an authenticated JSON request without mock fallback. */
+export function apiJson(method, path, body) {
+  return http(path, {}, { method, body });
+}
+
+export const isMockMode = MOCK_MODE === 'true';

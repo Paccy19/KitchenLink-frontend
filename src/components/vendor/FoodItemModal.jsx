@@ -28,13 +28,17 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
   if (!isOpen || !item) return null;
 
   const isSaved = isInWishlist(item.id);
-  const handleWishlistToggle = () => {
-    if (isSaved) {
-      removeFromWishlist(item.id);
-      toast.info(`${item.name} removed from your wishlist`);
-    } else {
-      addToWishlist(item, vendor);
-      toast.success(`${item.name} saved for later`);
+  const handleWishlistToggle = async () => {
+    try {
+      if (isSaved) {
+        await removeFromWishlist(item.id);
+        toast.info(`${item.name} removed from your wishlist`);
+      } else {
+        await addToWishlist(item, vendor);
+        toast.success(`${item.name} saved for later`);
+      }
+    } catch (error) {
+      toast.error(error.message);
     }
   };
 
@@ -45,9 +49,9 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose }) {
     }));
   };
 
-  const handleAddToCart = () => {
-    addToCart(item, vendor, selectedOptions, quantity, instructions);
-    onClose();
+  const handleAddToCart = async () => {
+    const added = await addToCart(item, vendor, selectedOptions, quantity, instructions);
+    if (added) onClose();
   };
 
   return (

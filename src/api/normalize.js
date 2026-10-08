@@ -185,6 +185,57 @@ export function normalizeVendorDetail(raw = {}) {
   };
 }
 
+/** Convert an order returned by the customer API into the order-page shape. */
+export function normalizeOrder(raw = {}) {
+  const vendor = raw.vendor ?? {};
+  const payment = raw.payment ?? {};
+  const deliveryLocation = raw.delivery_location ?? {};
+  const paymentMethod = raw.payment_method_label ?? payment.method_label ?? raw.payment_method ?? '';
+
+  return {
+    id: toText(raw.id, raw.order_id),
+    orderNumber: toText(raw.order_number),
+    createdAt: toText(raw.created_at, raw.placed_at),
+    vendorId: toText(vendor.id),
+    vendorName: toText(vendor.name, 'Kitchen'),
+    vendorType: toText(vendor.vendor_type, 'Food Vendor'),
+    vendorLocation: toText(deliveryLocation.neighborhood, vendor.neighborhood),
+    status: toText(raw.status, 'placed'),
+    items: (Array.isArray(raw.items) ? raw.items : []).map((item) => ({
+      id: toText(item.menu_item_id, item.id),
+      dishId: toText(item.menu_item_id, item.id),
+      name: toText(item.name, 'Dish'),
+      price: toNumber(item.price_rwf ?? item.price),
+      quantity: toNumber(item.quantity, 1),
+      image: toText(item.image_url, item.image),
+      selectedOptions: {},
+    })),
+    pricing: {
+      subtotal: toNumber(raw.subtotal_rwf),
+      deliveryFee: toNumber(raw.delivery_fee_rwf),
+      total: toNumber(raw.total_rwf),
+    },
+    payment: {
+      method: toText(payment.method_label, paymentMethod, 'Payment'),
+      methodCode: toText(payment.method, raw.payment_method),
+      status: toText(raw.payment_status, payment.status, 'pending'),
+      reference: toText(payment.reference),
+    },
+    deliveryAddress: {
+      title: 'Delivery location',
+      street: toText(deliveryLocation.address),
+      district: toText(deliveryLocation.neighborhood),
+      instructions: toText(deliveryLocation.note),
+    },
+    driver: raw.rider?.name ? { name: raw.rider.name, phone: raw.rider.phone } : null,
+    estimatedDeliveryTime: raw.estimated_delivery_at
+      ? new Date(raw.estimated_delivery_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : raw.eta_minutes != null ? `${raw.eta_minutes} minutes` : 'Pending',
+    rated: false,
+    cancelReason: toText(raw.cancel_reason),
+  };
+}
+
 /** Pull the vendor array out of loosely-shaped list payloads. */
 export function pickList(payload, ...keys) {
   if (Array.isArray(payload)) return payload;

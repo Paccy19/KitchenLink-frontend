@@ -19,6 +19,9 @@ export default function CartDrawer() {
   const navigate = useNavigate();
   const {
     cartItems,
+    apiError,
+    clearApiError,
+    isSyncing,
     activeVendor,
     isCartOpen,
     setIsCartOpen,
@@ -62,7 +65,9 @@ export default function CartDrawer() {
             <div>
               <h3 className="font-extrabold text-gray-900 text-base">Your Basket</h3>
               <p className="text-xs text-stone-500 font-medium">
-                {totalItemCount} {totalItemCount === 1 ? 'dish' : 'dishes'} selected
+                {isSyncing
+                  ? 'Syncing basket with your account…'
+                  : `${totalItemCount} ${totalItemCount === 1 ? 'dish' : 'dishes'} selected`}
               </p>
             </div>
           </div>
@@ -87,6 +92,15 @@ export default function CartDrawer() {
         </div>
 
         {/* Vendor Banner if cart has items */}
+        {apiError && (
+          <div role="alert" className="mx-5 mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 flex items-start justify-between gap-2">
+            <span>{apiError}</span>
+            <button type="button" onClick={clearApiError} aria-label="Dismiss error">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {activeVendor && cartItems.length > 0 && (
           <div className="px-5 py-3 bg-[#faf6f2] border-b border-[#ebd7c5] flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -280,6 +294,7 @@ export default function CartDrawer() {
 
             <button
               onClick={handleCheckoutClick}
+              disabled={isSyncing}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-extrabold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95"
             >
               <span>Proceed to Checkout</span>
