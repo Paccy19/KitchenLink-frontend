@@ -1,0 +1,543 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  MapPin, 
+  CreditCard, 
+  Smartphone, 
+  Clock, 
+  CheckCircle2, 
+  ShieldCheck, 
+  AlertCircle,
+  Plus,
+  Wallet
+} from 'lucide-react';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { useOrders } from '../context/OrderContext';
+
+export default function CheckoutPage() {
+  const navigate = useNavigate();
+  const { 
+    cartItems, 
+    activeVendor, 
+    subtotal, 
+    deliveryFee, 
+    platformFee, 
+    grandTotal, 
+    clearCart,
+    orderType,
+    scheduledDate,
+    scheduledTime
+  } = useCart();
+  const { user, isAuthenticated, openAuthModal, addAddress } = useAuth();
+  const { placeOrder } = useOrders();
+
+  // Selected address state
+  const [selectedAddressId, setSelectedAddressId] = useState(() => {
+    return user.addresses && user.addresses.length > 0 ? user.addresses[0].id : 'new';
+  });
+
+  // New address form state
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false);
+  const [newTitle, setNewTitle] = useState('Home');
+  const [newStreet, setNewStreet] = useState('');
+  const [newDistrict, setNewDistrict] = useState('Kimironko, Gasabo');
+  const [newInstructions, setNewInstructions] = useState('');
+
+  // Payment method state
+  const [paymentMethod, setPaymentMethod] = useState('mtn_momo');
+  const [momoPhone, setMomoPhone] = useState(user.phone || '+250 788 123 456');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  if (cartItems.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-orange-100 text-orange-600 mx-auto flex items-center justify-center">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-black text-gray-900">Your basket is currently empty</h2>
+        <p className="text-xs text-gray-500">Add dishes from a kitchen before checking out.</p>
+        <Link
+          to="/"
+          className="inline-block px-6 py-3 rounded-2xl bg-orange-600 text-white font-bold text-sm"
+        >
+          Browse Menus
+        </Link>
+      </div>
+    );
+  }
+
+  const handleAddNewAddress = (e) => {
+    e.preventDefault();
+    if (!newStreet) {
+      setErrorMsg('Please specify your street address');
+      return;
+    }
+    const newAddr = {
+      title: newTitle,
+      street: newStreet,
+      district: newDistrict,
+      city: 'Kigali',
+      instructions: newInstructions
+    };
+    addAddress(newAddr);
+    setShowNewAddressForm(false);
+    setErrorMsg('');
+  };
+
+  const handleConfirmOrder = () => {
+    if (!isAuthenticated) {
+      openAuthModal();
+      return;
+    }
+
+    const currentAddr = user.addresses.find((a) => a.id === selectedAddressId) || user.addresses[0] || {
+      title: 'Current Delivery Location',
+      street: 'KG 11 Ave, Kimironko',
+      district: 'Kimironko',
+      city: 'Kigali',
+      instructions: 'Deliver to gate'
+    };
+
+    setIsSubmitting(true);
+
+    setTimeout(() => {
+      const orderId = placeOrder({
+        items: cartItems,
+        vendor: activeVendor,
+        deliveryAddress: currentAddr,
+        paymentMethod: {
+          name: paymentMethod === 'mtn_momo' ? 'MTN Mobile Money'
+            : paymentMethod === 'airtel_money' ? 'Airtel Money'
+            : paymentMethod === 'card' ? 'Visa / Mastercard'
+            : paymentMethod === 'ekash' ? 'eKash Rwanda'
+            : 'Cash on Delivery',
+          phone: momoPhone
+        },
+        orderType,
+        scheduledInfo: { date: scheduledDate, time: scheduledTime },
+        pricing: { subtotal, deliveryFee, platformFee, total: grandTotal },
+        specialNotes: orderNotes
+      });
+
+      clearCart();
+      setIsSubmitting(false);
+      navigate(`/track/${orderId}`);
+    }, 1200);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      {/* Back button */}
+      <div className="mb-6">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-orange-600 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Continue browsing dishes</span>
+        </Link>
+      </div>
+
+      <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mb-8">
+        Checkout & Confirm Order
+      </h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Column: Delivery & Payment Details */}
+        <div className="lg:col-span-7 space-y-6">
+          
+          {/* 1. Delivery Address Card */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+                  1
+                </div>
+                <h3 className="font-extrabold text-gray-900 text-base">
+                  Delivery Address in Kigali
+                </h3>
+              </div>
+
+              {!showNewAddressForm && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewAddressForm(true)}
+                  className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add New</span>
+                </button>
+              )}
+            </div>
+
+            {/* Saved addresses options */}
+            {!showNewAddressForm ? (
+              <div className="space-y-2.5">
+                {user.addresses && user.addresses.length > 0 ? (
+                  user.addresses.map((addr) => (
+                    <label
+                      key={addr.id}
+                      className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${
+                        selectedAddressId === addr.id
+                          ? 'border-orange-500 bg-orange-50/50 shadow-sm'
+                          : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="address_choice"
+                        checked={selectedAddressId === addr.id}
+                        onChange={() => setSelectedAddressId(addr.id)}
+                        className="mt-1 text-orange-600 focus:ring-orange-500"
+                      />
+                      <div className="flex-1 text-xs">
+                        <div className="font-bold text-gray-900 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                          <span>{addr.title}</span>
+                          {addr.isDefault && (
+                            <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-700 mt-0.5 font-medium">{addr.street}, {addr.district}</p>
+                        {addr.instructions && (
+                          <p className="text-gray-400 italic mt-0.5">Note: {addr.instructions}</p>
+                        )}
+                      </div>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-xs text-gray-500">No saved addresses yet. Add one below:</p>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleAddNewAddress} className="p-4 bg-gray-50 rounded-2xl space-y-3">
+                <div className="font-bold text-xs text-gray-800">Add New Delivery Location</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Label (e.g. Home, Work)"
+                    className="p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                  />
+                  <select
+                    value={newDistrict}
+                    onChange={(e) => setNewDistrict(e.target.value)}
+                    className="p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                  >
+                    <option value="Kimironko, Gasabo">Kimironko, Gasabo</option>
+                    <option value="Remera, Gasabo">Remera, Gasabo</option>
+                    <option value="Nyarutarama, Gasabo">Nyarutarama, Gasabo</option>
+                    <option value="Kiyovu, Nyarugenge">Kiyovu, Nyarugenge</option>
+                    <option value="Kacyiru, Gasabo">Kacyiru, Gasabo</option>
+                    <option value="Gisozi, Gasabo">Gisozi, Gasabo</option>
+                  </select>
+                </div>
+                <input
+                  type="text"
+                  value={newStreet}
+                  onChange={(e) => setNewStreet(e.target.value)}
+                  placeholder="Street / Landmark (e.g. KG 11 Ave, near Simba Supermarket)"
+                  className="w-full p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                />
+                <input
+                  type="text"
+                  value={newInstructions}
+                  onChange={(e) => setNewInstructions(e.target.value)}
+                  placeholder="Delivery instructions for rider (e.g. Gate color, floor number)"
+                  className="w-full p-2.5 text-xs rounded-xl border border-gray-200 bg-white"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-bold"
+                  >
+                    Save Address
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewAddressForm(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* 2. Timing confirmation */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+                2
+              </div>
+              <h3 className="font-extrabold text-gray-900 text-base">
+                Delivery Schedule
+              </h3>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/60 flex items-center gap-3">
+              <Clock className="w-5 h-5 text-amber-700 flex-shrink-0" />
+              <div className="text-xs">
+                <span className="font-bold text-amber-900">
+                  {orderType === 'immediate' ? 'Immediate Delivery' : 'Scheduled Pre-Order'}
+                </span>
+                <p className="text-amber-800">
+                  {orderType === 'immediate'
+                    ? 'Estimated delivery time: 25–35 minutes after kitchen preparation'
+                    : `Scheduled to arrive: ${scheduledDate} at ${scheduledTime}`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Payment Method */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+                3
+              </div>
+              <h3 className="font-extrabold text-gray-900 text-base">
+                Payment Method
+              </h3>
+            </div>
+
+            <div className="space-y-2.5">
+              {/* MTN MoMo */}
+              <label
+                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
+                  paymentMethod === 'mtn_momo'
+                    ? 'border-orange-500 bg-orange-50/50'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="pay_method"
+                    checked={paymentMethod === 'mtn_momo'}
+                    onChange={() => setPaymentMethod('mtn_momo')}
+                    className="text-orange-600"
+                  />
+                  <div>
+                    <div className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span>
+                      <span>MTN Mobile Money</span>
+                      <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.2 rounded font-bold">Recommended</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500">Instant push prompt on your Rwandan phone</p>
+                  </div>
+                </div>
+                <Smartphone className="w-5 h-5 text-gray-400" />
+              </label>
+
+              {/* Airtel Money */}
+              <label
+                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
+                  paymentMethod === 'airtel_money'
+                    ? 'border-orange-500 bg-orange-50/50'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="pay_method"
+                    checked={paymentMethod === 'airtel_money'}
+                    onChange={() => setPaymentMethod('airtel_money')}
+                    className="text-orange-600"
+                  />
+                  <div>
+                    <div className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                      <span>Airtel Money</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500">Pay via Airtel Money wallet</p>
+                  </div>
+                </div>
+                <Smartphone className="w-5 h-5 text-gray-400" />
+              </label>
+
+              {/* Debit / Credit Card */}
+              <label
+                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
+                  paymentMethod === 'card'
+                    ? 'border-orange-500 bg-orange-50/50'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="pay_method"
+                    checked={paymentMethod === 'card'}
+                    onChange={() => setPaymentMethod('card')}
+                    className="text-orange-600"
+                  />
+                  <div>
+                    <div className="font-bold text-xs text-gray-900">Visa / Mastercard</div>
+                    <p className="text-[11px] text-gray-500">Debit or Credit Card</p>
+                  </div>
+                </div>
+                <CreditCard className="w-5 h-5 text-gray-400" />
+              </label>
+
+              {/* eKash / Wallet */}
+              <label
+                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
+                  paymentMethod === 'ekash'
+                    ? 'border-orange-500 bg-orange-50/50'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="pay_method"
+                    checked={paymentMethod === 'ekash'}
+                    onChange={() => setPaymentMethod('ekash')}
+                    className="text-orange-600"
+                  />
+                  <div>
+                    <div className="font-bold text-xs text-gray-900">eKash Rwanda / Platform Wallet</div>
+                    <p className="text-[11px] text-gray-500">Interoperable instant mobile wallet</p>
+                  </div>
+                </div>
+                <Wallet className="w-5 h-5 text-gray-400" />
+              </label>
+            </div>
+
+            {/* Mobile Money Phone Input if momo chosen */}
+            {(paymentMethod === 'mtn_momo' || paymentMethod === 'airtel_money') && (
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Payment Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={momoPhone}
+                  onChange={(e) => setMomoPhone(e.target.value)}
+                  placeholder="+250 788 123 456"
+                  className="w-full p-3 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:border-orange-500"
+                />
+                <span className="text-[11px] text-gray-400 mt-1 block">
+                  A USSD prompt will be sent to this phone to enter PIN and authorize {grandTotal.toLocaleString()} RWF.
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* 4. Notes for Kitchen or Rider */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+              Order Notes / Delivery Instructions
+            </label>
+            <textarea
+              value={orderNotes}
+              onChange={(e) => setOrderNotes(e.target.value)}
+              placeholder="Any special notes for the kitchen or delivery driver..."
+              rows={2}
+              className="w-full text-xs p-3 rounded-xl border border-gray-200 outline-none focus:border-orange-500"
+            />
+          </div>
+
+        </div>
+
+        {/* Right Column: Order Summary & Placement */}
+        <div className="lg:col-span-5">
+          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-lg sticky top-24 space-y-6">
+            
+            <div className="border-b border-gray-100 pb-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600">
+                Order Review
+              </span>
+              <h3 className="font-black text-lg text-gray-900 mt-0.5">
+                From: {activeVendor?.name}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {activeVendor?.type} · {activeVendor?.location}
+              </p>
+            </div>
+
+            {/* Items in order */}
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {cartItems.map((item) => (
+                <div key={item.itemKey} className="flex items-center justify-between text-xs">
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="font-bold text-gray-900 truncate">
+                      {item.quantity}x {item.name}
+                    </div>
+                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
+                      <div className="text-[10px] text-gray-400 truncate">
+                        {Object.values(item.selectedOptions).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                  <div className="font-extrabold text-gray-800 flex-shrink-0">
+                    {(item.price * item.quantity).toLocaleString()} RWF
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Price Breakdown */}
+            <div className="space-y-2 pt-4 border-t border-gray-100 text-xs">
+              <div className="flex justify-between text-gray-600">
+                <span>Items Subtotal</span>
+                <span className="font-bold">{subtotal.toLocaleString()} RWF</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Rider Delivery Fee</span>
+                <span className="font-bold">{deliveryFee.toLocaleString()} RWF</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Platform Service Fee</span>
+                <span className="font-bold">{platformFee.toLocaleString()} RWF</span>
+              </div>
+              <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
+                <span>Total Due</span>
+                <span className="text-orange-600">{grandTotal.toLocaleString()} RWF</span>
+              </div>
+            </div>
+
+            {/* Trust badge */}
+            <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-[11px] text-emerald-800 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>Payments held safely in escrow until your food is delivered.</span>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              onClick={handleConfirmOrder}
+              disabled={isSubmitting}
+              className={`w-full py-4 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-black text-sm shadow-xl shadow-orange-500/25 flex items-center justify-center gap-2 transition ${
+                isSubmitting ? 'opacity-75 cursor-wait' : ''
+              }`}
+            >
+              {isSubmitting ? (
+                <span>Authorizing Payment & Sending Order...</span>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span>Confirm & Pay {grandTotal.toLocaleString()} RWF</span>
+                </>
+              )}
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
