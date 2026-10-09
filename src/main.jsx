@@ -10,6 +10,7 @@ import { LocationProvider } from './context/LocationContext';
 import { CartProvider } from './context/CartContext';
 import { OrderProvider } from './context/OrderContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { VendorProvider } from './context/VendorContext';
 import { ToastProvider } from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -33,9 +34,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               <CartProvider>
                 <WishlistProvider>
                   <OrderProvider>
-                    <ToastProvider>
-                      <App />
-                    </ToastProvider>
+                    <VendorProvider>
+                      <ToastProvider>
+                        <App />
+                      </ToastProvider>
+                    </VendorProvider>
                   </OrderProvider>
                 </WishlistProvider>
               </CartProvider>

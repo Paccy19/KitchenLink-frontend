@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import CartDrawer from './components/cart/CartDrawer';
@@ -18,12 +18,22 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrdersHistoryPage = lazy(() => import('./pages/OrdersHistoryPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 
+// Vendor dashboard (separate shell without the customer chrome).
+const VendorLayout = lazy(() => import('./components/vendor-dashboard/VendorLayout'));
+const VendorOverviewPage = lazy(() => import('./pages/vendor/VendorOverviewPage'));
+const VendorOrdersPage = lazy(() => import('./pages/vendor/VendorOrdersPage'));
+const VendorMenuPage = lazy(() => import('./pages/vendor/VendorMenuPage'));
+const VendorWalletPage = lazy(() => import('./pages/vendor/VendorWalletPage'));
+const VendorRegisterPage = lazy(() => import('./pages/vendor/VendorRegisterPage'));
+
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
+  const location = useLocation();
+  const isVendorArea = location.pathname.startsWith('/vendor-dashboard');
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50/50">
-      <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+      {!isVendorArea && <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} />}
 
       <main className="flex-1">
         <ErrorBoundary>
@@ -44,15 +54,24 @@ export default function App() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/orders" element={<OrdersHistoryPage />} />
               <Route path="/wishlist" element={<WishlistPage />} />
+              <Route path="/vendor-register" element={<VendorRegisterPage />} />
+
+              <Route path="/vendor-dashboard" element={<VendorLayout />}>
+                <Route index element={<VendorOverviewPage />} />
+                <Route path="orders" element={<VendorOrdersPage />} />
+                <Route path="menu" element={<VendorMenuPage />} />
+                <Route path="wallet" element={<VendorWalletPage />} />
+              </Route>
+
               <Route path="*" element={<HomePage />} />
             </Routes>
           </Suspense>
         </ErrorBoundary>
       </main>
 
-      <CartDrawer />
-      <AuthModal />
-      <Footer />
+      {!isVendorArea && <CartDrawer />}
+      {!isVendorArea && <AuthModal />}
+      {!isVendorArea && <Footer />}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   ListOrdered,
   CalendarDays,
   Heart,
+  Store,
   Menu,
   X
 } from 'lucide-react';
@@ -19,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useVendor } from '../../context/VendorContext';
 
 export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const navigate = useNavigate();
@@ -26,6 +28,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const { totalItemCount, setIsCartOpen } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { currentLocation, setIsLocationModalOpen, neighborhoods, selectLocation } = useLocation();
+  const { isRegistered } = useVendor();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLocDropdownOpen, setIsLocDropdownOpen] = useState(false);
@@ -117,6 +120,15 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
 
+            {/* Vendor portal */}
+            <Link
+              to={isRegistered ? '/vendor-dashboard' : '/vendor-register'}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              <Store className="w-3.5 h-3.5 text-[#6d391d]" />
+              <span>{isRegistered ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
+            </Link>
+
             {/* Quick Link: Pre-Orders */}
             <Link
               to="/?filter=preorder"
@@ -205,6 +217,15 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                     >
                       <Heart className="w-4 h-4 text-rose-500" />
                       <span>Saved Dishes</span>
+                    </Link>
+
+                    <Link
+                      to={isRegistered ? '/vendor-dashboard' : '/vendor-register'}
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] transition"
+                    >
+                      <Store className="w-4 h-4 text-stone-400" />
+                      <span>{isRegistered ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
                     </Link>
 
                     <Link
@@ -301,6 +322,14 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
             >
               My Profile
+            </Link>
+            <Link
+              to={isRegistered ? '/vendor-dashboard' : '/vendor-register'}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#542813] hover:bg-[#faf6f2] rounded-lg"
+            >
+              <Store className="w-4 h-4" />
+              {isRegistered ? 'Vendor Dashboard' : 'Become a Vendor'}
             </Link>
           </div>
         )}
