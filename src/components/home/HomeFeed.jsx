@@ -8,7 +8,6 @@ import VendorCard from './VendorCard';
 import DishCard from './DishCard';
 import LocationIndicator from './LocationIndicator';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
-import PreOrderBanner from './PreOrderBanner';
 import FoodItemModal from '../vendor/FoodItemModal';
 import EmptyState, { ErrorState } from '../common/EmptyState';
 import { HomeFeedSkeleton, VendorTileSkeleton, DishCardSkeleton } from '../common/Skeleton';
@@ -55,7 +54,8 @@ export default function HomeFeed() {
   const navigate = useNavigate();
   const toast = useToast();
   const { isUsingFallback, isPrimerOpen } = useLocation();
-  const { isRegistered } = useVendor();
+  const { isAuthenticated: isVendorSignedIn, hasToken } = useVendor();
+  const vendorSignedIn = isVendorSignedIn || hasToken;
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlQuery = searchParams.get('q') ?? '';
@@ -227,7 +227,7 @@ export default function HomeFeed() {
           {/* Vendor call-to-action */}
           <section aria-label="Sell on FoodKitchen">
             <Link
-              to={isRegistered ? '/vendor-dashboard' : '/vendor-register'}
+              to={vendorSignedIn ? '/vendor-dashboard' : '/vendor-register'}
               className="group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#200d05] p-6 sm:p-8 shadow-lg"
             >
               <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-[#e8a33d]/20 blur-2xl transition group-hover:bg-[#e8a33d]/30" />
@@ -237,26 +237,21 @@ export default function HomeFeed() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                    {isRegistered ? 'Go to your vendor dashboard' : 'Turn your kitchen into a business'}
+                    {vendorSignedIn ? 'Go to your vendor dashboard' : 'Turn your kitchen into a business'}
                   </h2>
                   <p className="mt-1 text-sm text-[#e6cdb6] max-w-xl">
-                    {isRegistered
+                    {vendorSignedIn
                       ? 'Manage orders, update your menu and track your payouts — all in one place.'
                       : 'Join FoodKitchen and start receiving orders from hungry customers near you. It only takes a few minutes.'}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-2 self-start sm:self-center rounded-full bg-[#e8a33d] px-5 py-2.5 text-sm font-black text-[#2b1206] transition group-hover:bg-[#f0b955]">
-                  {isRegistered ? 'Open dashboard' : 'Become a vendor'}
+                  {vendorSignedIn ? 'Open dashboard' : 'Become a vendor'}
                   <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                 </span>
               </div>
             </Link>
           </section>
-
-          {/* Pre-order / tomorrow's specials (existing marketplace feature) */}
-          <PreOrderBanner onSelectPreorderDish={(dish, vendor) => {
-            setSelectedDish({ dish, vendor });
-          }} />
 
           {selectedDish && (
             <FoodItemModal

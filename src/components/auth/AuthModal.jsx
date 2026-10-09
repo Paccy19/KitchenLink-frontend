@@ -15,8 +15,8 @@ export default function AuthModal() {
     authError
   } = useAuth();
 
-  const [phone, setPhone] = useState('+250 788 123 456');
-  const [name, setName] = useState('Kevin Mugabo');
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [error, setError] = useState('');
 

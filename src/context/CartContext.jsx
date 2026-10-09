@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { addCartItem as addRemoteCartItem, clearRemoteCart, fetchCart, removeCartItem as removeRemoteCartItem, replaceRemoteCart, updateCartItem as updateRemoteCartItem } from '../api/endpoints';
-import { isMockMode } from '../api/client';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
@@ -9,7 +8,10 @@ const MAX_CART_QUANTITY = 99;
 const readStoredCart = () => {
   try {
     const saved = JSON.parse(localStorage.getItem('ofk_cart') ?? '[]');
-    return Array.isArray(saved) ? saved : [];
+    if (!Array.isArray(saved)) return [];
+    return saved.filter((item) =>
+      !String(item?.dishId ?? item?.id ?? '').startsWith('dish-')
+    );
   } catch {
     return [];
   }
@@ -32,7 +34,7 @@ export const CartProvider = ({ children }) => {
   // Conflict modal state when adding from a different vendor
   const [vendorConflict, setVendorConflict] = useState(null);
   const [apiError, setApiError] = useState('');
-  const [isSyncing, setIsSyncing] = useState(Boolean(accessToken && !isMockMode));
+  const [isSyncing, setIsSyncing] = useState(Boolean(accessToken));
   const guestCartForSync = useRef(readStoredCart());
   const previousAccessToken = useRef(accessToken);
   const cartSyncToken = useRef(null);
@@ -66,7 +68,7 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     if (!accessToken) {
-      if (previousAccessToken.current && !isMockMode) {
+      if (previousAccessToken.current) {
         setCartItems([]);
         setActiveVendor(null);
         guestCartForSync.current = [];
@@ -76,7 +78,6 @@ export const CartProvider = ({ children }) => {
       return;
     }
     previousAccessToken.current = accessToken;
-    if (isMockMode) return;
     if (cartSyncToken.current === accessToken) return;
     cartSyncToken.current = accessToken;
     setIsSyncing(true);
@@ -103,7 +104,7 @@ export const CartProvider = ({ children }) => {
   }, [cartItems, activeVendor]);
 
   useEffect(() => {
-    if (!accessToken && !isMockMode) guestCartForSync.current = cartItems;
+    if (!accessToken) guestCartForSync.current = cartItems;
   }, [cartItems, accessToken]);
 
   const addToCart = async (dish, vendor, selectedOptions = {}, quantity = 1, specialInstructions = '') => {
@@ -135,7 +136,7 @@ export const CartProvider = ({ children }) => {
 
     const itemKey = `${dish.id}-${JSON.stringify(selectedOptions)}`;
 
-    if (accessToken && !isMockMode) {
+    if (accessToken) {
       setApiError('');
       try {
         const response = await addRemoteCartItem(dish.id, safeQuantity);
@@ -190,7 +191,7 @@ export const CartProvider = ({ children }) => {
     const { incomingDish, incomingVendor, incomingOptions, incomingQuantity, incomingInstructions } = vendorConflict;
     
     const itemKey = `${incomingDish.id}-${JSON.stringify(incomingOptions)}`;
-    if (accessToken && !isMockMode) {
+    if (accessToken) {
       setApiError('');
       try {
         applyRemoteCart(await clearRemoteCart());
@@ -241,7 +242,7 @@ export const CartProvider = ({ children }) => {
       return removeFromCart(itemKey);
     }
     const safeQuantity = Math.min(MAX_CART_QUANTITY, Math.floor(Number(newQuantity)));
-    if (accessToken && !isMockMode) {
+    if (accessToken) {
       const item = cartItems.find((cartItem) => cartItem.itemKey === itemKey);
       if (!item) return false;
       setApiError('');
@@ -260,7 +261,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const removeFromCart = async (itemKey) => {
-    if (accessToken && !isMockMode) {
+    if (accessToken) {
       const item = cartItems.find((cartItem) => cartItem.itemKey === itemKey);
       if (!item) return false;
       setApiError('');
@@ -283,7 +284,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearCart = async () => {
-    if (accessToken && !isMockMode) {
+    if (accessToken) {
       setApiError('');
       try {
         applyRemoteCart(await clearRemoteCart());

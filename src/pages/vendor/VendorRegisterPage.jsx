@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -19,10 +19,7 @@ import {
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
-import {
-  VENDOR_TYPE_OPTIONS,
-  FOOD_CATEGORY_OPTIONS,
-} from '../../data/vendorMockData';
+import { VENDOR_TYPE_OPTIONS } from '../../data/vendorOptions';
 
 const STEPS = [
   { id: 1, label: 'Business', icon: Store },
@@ -45,19 +42,23 @@ const INITIAL = {
   payoutMethod: 'MTN Mobile Money',
   payoutNumber: '',
   documents: [],
-  sampleData: true,
   agree: false,
 };
 
 export default function VendorRegisterPage() {
   const navigate = useNavigate();
-  const { registerVendor } = useVendor();
-  const { success } = useToast();
+  const { registerVendor, categoryNames, loadCategories } = useVendor();
+  const { success, error } = useToast();
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL);
   const [errors, setErrors] = useState({});
   const [created, setCreated] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (categoryNames.length === 0) loadCategories();
+  }, [categoryNames.length, loadCategories]);
 
   const update = (patch) => setForm((prev) => ({ ...prev, ...patch }));
 
@@ -70,8 +71,8 @@ export default function VendorRegisterPage() {
   };
 
   const handleDocuments = (event) => {
-    const files = Array.from(event.target.files || []).map((file) => file.name);
-    update({ documents: [...new Set([...form.documents, ...files])] });
+    const files = Array.from(event.target.files || []);
+    update({ documents: [...form.documents, ...files] });
   };
 
   const validateStep = (current) => {
@@ -81,6 +82,9 @@ export default function VendorRegisterPage() {
       if (!form.ownerName.trim()) next.ownerName = 'Owner name is required.';
       if (!form.phone.trim()) next.phone = 'Phone number is required.';
       else if (form.phone.replace(/\D/g, '').length < 9) next.phone = 'Enter a valid phone number.';
+      if (form.description.trim().length < 10) {
+        next.description = 'Please write at least 10 characters.';
+      }
     }
     if (current === 2) {
       if (!form.location.trim()) next.location = 'Location is required.';
@@ -88,6 +92,7 @@ export default function VendorRegisterPage() {
     }
     if (current === 3) {
       if (!form.payoutNumber.trim()) next.payoutNumber = 'Payout number/account is required.';
+      if (form.documents.length === 0) next.documents = 'Upload at least one verification document.';
       if (!form.agree) next.agree = 'Please accept the vendor agreement.';
     }
     setErrors(next);
@@ -103,21 +108,23 @@ export default function VendorRegisterPage() {
     setStep((prev) => Math.max(1, prev - 1));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!validateStep(3)) return;
 
-    const operatingHours = `${formatTime(form.openTime)} – ${formatTime(form.closeTime)}`;
-    const vendor = registerVendor(
-      {
-        ...form,
-        operatingHours,
-      },
-      { sampleData: form.sampleData },
-    );
-
-    setCreated(vendor);
-    success('Vendor account created successfully!');
+    setSubmitting(true);
+    try {
+      const vendor = await registerVendor(
+        { ...form },
+        form.documents,
+      );
+      setCreated(vendor);
+      success('Vendor account created successfully!');
+    } catch (err) {
+      error(err?.message || 'Could not create your vendor account.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (created) {
@@ -130,9 +137,8 @@ export default function VendorRegisterPage() {
           <div>
             <h1 className="text-2xl font-black text-gray-900">You're all set, {created.name}!</h1>
             <p className="text-sm text-stone-500 mt-1 max-w-md mx-auto">
-              Your vendor account has been created and is now{' '}
-              <span className="font-bold text-amber-600">pending verification</span>. You can already explore your
-              dashboard and set up your menu.
+              Your account has been created. Your kitchen is listed on the marketplace while its verification is pending.
+              Sign in to add your menu and manage your store.
             </p>
           </div>
 
@@ -144,10 +150,10 @@ export default function VendorRegisterPage() {
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
             <Link
-              to="/vendor-dashboard"
+              to="/vendor-login"
               className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-sm shadow-md transition active:scale-95"
             >
-              Go to Vendor Dashboard
+              Go to Vendor Login
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
@@ -174,6 +180,12 @@ export default function VendorRegisterPage() {
         </h1>
         <p className="mt-1 text-sm text-stone-500 max-w-lg mx-auto">
           Create your digital storefront on Online Food Kitchen in a few steps — no restaurant required.
+        </p>
+        <p className="mt-3 text-xs font-bold text-stone-500">
+          Already have a vendor account?{' '}
+          <Link to="/vendor-login" className="text-[#542813] hover:text-[#2b1206] underline underline-offset-2">
+            Log in
+          </Link>
         </p>
       </div>
 
@@ -218,7 +230,7 @@ export default function VendorRegisterPage() {
                 type="text"
                 value={form.name}
                 onChange={(event) => update({ name: event.target.value })}
-                placeholder="e.g. Mama Grace Kitchen"
+                placeholder="e.g. Your Kitchen Name"
                 className={inputClass(errors.name)}
               />
             </Field>
@@ -302,7 +314,7 @@ export default function VendorRegisterPage() {
             <div>
               <label className="text-xs font-bold text-stone-500 block mb-2">Food categories</label>
               <div className="flex flex-wrap gap-2">
-                {FOOD_CATEGORY_OPTIONS.map((category) => {
+                {categoryNames.map((category) => {
                   const active = form.foodCategories.includes(category);
                   return (
                     <button
@@ -385,28 +397,18 @@ export default function VendorRegisterPage() {
               </label>
               {form.documents.length > 0 && (
                 <ul className="mt-2 space-y-1">
-                  {form.documents.map((name) => (
-                    <li key={name} className="flex items-center gap-2 text-xs text-stone-600 font-medium">
+                  {form.documents.map((file) => (
+                    <li key={file.name} className="flex items-center gap-2 text-xs text-stone-600 font-medium">
                       <FileText className="w-3.5 h-3.5 text-[#8a5332]" />
-                      {name}
+                      {file.name}
                     </li>
                   ))}
                 </ul>
               )}
+              {errors.documents && (
+                <p className="text-[11px] text-red-500 font-semibold mt-1.5">{errors.documents}</p>
+              )}
             </div>
-
-            <label className="flex items-start gap-3 p-4 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.sampleData}
-                onChange={(event) => update({ sampleData: event.target.checked })}
-                className="mt-0.5 w-4 h-4 accent-[#542813]"
-              />
-              <span className="text-xs text-[#3d1b0c] font-medium">
-                <span className="font-bold block">Preload sample menu & orders</span>
-                Explore the dashboard right away with demo dishes and orders. Uncheck to start with a clean kitchen.
-              </span>
-            </label>
 
             <label className="flex items-start gap-3 cursor-pointer">
               <input
@@ -455,10 +457,11 @@ export default function VendorRegisterPage() {
           ) : (
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95"
+              disabled={submitting}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-60"
             >
               <BadgeCheck className="w-4 h-4 text-[#d9bda6]" />
-              Create Vendor Account
+              {submitting ? 'Creating account…' : 'Create Vendor Account'}
             </button>
           )}
         </div>
@@ -502,12 +505,4 @@ function inputClass(error) {
   return `w-full text-sm p-3 rounded-xl border outline-none transition ${
     error ? 'border-red-300 focus:border-red-400' : 'border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/10'
   }`;
-}
-
-function formatTime(value) {
-  if (!value) return '';
-  const [hour, minute] = value.split(':').map(Number);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const display = hour % 12 === 0 ? 12 : hour % 12;
-  return `${String(display).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${period}`;
 }

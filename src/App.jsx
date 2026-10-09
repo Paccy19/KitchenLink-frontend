@@ -25,11 +25,14 @@ const VendorOrdersPage = lazy(() => import('./pages/vendor/VendorOrdersPage'));
 const VendorMenuPage = lazy(() => import('./pages/vendor/VendorMenuPage'));
 const VendorWalletPage = lazy(() => import('./pages/vendor/VendorWalletPage'));
 const VendorRegisterPage = lazy(() => import('./pages/vendor/VendorRegisterPage'));
+const VendorLoginPage = lazy(() => import('./pages/vendor/VendorLoginPage'));
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
-  const isVendorArea = location.pathname.startsWith('/vendor-dashboard');
+  const isVendorArea =
+    location.pathname.startsWith('/vendor-dashboard') ||
+    location.pathname.startsWith('/vendor-login');
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50/50">
@@ -55,6 +58,7 @@ export default function App() {
               <Route path="/orders" element={<OrdersHistoryPage />} />
               <Route path="/wishlist" element={<WishlistPage />} />
               <Route path="/vendor-register" element={<VendorRegisterPage />} />
+              <Route path="/vendor-login" element={<VendorLoginPage />} />
 
               <Route path="/vendor-dashboard" element={<VendorLayout />}>
                 <Route index element={<VendorOverviewPage />} />

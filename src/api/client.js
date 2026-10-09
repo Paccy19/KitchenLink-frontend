@@ -3,20 +3,13 @@
  *
  * - Reads the base URL from `VITE_API_BASE_URL`
  * - Applies request timeouts and normalises errors into `ApiError`
- * - Uses the backend by default; local mocks are an explicit development
- *   option through `VITE_USE_MOCK=true`.
- *
- * Mock modes (VITE_USE_MOCK):
- *   - "true"         → use local mocks without contacting the backend
- *   - "auto"         → try the real API first, fall back to mocks on failure
- *   - unset / "false"→ never use mocks, surface network errors
+ * - Sends requests to the backend and surfaces API and network errors.
  *
  * @module api/client
  */
 
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 const BASE_URL = String(RAW_BASE).replace(/\/+$/, '');
-const MOCK_MODE = (import.meta.env.VITE_USE_MOCK ?? 'false').toLowerCase();
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT ?? 8000);
 
 export class ApiError extends Error {
@@ -107,49 +100,18 @@ async function http(path, params = {}, { method = 'GET', body, headers = {} } = 
 }
 
 /**
- * Request an API endpoint with optional mock fallback.
+ * Request an API endpoint.
  *
  * @template T
  * @param {string} path    Endpoint path, e.g. `/home/feed`
  * @param {Record<string, any>} params Query parameters
- * @param {(params: Record<string, any>) => T} [mockHandler] Mock server handler
  * @returns {Promise<T>} Parsed JSON payload (raw contract shape)
  */
-export async function apiRequest(path, params = {}, mockHandler = null) {
-  const forceMock = MOCK_MODE === 'true' && Boolean(mockHandler);
-
-  if (!forceMock) {
-    try {
-      return await http(path, params);
-    } catch (error) {
-      const offline = !(error instanceof ApiError) || error.status === 0;
-      const unreachable = error instanceof ApiError && error.status === 0;
-      const serverError = error instanceof ApiError && error.status >= 500;
-      const notImplemented = error instanceof ApiError && (error.status === 404 || error.status === 501);
-
-      const canFallback =
-        mockHandler &&
-        MOCK_MODE !== 'false' &&
-        (offline || unreachable || serverError || notImplemented);
-
-      if (!canFallback) throw error;
-      // eslint-disable-next-line no-console
-      console.warn(`[api] ${path} unavailable (${error.message}) — serving mock response.`);
-    }
-
-  }
-
-  if (!mockHandler) {
-    throw new ApiError('Endpoint is not available yet.', { path });
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 260 + Math.random() * 240));
-  return mockHandler(params);
+export function apiRequest(path, params = {}) {
+  return http(path, params);
 }
 
-/** Make an authenticated JSON request without mock fallback. */
+/** Make an authenticated JSON request. */
 export function apiJson(method, path, body) {
   return http(path, {}, { method, body });
 }
-
-export const isMockMode = MOCK_MODE === 'true';

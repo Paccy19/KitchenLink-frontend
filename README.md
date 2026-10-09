@@ -26,28 +26,24 @@ Copy `.env.example` to `.env.local`:
 | Variable | Default | Description |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | `/api/v1` | Base URL for all API calls. In development, Vite proxies `/api` to `http://localhost:4000`; set `VITE_API_PROXY` to override the backend host. |
-| `VITE_USE_MOCK` | `false` | `true` = use local discovery/auth/order demos; `auto` = allow discovery calls to fall back to mocks when the backend is unavailable; `false` or unset = use the backend and surface errors. |
 | `VITE_API_TIMEOUT` | `8000` | Request timeout in ms. |
 
 Start the backend and MongoDB alongside Vite to use the connected API. Customer
 OTP authentication, cart, wishlist, checkout, order history, tracking, and
-cancellation use authenticated `/api/v1` endpoints. The development OTP is
-returned by the backend only outside production. Set `VITE_USE_MOCK=true` to
-explicitly use the local demo flows instead.
-
-Scheduled checkout, saved addresses, ratings, and complaints remain local
-demo-only features because the current backend does not expose those APIs.
+cancellation use `/api/v1` endpoints. The development OTP is returned by the
+backend only outside production. Saved addresses are stored in the browser.
+Checkout currently supports Cash on Delivery only; online payment methods
+remain unavailable until a real provider is configured.
 
 ## Architecture
 
 ```
 src/
 ├── api/                  API service layer (no React)
-│   ├── client.js         authenticated fetch wrapper + timeout + explicit mock mode
+│   ├── client.js         authenticated fetch wrapper + timeout
 │   ├── endpoints.js      discovery and customer endpoint functions
 │   ├── types.js          JSDoc typedefs of the raw JSON contracts
 │   ├── normalize.js      snake_case payloads → camelCase view-models
-│   └── mock/             offline mock server (contract-accurate)
 ├── hooks/                React Query hooks + small UI hooks
 │   ├── useHomeFeed.js        GET /home/feed
 │   ├── useCategories.js      GET /home/categories
@@ -119,9 +115,8 @@ Simulate a denied prompt: DevTools → Application → Permissions → Geolocati
 *Block*, then reload (clear `ofk_location_v1` / `ofk_location_primer_v1` from
 `localStorage` to re-trigger the primer).
 
-Because the mock backend is coordinate-aware, moving the simulated location
-away from Kigali (e.g. to Nairobi) shows the "No kitchens in this radius"
-empty state — useful for testing empty/error handling.
+Use an area with no active vendors to check the "No kitchens in this radius"
+empty state and verify empty/error handling against the backend.
 
 ## Key UX behaviours
 
@@ -138,7 +133,7 @@ empty state — useful for testing empty/error handling.
   `aria-live` toasts, keyboard-navigable category bar.
 - **Responsive**: mobile-first (360–430 px), scales to tablet/desktop grids.
 
-## Sample flows to verify
+## Manual flows to verify
 
 1. Open `/` → allow location → feed loads categories, featured kitchens and
    popular dishes → pull down to refresh.

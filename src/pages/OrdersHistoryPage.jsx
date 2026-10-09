@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { ORDER_STATUSES, useOrders } from '../context/OrderContext';
 import { useCart } from '../context/CartContext';
-import { VENDORS } from '../data/mockData';
 import { useToast } from '../components/common/Toast';
 
 export default function OrdersHistoryPage() {
@@ -22,7 +21,7 @@ export default function OrdersHistoryPage() {
   const toast = useToast();
 
   const handleReorder = async (order) => {
-    const vendor = VENDORS.find((v) => v.id === order.vendorId) || {
+    const vendor = {
       id: order.vendorId,
       name: order.vendorName,
       type: order.vendorType,
@@ -32,7 +31,7 @@ export default function OrdersHistoryPage() {
 
     for (const item of order.items) {
       const added = await addToCart(
-        { id: item.id || item.dishId, name: item.name, price: item.price, image: item.image || vendor.coverImage },
+        { id: item.id || item.dishId, name: item.name, price: item.price, image: item.image || '' },
         vendor,
         item.selectedOptions || {},
         item.quantity || 1

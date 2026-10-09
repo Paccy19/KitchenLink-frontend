@@ -64,11 +64,16 @@ export default function VendorWalletPage() {
     setConfirm(true);
   };
 
-  const confirmWithdrawal = () => {
-    const entry = requestWithdrawal(numericAmount, method);
-    success(`Withdrawal of ${money(numericAmount)} submitted via ${entry.method}.`);
-    setConfirm(false);
-    setAmount('');
+  const confirmWithdrawal = async () => {
+    try {
+      const entry = await requestWithdrawal(numericAmount, method);
+      success(`Withdrawal of ${money(numericAmount)} submitted via ${entry.method}.`);
+      setConfirm(false);
+      setAmount('');
+    } catch (err) {
+      error(err?.message || 'Could not submit your withdrawal.');
+      setConfirm(false);
+    }
   };
 
   return (

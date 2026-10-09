@@ -3,11 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
   MapPin, 
-  CreditCard, 
-  Smartphone, 
   Clock, 
   CheckCircle2, 
-  ShieldCheck, 
   AlertCircle,
   Plus,
 } from 'lucide-react';
@@ -49,8 +46,7 @@ export default function CheckoutPage() {
   const [newInstructions, setNewInstructions] = useState('');
 
   // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState('momo');
-  const [momoPhone, setMomoPhone] = useState(user.phone || '+250 788 123 456');
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -105,12 +101,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    const currentAddr = user.addresses?.find((a) => a.id === selectedAddressId) || user.addresses?.[0] || {
-      title: 'Current Delivery Location',
-      street: 'KG 11 Ave, Kimironko',
-      district: 'Kimironko',
-      city: 'Kigali'
-    };
+    const currentAddr = user.addresses?.find((a) => a.id === selectedAddressId)
+      || user.addresses?.[0];
+    if (!currentAddr?.street) {
+      setErrorMsg('Add or select a delivery address before placing your order.');
+      return;
+    }
 
     setIsSubmitting(true);
     setErrorMsg('');
@@ -121,18 +117,16 @@ export default function CheckoutPage() {
         vendor: activeVendor,
         deliveryAddress: currentAddr,
         deliveryLocation: {
-          address: currentAddr.street || 'Kimironko, Kigali',
-          neighborhood: currentAddr.district || 'Kimironko',
+          address: currentAddr.street,
+          neighborhood: currentAddr.district,
           latitude: coords.lat,
           longitude: coords.lng,
           note: [currentAddr.instructions, orderNotes].filter(Boolean).join(' | '),
         },
         paymentMethod: {
           code: paymentMethod,
-          label: paymentMethod === 'momo' ? 'MTN Mobile Money'
-            : paymentMethod === 'card' ? 'Visa / Mastercard'
-            : 'Cash on Delivery',
-          phone: paymentMethod === 'momo' ? momoPhone : '',
+          label: 'Cash on Delivery',
+          phone: '',
         },
         orderType,
         scheduledInfo: { date: scheduledDate, time: scheduledTime },
@@ -348,58 +342,6 @@ export default function CheckoutPage() {
             </div>
 
             <div className="space-y-2.5">
-              {/* MTN MoMo */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
-                  paymentMethod === 'momo'
-                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
-                    : 'border-stone-200 hover:bg-stone-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="pay_method"
-                    checked={paymentMethod === 'momo'}
-                    onChange={() => setPaymentMethod('momo')}
-                    className="accent-[#542813]"
-                  />
-                  <div>
-                    <div className="font-bold text-xs text-gray-900 flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block"></span>
-                      <span>MTN Mobile Money</span>
-                      <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.2 rounded font-bold">Recommended</span>
-                    </div>
-                    <p className="text-[11px] text-stone-500">Instant push prompt on your Rwandan phone</p>
-                  </div>
-                </div>
-                <Smartphone className="w-5 h-5 text-stone-400" />
-              </label>
-
-              {/* Debit / Credit Card */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
-                  paymentMethod === 'card'
-                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
-                    : 'border-stone-200 hover:bg-stone-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="pay_method"
-                    checked={paymentMethod === 'card'}
-                    onChange={() => setPaymentMethod('card')}
-                    className="accent-[#542813]"
-                  />
-                  <div>
-                    <div className="font-bold text-xs text-gray-900">Visa / Mastercard</div>
-                    <p className="text-[11px] text-stone-500">Debit or Credit Card</p>
-                  </div>
-                </div>
-                <CreditCard className="w-5 h-5 text-stone-400" />
-              </label>
-
               {/* Cash on delivery */}
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
@@ -424,25 +366,9 @@ export default function CheckoutPage() {
                 <Clock className="w-5 h-5 text-stone-400" />
               </label>
             </div>
-
-            {/* Mobile Money Phone Input if momo chosen */}
-            {paymentMethod === 'momo' && (
-              <div className="pt-2">
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  Payment Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={momoPhone}
-                  onChange={(e) => setMomoPhone(e.target.value)}
-                  placeholder="+250 788 123 456"
-                  className="w-full p-3 rounded-xl border border-stone-200 text-xs font-bold outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition"
-                />
-                <span className="text-[11px] text-stone-400 mt-1 block">
-                  A USSD prompt will be sent to this phone to enter PIN and authorize {grandTotal.toLocaleString()} RWF.
-                </span>
-              </div>
-            )}
+            <p className="text-[11px] text-stone-500">
+              Online payments are unavailable until a payment provider is connected.
+            </p>
           </div>
 
           {/* 4. Notes for Kitchen or Rider */}
@@ -512,12 +438,6 @@ export default function CheckoutPage() {
                 <span>Total Due</span>
                 <span className="text-[#4e2410]">{grandTotal.toLocaleString()} RWF</span>
               </div>
-            </div>
-
-            {/* Trust badge */}
-            <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-[11px] text-emerald-800 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span>Checkout is simulated locally. No payment provider is connected yet.</span>
             </div>
 
             {/* Submit Button */}

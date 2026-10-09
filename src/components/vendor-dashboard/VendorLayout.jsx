@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
+import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -23,9 +23,24 @@ const NAV = [
 ];
 
 export default function VendorLayout() {
-  const { vendor, stats, menuItems, toggleStoreOpen, isRegistered } = useVendor();
+  const { vendor, stats, menuItems, toggleStoreOpen, isRegistered, hasToken, isAuthenticated } = useVendor();
   const { connected } = useVendorRealtime({ enabled: true });
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  if (!hasToken) {
+    return <Navigate to="/vendor-login" replace />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#faf7f4]">
+        <div className="flex flex-col items-center gap-3 text-stone-500">
+          <div className="w-10 h-10 rounded-full border-2 border-[#ebd7c5] border-t-[#542813] animate-spin" />
+          <p className="text-sm font-bold">Loading your kitchen…</p>
+        </div>
+      </div>
+    );
+  }
 
   const badgeValue = (item) => {
     if (item.badgeKey === 'pendingOrders') return stats.pendingOrders;

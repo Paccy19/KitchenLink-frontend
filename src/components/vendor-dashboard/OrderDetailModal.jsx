@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Phone, MapPin, Check, X as XIcon, Clock, CreditCard, FileText } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
-import { ORDER_ACTION_LABEL, ORDER_NEXT_STATUS } from '../../data/vendorMockData';
+import { ORDER_ACTION_LABEL, ORDER_NEXT_STATUS } from '../../data/vendorOptions';
 
 const FLOW = ['New', 'Accepted', 'Preparing', 'Ready', 'Completed'];
 

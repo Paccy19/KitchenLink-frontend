@@ -2,14 +2,13 @@ import React, { useMemo, useState } from 'react';
 import { Plus, Search, Pencil, Trash2, Clock, Layers, ImageOff, UtensilsCrossed, PackageOpen } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
-import { MENU_CATEGORIES } from '../../data/vendorMockData';
 import MenuItemFormModal from '../../components/vendor-dashboard/MenuItemFormModal';
 import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
 
 export default function VendorMenuPage() {
-  const { menuItems, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability } = useVendor();
-  const { success } = useToast();
+  const { menuItems, categoryNames, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability } = useVendor();
+  const { success, error } = useToast();
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
@@ -37,21 +36,37 @@ export default function VendorMenuPage() {
     setFormOpen(true);
   };
 
-  const handleSubmit = (data) => {
-    if (editing) {
-      updateMenuItem(editing.id, data);
-      success(`${data.name} updated.`);
-    } else {
-      addMenuItem(data);
-      success(`${data.name} added to your menu.`);
+  const handleSubmit = async (data) => {
+    try {
+      if (editing) {
+        await updateMenuItem(editing.id, data);
+        success(`${data.name} updated.`);
+      } else {
+        await addMenuItem(data);
+        success(`${data.name} added to your menu.`);
+      }
+    } catch (err) {
+      error(err?.message || 'Could not save this dish.');
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!pendingDelete) return;
-    deleteMenuItem(pendingDelete.id);
-    success(`${pendingDelete.name} deleted.`);
+    try {
+      await deleteMenuItem(pendingDelete.id);
+      success(`${pendingDelete.name} deleted.`);
+    } catch (err) {
+      error(err?.message || 'Could not delete this dish.');
+    }
     setPendingDelete(null);
+  };
+
+  const handleToggle = async (item) => {
+    try {
+      await toggleItemAvailability(item.id);
+    } catch (err) {
+      error(err?.message || 'Could not update availability.');
+    }
   };
 
   const availableCount = menuItems.filter((item) => item.isAvailable).length;
@@ -92,7 +107,7 @@ export default function VendorMenuPage() {
           className="px-4 py-2.5 text-sm rounded-xl border border-stone-200 focus:border-[#542813] outline-none transition bg-white font-semibold text-stone-700"
         >
           <option value="all">All categories</option>
-          {MENU_CATEGORIES.map((name) => (
+          {categoryNames.map((name) => (
             <option key={name} value={name}>
               {name}
             </option>
@@ -181,7 +196,7 @@ export default function VendorMenuPage() {
                     type="button"
                     role="switch"
                     aria-checked={item.isAvailable}
-                    onClick={() => toggleItemAvailability(item.id)}
+                    onClick={() => handleToggle(item)}
                     className="flex items-center gap-2"
                   >
                     <span

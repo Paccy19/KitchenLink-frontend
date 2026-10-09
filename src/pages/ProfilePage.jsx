@@ -7,14 +7,12 @@ import {
   Plus, 
   Trash2, 
   ShieldCheck, 
-  AlertCircle, 
   ListOrdered, 
   Check, 
   Smartphone,
   Edit2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useOrders } from '../context/OrderContext';
 
 export default function ProfilePage() {
   const { 
@@ -24,9 +22,7 @@ export default function ProfilePage() {
     deleteAddress, 
     setDefaultAddress 
   } = useAuth();
-  const { complaints } = useOrders();
-
-  const [activeTab, setActiveTab] = useState('addresses'); // 'addresses' | 'payments' | 'complaints'
+  const [activeTab, setActiveTab] = useState('addresses');
   
   // Profile edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -159,17 +155,6 @@ export default function ProfilePage() {
           <span>Payment Methods</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('complaints')}
-          className={`pb-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all whitespace-nowrap ${
-            activeTab === 'complaints'
-              ? 'border-[#542813] text-[#542813]'
-              : 'border-transparent text-stone-500 hover:text-stone-900'
-          }`}
-        >
-          <AlertCircle className="w-4 h-4" />
-          <span>Support & Complaints ({complaints.length})</span>
-        </button>
       </div>
 
       {/* Tab 1: Saved Addresses */}
@@ -315,40 +300,6 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Tab 3: Complaints & Support */}
-      {activeTab === 'complaints' && (
-        <div className="space-y-4">
-          <h3 className="font-extrabold text-base text-gray-900">Submitted Complaints & Tickets</h3>
-          {complaints.length === 0 ? (
-            <p className="text-xs text-stone-500">No complaints reported.</p>
-          ) : (
-            <div className="space-y-3">
-              {complaints.map((c) => (
-                <div key={c.id} className="p-5 bg-white rounded-3xl border border-stone-200/80 shadow-sm space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-gray-900">
-                      Ticket #{c.id} · Order: {c.orderId}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                      c.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {c.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-stone-700 font-medium">Issue: <span className="font-bold">{c.issueType}</span></p>
-                  <p className="text-xs text-stone-500">{c.description}</p>
-                  {c.resolutionNote && (
-                    <div className="p-2.5 bg-emerald-50 rounded-xl text-xs text-emerald-800">
-                      Resolution: {c.resolutionNote}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 

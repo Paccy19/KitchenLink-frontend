@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Upload, Plus, Trash2, ImageOff, Clock, Sparkles } from 'lucide-react';
-import { MENU_CATEGORIES } from '../../data/vendorMockData';
+import { useVendor } from '../../context/VendorContext';
 
 const EMPTY = {
   name: '',
-  category: MENU_CATEGORIES[0],
+  category: '',
   price: '',
   prepTime: '',
   description: '',
@@ -43,6 +43,7 @@ const Toggle = ({ checked, onChange, label, hint }) => (
 );
 
 export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
+  const { categoryNames } = useVendor();
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
@@ -61,9 +62,9 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
         })),
       });
     } else {
-      setForm(EMPTY);
+      setForm({ ...EMPTY, category: categoryNames[0] || '' });
     }
-  }, [isOpen, item]);
+  }, [isOpen, item, categoryNames]);
 
   if (!isOpen) return null;
 
@@ -237,7 +238,7 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
                 onChange={(event) => update({ category: event.target.value })}
                 className={inputClass('category')}
               >
-                {MENU_CATEGORIES.map((category) => (
+                {categoryNames.map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>

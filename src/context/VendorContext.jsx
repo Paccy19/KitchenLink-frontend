@@ -4,246 +4,415 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  ACTIVE_VENDOR,
-  INITIAL_MENU_ITEMS,
-  INITIAL_VENDOR_WALLET,
-  buildInitialVendorOrders,
-} from '../data/vendorMockData';
+  vendorApi,
+  buildMenuItemPayload,
+  clearVendorToken,
+  getVendorToken,
+  mapMenuItem,
+  mapOrder,
+  mapStats,
+  mapVendorAccount,
+  mapWallet,
+  setVendorToken,
+  titleToStatus,
+} from '../api/vendorApi';
 
 const VendorContext = createContext(null);
 
 const STORAGE = {
-  profile: 'ofk_vendor_profile',
-  menu: 'ofk_vendor_menu',
-  orders: 'ofk_vendor_orders',
-  wallet: 'ofk_vendor_wallet',
   registered: 'ofk_vendor_registered',
 };
 
-function readStorage(key, fallback) {
+const readFlag = (key, fallback = false) => {
   try {
     const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : fallback;
   } catch {
     return fallback;
   }
-}
-
-const ACTIVE_STATUSES = ['New', 'Accepted', 'Preparing', 'Ready'];
-const CANCELLED_STATUSES = ['Cancelled', 'Rejected'];
-
-const sameDay = (iso, reference) => {
-  const date = new Date(iso);
-  return date.toDateString() === reference.toDateString();
 };
 
-let menuSeed = 0;
-const nextMenuId = () => `dish-${Date.now()}-${++menuSeed}`;
+const EMPTY_STATS = mapStats({});
 
 export function VendorProvider({ children }) {
-  const [vendor, setVendor] = useState(() => readStorage(STORAGE.profile, ACTIVE_VENDOR));
-  const [menuItems, setMenuItems] = useState(() => readStorage(STORAGE.menu, INITIAL_MENU_ITEMS));
-  const [orders, setOrders] = useState(() => {
-    const saved = readStorage(STORAGE.orders, null);
-    return Array.isArray(saved) ? saved : buildInitialVendorOrders();
-  });
-  const [wallet, setWallet] = useState(() => readStorage(STORAGE.wallet, INITIAL_VENDOR_WALLET));
-  const [isRegistered, setIsRegistered] = useState(() => readStorage(STORAGE.registered, false));
+  const queryClient = useQueryClient();
+  const [vendor, setVendor] = useState(null);
+  const [menuItems, setMenuItems] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [wallet, setWallet] = useState({ withdrawn: 0, baseSales: 0, withdrawalHistory: [] });
+  const [dashboard, setDashboard] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [isRegistered, setIsRegistered] = useState(() => readFlag(STORAGE.registered));
   const [lastSyncedAt, setLastSyncedAt] = useState(() => new Date().toISOString());
+  const [authToken, setAuthToken] = useState(() => getVendorToken());
+  const [loading, setLoading] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [pendingLoginPhone, setPendingLoginPhone] = useState('');
+  const [loginOtpPreview, setLoginOtpPreview] = useState('');
+  const mounted = useRef(true);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE.profile, JSON.stringify(vendor));
-  }, [vendor]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE.menu, JSON.stringify(menuItems));
-  }, [menuItems]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE.orders, JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE.wallet, JSON.stringify(wallet));
-  }, [wallet]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE.registered, JSON.stringify(isRegistered));
-  }, [isRegistered]);
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const markSynced = useCallback(() => setLastSyncedAt(new Date().toISOString()), []);
+  const refreshPublicCatalog = useCallback(
+    () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['home'] }),
+      queryClient.invalidateQueries({ queryKey: ['vendor'] }),
+    ]),
+    [queryClient],
+  );
 
-  const updateVendorProfile = useCallback((patch) => {
-    setVendor((prev) => ({ ...prev, ...patch }));
+  /* ------------------------------ loaders ------------------------------ */
+
+  const refreshMenu = useCallback(async () => {
+    const data = await vendorApi.listMenu({ limit: 100 });
+    if (!mounted.current) return [];
+    const mapped = (data.items || []).map(mapMenuItem);
+    setMenuItems(mapped);
+    return mapped;
   }, []);
 
-  const toggleStoreOpen = useCallback(() => {
-    setVendor((prev) => ({ ...prev, isOpen: !prev.isOpen }));
+  const refreshOrders = useCallback(async () => {
+    const data = await vendorApi.listOrders({ limit: 50 });
+    if (!mounted.current) return [];
+    const mapped = (data.orders || []).map(mapOrder);
+    setOrders(mapped);
+    return mapped;
   }, []);
 
-  /**
-   * Creates a brand-new vendor account from the registration application.
-   * When `sampleData` is true the new account is preloaded with demo menu,
-   * orders and wallet figures so the dashboard is explorable immediately.
-   */
-  const registerVendor = useCallback((data, { sampleData = true } = {}) => {
-    const created = {
-      ...ACTIVE_VENDOR,
-      id: `vendor-${Date.now()}`,
-      name: data.name,
-      type: data.type,
-      ownerName: data.ownerName,
-      phone: data.phone,
-      email: data.email || '',
-      location: data.location,
-      address: data.address || data.location,
-      description: data.description,
-      foodCategories: data.foodCategories?.length ? data.foodCategories : ACTIVE_VENDOR.foodCategories,
-      operatingHours: data.operatingHours || ACTIVE_VENDOR.operatingHours,
-      payoutMethod: data.payoutMethod || '',
-      payoutNumber: data.payoutNumber || '',
-      documents: data.documents || [],
-      verificationStatus: 'Pending',
-      isOpen: false,
-      rating: 0,
-      reviewsCount: 0,
-      joinedAt: new Date().toISOString(),
-    };
+  const refreshWallet = useCallback(async () => {
+    const data = await vendorApi.wallet();
+    if (!mounted.current) return data;
+    setWallet(mapWallet(data));
+    return data;
+  }, []);
 
-    setVendor(created);
-    setIsRegistered(true);
+  const refreshDashboard = useCallback(async () => {
+    const data = await vendorApi.dashboard();
+    if (!mounted.current) return data;
+    setDashboard(data);
+    return data;
+  }, []);
 
-    if (sampleData) {
-      setMenuItems(INITIAL_MENU_ITEMS);
-      setOrders(buildInitialVendorOrders());
-      setWallet(INITIAL_VENDOR_WALLET);
+  const refreshProfile = useCallback(async () => {
+    const { vendor: raw } = await vendorApi.me();
+    if (!mounted.current) return raw;
+    const mapped = mapVendorAccount(raw);
+    setVendor(mapped);
+    return mapped;
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    if (!getVendorToken()) return;
+    setLoading(true);
+    setError('');
+    try {
+      await refreshProfile();
+      await Promise.all([refreshDashboard(), refreshMenu(), refreshOrders(), refreshWallet()]);
+      markSynced();
+    } catch (err) {
+      if (mounted.current) setError(err.message || 'Failed to load your dashboard.');
+    } finally {
+      if (mounted.current) setLoading(false);
+    }
+  }, [refreshProfile, refreshDashboard, refreshMenu, refreshOrders, refreshWallet, markSynced]);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const data = await vendorApi.menuCategories();
+      if (mounted.current) setCategories(data.categories || []);
+    } catch {
+      /* categories are best-effort */
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    if (authToken) {
+      refreshAll();
     } else {
+      setVendor(null);
       setMenuItems([]);
       setOrders([]);
       setWallet({ withdrawn: 0, baseSales: 0, withdrawalHistory: [] });
+      setDashboard(null);
     }
-    setLastSyncedAt(new Date().toISOString());
-    return created;
-  }, []);
+  }, [authToken, refreshAll]);
 
-  const resetToDemoAccount = useCallback(() => {
-    setVendor(ACTIVE_VENDOR);
-    setMenuItems(INITIAL_MENU_ITEMS);
-    setOrders(buildInitialVendorOrders());
-    setWallet(INITIAL_VENDOR_WALLET);
-    setIsRegistered(false);
-  }, []);
-
-  /* ----------------------------- Menu CRUD ----------------------------- */
-
-  const addMenuItem = useCallback((data) => {
-    const created = {
-      id: nextMenuId(),
-      isAvailable: true,
-      isPreorder: false,
-      preorderCutoff: '',
-      popular: false,
-      options: [],
-      ...data,
+  useEffect(() => {
+    const onUnauthorized = () => {
+      clearVendorToken();
+      setAuthToken('');
+      setError('Your vendor session has expired. Please log in again.');
     };
-    setMenuItems((prev) => [created, ...prev]);
-    return created;
+    window.addEventListener('ofk:vendor-unauthorized', onUnauthorized);
+    return () => window.removeEventListener('ofk:vendor-unauthorized', onUnauthorized);
   }, []);
 
-  const updateMenuItem = useCallback((id, data) => {
-    setMenuItems((prev) => prev.map((entry) => (entry.id === id ? { ...entry, ...data } : entry)));
+  /* ------------------------------- auth -------------------------------- */
+
+  const requestLoginOtp = useCallback(
+    async (phone) => {
+      setAuthBusy(true);
+      setError('');
+      try {
+        const result = await vendorApi.sendLoginOtp(phone);
+        setPendingLoginPhone(result.phone_number);
+        setLoginOtpPreview(result.dev_otp || '');
+        return result;
+      } catch (err) {
+        setError(err.message || 'Could not send a verification code.');
+        throw err;
+      } finally {
+        if (mounted.current) setAuthBusy(false);
+      }
+    },
+    [],
+  );
+
+  const verifyLoginOtp = useCallback(
+    async (code) => {
+      setAuthBusy(true);
+      setError('');
+      try {
+        const result = await vendorApi.verifyLoginOtp(pendingLoginPhone, code);
+        setVendorToken(result.token);
+        setAuthToken(result.token);
+        setVendor(mapVendorAccount(result.vendor));
+        setLoginOtpPreview('');
+        return result;
+      } catch (err) {
+        setError(err.message || 'Could not verify the code.');
+        throw err;
+      } finally {
+        if (mounted.current) setAuthBusy(false);
+      }
+    },
+    [pendingLoginPhone],
+  );
+
+  const logout = useCallback(() => {
+    clearVendorToken();
+    setAuthToken('');
+    setVendor(null);
+    setError('');
   }, []);
 
-  const deleteMenuItem = useCallback((id) => {
-    setMenuItems((prev) => prev.filter((entry) => entry.id !== id));
-  }, []);
-
-  const toggleItemAvailability = useCallback((id) => {
-    setMenuItems((prev) =>
-      prev.map((entry) => (entry.id === id ? { ...entry, isAvailable: !entry.isAvailable } : entry)),
+  const registerVendor = useCallback(async (data, files = []) => {
+    const form = new FormData();
+    form.append('name', data.name);
+    form.append('owner_name', data.ownerName);
+    form.append('vendor_type', data.type);
+    form.append('phone', data.phone);
+    if (data.email) form.append('email', data.email);
+    form.append('description', data.description);
+    form.append(
+      'location',
+      JSON.stringify({
+        neighborhood: data.location,
+        address: data.address || data.location,
+        latitude: data.latitude ?? -1.9441,
+        longitude: data.longitude ?? 30.0619,
+      }),
     );
+    form.append('food_categories', JSON.stringify(data.foodCategories || []));
+    const day = 'monday';
+    form.append(
+      'operating_hours',
+      JSON.stringify([
+        { day, open_time: data.openTime || '08:00', close_time: data.closeTime || '20:00' },
+      ]),
+    );
+    form.append(
+      'payment_information',
+      JSON.stringify({
+        payout_method: 'mobile_money',
+        account_name: data.ownerName,
+        mobile_money_number: data.payoutNumber || data.phone,
+      }),
+    );
+    (files || []).forEach((file) => form.append('documents', file));
+
+    const result = await vendorApi.register(form);
+    setIsRegistered(true);
+    localStorage.setItem(STORAGE.registered, JSON.stringify(true));
+    return mapVendorAccount(result.vendor);
   }, []);
 
-  /* ---------------------------- Order flow ----------------------------- */
+  /* ------------------------------ profile ------------------------------ */
 
-  const updateOrderStatus = useCallback((orderId, status) => {
-    setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status } : order)));
-    markSynced();
-  }, [markSynced]);
+  const updateVendorProfile = useCallback(
+    async (patch) => {
+      const payload = {};
+      if (patch.name !== undefined) payload.name = patch.name;
+      if (patch.ownerName !== undefined) payload.owner_name = patch.ownerName;
+      if (patch.description !== undefined) payload.description = patch.description;
+      if (patch.phone !== undefined) payload.phone = patch.phone;
+      if (patch.isOpen !== undefined) payload.is_open = patch.isOpen;
+      if (Object.keys(payload).length === 0) return;
+      const { vendor: raw } = await vendorApi.updateProfile(payload);
+      if (mounted.current) setVendor(mapVendorAccount(raw));
+    },
+    [],
+  );
+
+  const toggleStoreOpen = useCallback(async () => {
+    const next = !(vendor?.isOpen);
+    setVendor((prev) => (prev ? { ...prev, isOpen: next } : prev));
+    try {
+      await updateVendorProfile({ isOpen: next });
+    } catch (err) {
+      setVendor((prev) => (prev ? { ...prev, isOpen: !next } : prev));
+      throw err;
+    }
+  }, [vendor?.isOpen, updateVendorProfile]);
+
+  /* -------------------------------- menu ------------------------------- */
+
+  const categoriesByName = useMemo(() => {
+    const map = {};
+    categories.forEach((category) => {
+      map[category.name] = category.id;
+    });
+    return map;
+  }, [categories]);
+
+  const addMenuItem = useCallback(
+    async (data) => {
+      const payload = buildMenuItemPayload(data, categoriesByName);
+      await vendorApi.createMenuItem(payload);
+      const mapped = await refreshMenu();
+      await refreshPublicCatalog();
+      return mapped[0];
+    },
+    [categoriesByName, refreshMenu, refreshPublicCatalog],
+  );
+
+  const updateMenuItem = useCallback(
+    async (id, data) => {
+      const payload = buildMenuItemPayload(data, categoriesByName);
+      await vendorApi.updateMenuItem(id, payload);
+      const mapped = await refreshMenu();
+      await refreshPublicCatalog();
+      return mapped;
+    },
+    [categoriesByName, refreshMenu, refreshPublicCatalog],
+  );
+
+  const deleteMenuItem = useCallback(
+    async (id) => {
+      await vendorApi.deleteMenuItem(id, true);
+      const mapped = await refreshMenu();
+      await refreshPublicCatalog();
+      return mapped;
+    },
+    [refreshMenu, refreshPublicCatalog],
+  );
+
+  const toggleItemAvailability = useCallback(
+    async (id) => {
+      const current = menuItems.find((item) => item.id === id);
+      if (!current) return;
+      setMenuItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isAvailable: !item.isAvailable } : item)),
+      );
+      try {
+        await vendorApi.setMenuAvailability(id, !current.isAvailable);
+        await refreshPublicCatalog();
+      } catch (err) {
+        setMenuItems((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, isAvailable: current.isAvailable } : item)),
+        );
+        throw err;
+      }
+    },
+    [menuItems, refreshPublicCatalog],
+  );
+
+  /* ------------------------------- orders ------------------------------ */
+
+  const updateOrderStatus = useCallback(
+    async (orderId, statusLabel) => {
+      const target = orders.find((order) => order.id === orderId);
+      const backendId = target?.backendId || orderId;
+      const status = titleToStatus[statusLabel] || statusLabel.toLowerCase();
+      await vendorApi.updateOrderStatus(backendId, status);
+      await Promise.all([refreshOrders(), refreshDashboard(), refreshWallet()]);
+      markSynced();
+    },
+    [orders, refreshOrders, refreshDashboard, refreshWallet, markSynced],
+  );
 
   const acceptOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Accepted'), [updateOrderStatus]);
   const rejectOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Cancelled'), [updateOrderStatus]);
   const completeOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Completed'), [updateOrderStatus]);
 
-  /* ------------------------------ Wallet ------------------------------- */
+  /* ------------------------------- wallet ------------------------------ */
 
-  const requestWithdrawal = useCallback((amount, method = 'MTN Mobile Money') => {
-    const entry = {
-      id: `WD-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`,
-      amount,
-      method,
-      date: new Date().toISOString(),
-      status: 'Processing',
-    };
-    setWallet((prev) => ({
-      ...prev,
-      withdrawn: prev.withdrawn + amount,
-      withdrawalHistory: [entry, ...(prev.withdrawalHistory || [])],
-    }));
-    return entry;
-  }, []);
+  const requestWithdrawal = useCallback(
+    async (amount, method = 'MTN Mobile Money') => {
+      const result = await vendorApi.requestWithdrawal({ amount_rwf: amount, method });
+      await Promise.all([refreshWallet(), refreshDashboard()]);
+      return {
+        id: result.withdrawal?.id,
+        amount,
+        method: result.withdrawal?.method_label || method,
+        status: result.withdrawal?.status ? 'Processing' : 'Processing',
+      };
+    },
+    [refreshWallet, refreshDashboard],
+  );
 
-  /* ------------------------------- Stats ------------------------------- */
+  const stats = useMemo(
+    () => (dashboard ? mapStats(dashboard) : EMPTY_STATS),
+    [dashboard],
+  );
 
-  const stats = useMemo(() => {
-    const now = new Date();
-    const completed = orders.filter((order) => order.status === 'Completed');
-    const todayOrders = orders.filter(
-      (order) => sameDay(order.createdAt, now) && !CANCELLED_STATUSES.includes(order.status),
-    );
-
-    const completedRevenue = completed.reduce((sum, order) => sum + order.total, 0);
-    const totalSales = wallet.baseSales + completedRevenue;
-    const commission = Math.round(totalSales * vendor.commissionRate);
-    const netEarned = totalSales - commission;
-
-    const activeRevenue = orders
-      .filter((order) => ACTIVE_STATUSES.includes(order.status))
-      .reduce((sum, order) => sum + order.total, 0);
-
-    return {
-      todayOrdersCount: todayOrders.length,
-      pendingOrders: orders.filter((order) => order.status === 'New').length,
-      preparingOrders: orders.filter((order) => order.status === 'Preparing').length,
-      completedOrders: completed.length,
-      cancelledOrders: orders.filter((order) => CANCELLED_STATUSES.includes(order.status)).length,
-      todaySales: todayOrders.reduce((sum, order) => sum + order.total, 0),
-      totalSales,
-      commission,
-      netEarned,
-      availableBalance: Math.max(0, netEarned - wallet.withdrawn),
-      pendingBalance: Math.round(activeRevenue * (1 - vendor.commissionRate)),
-      withdrawn: wallet.withdrawn,
-    };
-  }, [orders, wallet, vendor.commissionRate]);
+  const isAuthenticated = Boolean(authToken && vendor);
+  const hasToken = Boolean(authToken);
 
   const value = useMemo(
     () => ({
       vendor,
+      rawVendor: vendor,
       menuItems,
       orders,
       wallet,
+      categories,
+      categoryNames: categories.map((category) => category.name),
       stats,
       isRegistered,
+      isAuthenticated,
+      hasToken,
+      loading,
+      authBusy,
+      error,
       lastSyncedAt,
       markSynced,
+      refreshAll,
+      loadCategories,
+      requestLoginOtp,
+      verifyLoginOtp,
+      pendingLoginPhone,
+      loginOtpPreview,
+      logout,
       updateVendorProfile,
       toggleStoreOpen,
       registerVendor,
-      resetToDemoAccount,
       addMenuItem,
       updateMenuItem,
       deleteMenuItem,
@@ -259,14 +428,26 @@ export function VendorProvider({ children }) {
       menuItems,
       orders,
       wallet,
+      categories,
       stats,
       isRegistered,
+      isAuthenticated,
+      hasToken,
+      loading,
+      authBusy,
+      error,
       lastSyncedAt,
       markSynced,
+      refreshAll,
+      loadCategories,
+      requestLoginOtp,
+      verifyLoginOtp,
+      pendingLoginPhone,
+      loginOtpPreview,
+      logout,
       updateVendorProfile,
       toggleStoreOpen,
       registerVendor,
-      resetToDemoAccount,
       addMenuItem,
       updateMenuItem,
       deleteMenuItem,

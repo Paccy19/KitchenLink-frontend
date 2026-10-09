@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Search, ClipboardList, Inbox } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
-import { VENDOR_ORDER_STATUSES } from '../../data/vendorMockData';
+import { VENDOR_ORDER_STATUSES } from '../../data/vendorOptions';
 import OrderCard from '../../components/vendor-dashboard/OrderCard';
 import OrderDetailModal from '../../components/vendor-dashboard/OrderDetailModal';
 import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
@@ -18,7 +18,7 @@ const ACTION_PAST = {
 
 export default function VendorOrdersPage() {
   const { orders, updateOrderStatus } = useVendor();
-  const { success } = useToast();
+  const { success, error } = useToast();
 
   const [activeTab, setActiveTab] = useState('New');
   const [query, setQuery] = useState('');
@@ -58,16 +58,21 @@ export default function VendorOrdersPage() {
         message: `${order.id} will be closed and the payout released to your wallet.`,
         confirmLabel: 'Mark Completed',
         tone: 'default',
-        onConfirm: () => {
-          updateOrderStatus(order.id, next);
-          success(`Order ${order.id} marked completed.`);
+        onConfirm: async () => {
+          try {
+            await updateOrderStatus(order.id, next);
+            success(`Order ${order.id} marked completed.`);
+          } catch (err) {
+            error(err?.message || 'Could not update the order.');
+          }
           setConfirm(null);
         },
       });
       return;
     }
-    updateOrderStatus(order.id, next);
-    success(`Order ${order.id} is now ${ACTION_PAST[next]}.`);
+    return updateOrderStatus(order.id, next)
+      .then(() => success(`Order ${order.id} is now ${ACTION_PAST[next]}.`))
+      .catch((err) => error(err?.message || 'Could not update the order.'));
   };
 
   const handleCancel = (order) => {
@@ -77,9 +82,13 @@ export default function VendorOrdersPage() {
       message: `${order.id} from ${order.customer.name} will be cancelled. This cannot be undone.`,
       confirmLabel: rejecting ? 'Reject Order' : 'Cancel Order',
       tone: 'danger',
-      onConfirm: () => {
-        updateOrderStatus(order.id, 'Cancelled');
-        success(`Order ${order.id} ${rejecting ? 'rejected' : 'cancelled'}.`);
+      onConfirm: async () => {
+        try {
+          await updateOrderStatus(order.id, 'Cancelled');
+          success(`Order ${order.id} ${rejecting ? 'rejected' : 'cancelled'}.`);
+        } catch (err) {
+          error(err?.message || 'Could not update the order.');
+        }
         setConfirm(null);
       },
     });

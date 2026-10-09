@@ -1,6 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { addWishlistItem, fetchWishlist, removeWishlistItem } from '../api/endpoints';
-import { isMockMode } from '../api/client';
 import { useAuth } from './AuthContext';
 
 const WishlistContext = createContext(null);
@@ -10,7 +9,11 @@ const readWishlist = () => {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
     return Array.isArray(saved)
-      ? saved.filter((entry) => entry?.dish?.id && entry?.vendor?.id)
+      ? saved.filter((entry) =>
+          entry?.dish?.id &&
+          entry?.vendor?.id &&
+          !String(entry.dish.id).startsWith('dish-')
+        )
       : [];
   } catch {
     return [];
@@ -45,12 +48,11 @@ export function WishlistProvider({ children }) {
 
   useEffect(() => {
     if (!accessToken) {
-      if (previousAccessToken.current && !isMockMode) setItems([]);
+      if (previousAccessToken.current) setItems([]);
       previousAccessToken.current = null;
       return;
     }
     previousAccessToken.current = accessToken;
-    if (isMockMode) return;
     fetchWishlist()
       .then(async (payload) => {
         let wishlist = payload;
@@ -71,11 +73,11 @@ export function WishlistProvider({ children }) {
   }, [items]);
 
   useEffect(() => {
-    if (!accessToken && !isMockMode) guestWishlistForSync.current = items;
+    if (!accessToken) guestWishlistForSync.current = items;
   }, [items, accessToken]);
 
   const addToWishlist = useCallback(async (dish, vendor) => {
-    if (accessToken && !isMockMode) {
+    if (accessToken) {
       setApiError('');
       try {
         const payload = await addWishlistItem(dish.id);
@@ -93,7 +95,7 @@ export function WishlistProvider({ children }) {
   }, [accessToken]);
 
   const removeFromWishlist = useCallback(async (dishId) => {
-    if (accessToken && !isMockMode) {
+    if (accessToken) {
       setApiError('');
       try {
         setItems(normalizeWishlist(await removeWishlistItem(dishId)));

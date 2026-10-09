@@ -9,13 +9,6 @@
  */
 
 import { apiJson, apiRequest } from './client';
-import {
-  handleCategories,
-  handleFeed,
-  handleNearbyVendors,
-  handleSearch,
-  handleVendorDetail,
-} from './mock/mockServer';
 
 /**
  * GET /home/feed?lat={lat}&lng={lng}
@@ -26,7 +19,7 @@ import {
  * @returns {Promise<import('./types').RawHomeFeed>}
  */
 export function fetchHomeFeed({ lat, lng, label } = {}) {
-  return apiRequest('/home/feed', { lat, lng, label }, handleFeed);
+  return apiRequest('/home/feed', { lat, lng, label });
 }
 
 /**
@@ -34,7 +27,7 @@ export function fetchHomeFeed({ lat, lng, label } = {}) {
  * @returns {Promise<{categories: import('./types').RawCategory[]}>}
  */
 export function fetchCategories() {
-  return apiRequest('/home/categories', {}, handleCategories);
+  return apiRequest('/home/categories');
 }
 
 /**
@@ -49,7 +42,7 @@ export function fetchCategories() {
  * @returns {Promise<import('./types').RawNearbyVendors>}
  */
 export function fetchNearbyVendors(params = {}) {
-  return apiRequest('/home/vendors/nearby', params, handleNearbyVendors);
+  return apiRequest('/home/vendors/nearby', params);
 }
 
 /**
@@ -59,7 +52,7 @@ export function fetchNearbyVendors(params = {}) {
  * @returns {Promise<import('./types').RawSearchResults>}
  */
 export function searchHome(params = {}) {
-  return apiRequest('/home/search', params, handleSearch);
+  return apiRequest('/home/search', params);
 }
 
 /**
@@ -69,11 +62,7 @@ export function searchHome(params = {}) {
  * @returns {Promise<import('./types').RawVendorDetail>}
  */
 export function fetchVendorStorefront(vendorId) {
-  return apiRequest(
-    `/vendors/${encodeURIComponent(vendorId)}`,
-    {},
-    (params) => handleVendorDetail(params, vendorId),
-  );
+  return apiRequest(`/vendors/${encodeURIComponent(vendorId)}`);
 }
 
 export const sendOtp = (phoneNumber, name) =>
@@ -110,7 +99,7 @@ export const moveWishlistItemToCart = (menuItemId, quantity = 1) =>
   apiJson('POST', `/wishlist/${encodeURIComponent(menuItemId)}/move-to-cart`, { quantity });
 
 export const fetchOrders = (params = {}) =>
-  apiRequest('/orders', params, null);
+  apiRequest('/orders', params);
 export const fetchOrder = (orderId) =>
   apiJson('GET', `/orders/${encodeURIComponent(orderId)}`);
 export const fetchOrderTracking = (orderId) =>

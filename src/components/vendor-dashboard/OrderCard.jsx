@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, MapPin, Clock, Eye, Check, X, CalendarClock } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
-import { ORDER_ACTION_LABEL, ORDER_NEXT_STATUS } from '../../data/vendorMockData';
+import { ORDER_ACTION_LABEL, ORDER_NEXT_STATUS } from '../../data/vendorOptions';
 
 const timeAgo = (iso) => {
   const diff = Date.now() - new Date(iso).getTime();

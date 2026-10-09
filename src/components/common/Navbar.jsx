@@ -28,7 +28,8 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const { totalItemCount, setIsCartOpen } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { currentLocation, setIsLocationModalOpen, neighborhoods, selectLocation } = useLocation();
-  const { isRegistered } = useVendor();
+  const { isAuthenticated: isVendorSignedIn, hasToken } = useVendor();
+  const vendorSignedIn = isVendorSignedIn || hasToken;
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLocDropdownOpen, setIsLocDropdownOpen] = useState(false);
@@ -122,11 +123,11 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
 
             {/* Vendor portal */}
             <Link
-              to={isRegistered ? '/vendor-dashboard' : '/vendor-register'}
+              to={vendorSignedIn ? '/vendor-dashboard' : '/vendor-register'}
               className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <Store className="w-3.5 h-3.5 text-[#6d391d]" />
-              <span>{isRegistered ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
+              <span>{vendorSignedIn ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
             </Link>
 
             {/* Quick Link: Pre-Orders */}
@@ -220,12 +221,12 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                     </Link>
 
                     <Link
-                      to={isRegistered ? '/vendor-dashboard' : '/vendor-register'}
+                      to={vendorSignedIn ? '/vendor-dashboard' : '/vendor-register'}
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] transition"
                     >
                       <Store className="w-4 h-4 text-stone-400" />
-                      <span>{isRegistered ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
+                      <span>{vendorSignedIn ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
                     </Link>
 
                     <Link
@@ -324,12 +325,12 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               My Profile
             </Link>
             <Link
-              to={isRegistered ? '/vendor-dashboard' : '/vendor-register'}
+              to={vendorSignedIn ? '/vendor-dashboard' : '/vendor-register'}
               onClick={() => setIsMobileMenuOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#542813] hover:bg-[#faf6f2] rounded-lg"
             >
               <Store className="w-4 h-4" />
-              {isRegistered ? 'Vendor Dashboard' : 'Become a Vendor'}
+              {vendorSignedIn ? 'Vendor Dashboard' : 'Become a Vendor'}
             </Link>
           </div>
         )}

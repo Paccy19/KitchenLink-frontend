@@ -1,19 +1,32 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { INITIAL_USER } from '../data/mockData';
 import { fetchCurrentCustomer, sendOtp as sendOtpRequest, verifyOtp as verifyOtpRequest } from '../api/endpoints';
-import { isMockMode } from '../api/client';
 
 const AuthContext = createContext(null);
 const ACCESS_TOKEN_KEY = 'ofk_access_token';
 
 const guestUser = {
-  ...INITIAL_USER,
   id: null,
   name: 'Guest User',
   phone: '',
   email: '',
+  avatar: '',
+  defaultLocation: '',
   addresses: [],
   savedPaymentMethods: [],
+};
+
+const readStoredUser = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('ofk_user') || 'null');
+    if (!saved || saved.name?.trim().toLowerCase() === 'kevin mugabo') {
+      localStorage.removeItem('ofk_user');
+      return guestUser;
+    }
+    return { ...guestUser, ...saved };
+  } catch {
+    localStorage.removeItem('ofk_user');
+    return guestUser;
+  }
 };
 
 const customerUser = (customer, existing = guestUser) => ({
@@ -25,8 +38,7 @@ const customerUser = (customer, existing = guestUser) => ({
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('ofk_user');
-    return saved ? JSON.parse(saved) : guestUser;
+    return readStoredUser();
   });
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_KEY));
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -52,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!accessToken || isMockMode) return;
+    if (!accessToken) return;
     fetchCurrentCustomer()
       .then(({ customer }) => setUser((current) => customerUser(customer, current)))
       .catch((error) => {
@@ -76,30 +88,17 @@ export const AuthProvider = ({ children }) => {
     setAuthError('');
     setPendingPhone(phone);
     setPendingName(name);
-    if (isMockMode) {
-      setOtpPreview('123456');
-    } else {
-      const result = await sendOtpRequest(phone, name);
-      setPendingPhone(result.phone_number);
-      setOtpPreview(result.dev_otp ?? '');
-    }
+    const result = await sendOtpRequest(phone, name);
+    setPendingPhone(result.phone_number);
+    setOtpPreview(result.dev_otp ?? '');
     setAuthStep('otp');
   };
 
   const verifyOtp = async (code, name = pendingName) => {
-    if (isMockMode) {
-      if (code !== '123456') return false;
-      setUser((current) => ({
-        ...current,
-        phone: pendingPhone || current.phone,
-        name: name || current.name || 'Food Explorer',
-      }));
-    } else {
-      const result = await verifyOtpRequest(pendingPhone, code, name);
-      localStorage.setItem(ACCESS_TOKEN_KEY, result.token);
-      setAccessToken(result.token);
-      setUser((current) => customerUser(result.customer, current));
-    }
+    const result = await verifyOtpRequest(pendingPhone, code, name);
+    localStorage.setItem(ACCESS_TOKEN_KEY, result.token);
+    setAccessToken(result.token);
+    setUser((current) => customerUser(result.customer, current));
     setIsAuthModalOpen(false);
     setAuthStep('phone');
     setOtpPreview('');
@@ -143,9 +142,7 @@ export const AuthProvider = ({ children }) => {
   const value = useMemo(() => ({
     user,
     accessToken,
-    isAuthenticated: isMockMode
-      ? Boolean(user?.name && user?.phone)
-      : Boolean(accessToken),
+    isAuthenticated: Boolean(accessToken),
     isAuthModalOpen,
     authStep,
     pendingPhone,
