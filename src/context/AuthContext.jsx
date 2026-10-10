@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { fetchCurrentCustomer, sendOtp as sendOtpRequest, verifyOtp as verifyOtpRequest } from '../api/endpoints';
+import {
+  fetchCurrentCustomer,
+  sendOtp as sendOtpRequest,
+  verifyOtp as verifyOtpRequest,
+  updateCurrentCustomerProfile,
+} from '../api/endpoints';
 
 const AuthContext = createContext(null);
 const ACCESS_TOKEN_KEY = 'ofk_access_token';
@@ -34,6 +39,7 @@ const customerUser = (customer, existing = guestUser) => ({
   id: customer.id,
   name: customer.name,
   phone: customer.phone_number,
+  avatar: customer.profile_image_url || existing.avatar || '',
 });
 
 export const AuthProvider = ({ children }) => {
@@ -135,8 +141,31 @@ export const AuthProvider = ({ children }) => {
     }));
   };
 
-  const updateProfile = (profileData) => {
+  const updateProfile = async (profileData) => {
+    setAuthError('');
+    const payload = {};
+    if (profileData.name !== undefined) payload.name = profileData.name;
+    if (profileData.phone !== undefined) payload.phone_number = profileData.phone;
+    if (profileData.avatar !== undefined && profileData.avatar !== '') {
+      if (String(profileData.avatar).startsWith('data:')) {
+        payload.profile_image_base64 = profileData.avatar;
+      } else {
+        payload.profile_image_url = profileData.avatar;
+      }
+    }
+    if (Object.keys(payload).length === 0) return user;
+
     setUser((prev) => ({ ...prev, ...profileData }));
+    if (!accessToken) return user;
+
+    try {
+      const { customer } = await updateCurrentCustomerProfile(payload);
+      setUser((prev) => customerUser(customer, prev));
+      return customer;
+    } catch (error) {
+      setAuthError(error.message);
+      throw error;
+    }
   };
 
   const value = useMemo(() => ({

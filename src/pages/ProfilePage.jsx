@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   User, 
@@ -10,9 +10,15 @@ import {
   ListOrdered, 
   Check, 
   Smartphone,
-  Edit2
+  Edit2,
+  Camera
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
+const initialsOf = (name) => {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
+};
 
 export default function ProfilePage() {
   const { 
@@ -23,6 +29,8 @@ export default function ProfilePage() {
     setDefaultAddress 
   } = useAuth();
   const [activeTab, setActiveTab] = useState('addresses');
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar);
+  const avatarInputRef = useRef(null);
   
   // Profile edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -39,8 +47,22 @@ export default function ProfilePage() {
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
-    updateProfile({ name, phone, email });
+    updateProfile({ name, phone, email }).catch(() => {});
     setIsEditing(false);
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUri = String(reader.result);
+      setAvatarUrl(dataUri);
+      updateProfile({ avatar: dataUri }).catch(() => setAvatarUrl(user.avatar));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleAddAddress = (e) => {
@@ -58,11 +80,34 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-sm mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <img
-            src={user.avatar}
-            alt={user.name}
-            className="w-20 h-20 rounded-2xl object-cover ring-4 ring-[#ebd7c5]"
-          />
+          <div className="relative">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={user.name}
+                className="w-20 h-20 rounded-2xl object-cover ring-4 ring-[#ebd7c5]"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#faf6f2] to-[#f5ebe1] ring-4 ring-[#ebd7c5] flex items-center justify-center text-xl font-black text-[#542813]">
+                {initialsOf(user.name)}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              title="Upload profile picture"
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#542813] text-white flex items-center justify-center shadow-md hover:bg-[#2b1206] transition active:scale-90"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+          </div>
           <div>
             <h1 className="text-2xl font-black text-gray-900">{user.name}</h1>
             <p className="text-xs text-stone-500 font-medium mt-0.5">{user.phone} · {user.email}</p>

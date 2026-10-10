@@ -190,6 +190,7 @@ export function normalizeOrder(raw = {}) {
   const vendor = raw.vendor ?? {};
   const payment = raw.payment ?? {};
   const deliveryLocation = raw.delivery_location ?? {};
+  const delivery = raw.delivery ?? {};
   const paymentMethod = raw.payment_method_label ?? payment.method_label ?? raw.payment_method ?? '';
 
   return {
@@ -233,6 +234,11 @@ export function normalizeOrder(raw = {}) {
       : raw.eta_minutes != null ? `${raw.eta_minutes} minutes` : 'Pending',
     rated: false,
     cancelReason: toText(raw.cancel_reason),
+    deliveryCode: toText(delivery.proof_of_delivery_code) || '',
+    otpCodeRequired: Boolean(delivery.otp_required),
+    deliveryConfirmed: Boolean(delivery.otp_verified),
+    canConfirmDelivery: Boolean(delivery.can_confirm),
+    deliveryStatus: toText(delivery.status),
   };
 }
 

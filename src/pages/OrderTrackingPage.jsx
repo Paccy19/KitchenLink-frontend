@@ -13,7 +13,8 @@ import {
   Check,
   ClipboardList,
   PackageCheck,
-  ShoppingBag
+  ShoppingBag,
+  ShieldCheck
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES } from '../context/OrderContext';
 
@@ -195,6 +196,38 @@ export default function OrderTrackingPage() {
         )}
 
       </div>
+
+      {/* Delivery confirmation code */}
+      {order.deliveryCode && !order.deliveryConfirmed && (
+        <div className="mb-8 rounded-3xl border-2 border-dashed border-[#6d391d]/40 bg-gradient-to-br from-[#fff7ee] to-[#faf6f2] p-6 sm:p-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#2b1206] via-[#8a5332] to-[#2b1206]" />
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#6d391d]">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Delivery confirmation code
+          </div>
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div className="font-mono text-5xl sm:text-6xl tracking-[0.25em] font-black text-[#2b1206] bg-white/80 border border-[#ebd7c5] rounded-2xl px-5 py-3 shadow-sm select-all">
+                {order.deliveryCode}
+              </div>
+              <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-[220px] leading-relaxed">
+                Give this to the rider when your food arrives to confirm the delivery.
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-stone-400 self-start sm:self-center">
+              Sent to your phone and stored here in your account
+            </span>
+          </div>
+        </div>
+      )}
+      {order.deliveryConfirmed && (
+        <div className="mb-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <p className="text-sm font-semibold text-emerald-800">
+            Delivery confirmed. Enjoy your meal!
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         

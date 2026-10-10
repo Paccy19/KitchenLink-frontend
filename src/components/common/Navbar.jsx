@@ -21,6 +21,11 @@ import { useCart } from '../../context/CartContext';
 import { useLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useVendor } from '../../context/VendorContext';
+import { useNotifications } from '../../context/NotificationContext';
+import {
+  Bell,
+  CheckCheck,
+} from 'lucide-react';
 
 export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const navigate = useNavigate();
@@ -30,10 +35,12 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const { currentLocation, setIsLocationModalOpen, neighborhoods, selectLocation } = useLocation();
   const { isAuthenticated: isVendorSignedIn, hasToken } = useVendor();
   const vendorSignedIn = isVendorSignedIn || hasToken;
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLocDropdownOpen, setIsLocDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -168,6 +175,81 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               )}
             </Link>
 
+            {/* Notifications bell */}
+            {isAuthenticated && (
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setIsNotificationsOpen(!isNotificationsOpen);
+                    setIsUserMenuOpen(false);
+                  }}
+                  aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+                  title="Notifications"
+                  className="relative p-2.5 rounded-xl border border-gray-200 bg-white text-stone-600 hover:bg-[#faf6f2] hover:text-[#542813] transition"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full bg-gradient-to-r from-[#2b1206] to-[#542813] text-white text-[9px] flex items-center justify-center font-bold">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {isNotificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-stone-100 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100">
+                      <span className="text-xs font-black uppercase tracking-wider text-stone-500">
+                        Notifications
+                      </span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllRead}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-[#542813] hover:text-[#2b1206]"
+                        >
+                          <CheckCheck className="w-3 h-3" />
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <p className="px-4 py-6 text-xs text-stone-500 text-center">
+                          You have no notifications yet.
+                        </p>
+                      ) : (
+                        notifications.map((notification) => (
+                          <Link
+                            key={notification.id}
+                            to={notification.order_id ? `/track/${notification.order_id}` : '/track'}
+                            onClick={() => {
+                              if (!notification.read) markRead(notification.id);
+                              setIsNotificationsOpen(false);
+                            }}
+                            className={`block px-4 py-3 border-b border-stone-50 hover:bg-[#faf6f2] transition ${
+                              notification.read ? '' : 'bg-[#fffbf5]'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="text-xs font-bold text-gray-900">
+                                {notification.title}
+                              </span>
+                              {!notification.read && (
+                                <span className="w-2 h-2 rounded-full bg-[#542813] flex-shrink-0 mt-1" />
+                              )}
+                            </div>
+                            <p className="text-[11px] text-stone-600 mt-0.5 leading-snug">
+                              {notification.body}
+                            </p>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* User Account / Login */}
             {isAuthenticated ? (
               <div className="relative">
@@ -175,11 +257,17 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 text-sm font-medium transition"
                 >
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-7 h-7 rounded-full object-cover ring-2 ring-[#8a5332]/30"
-                  />
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-7 h-7 rounded-full object-cover ring-2 ring-[#8a5332]/30"
+                    />
+                  ) : (
+                    <span className="w-7 h-7 rounded-full bg-[#542813] text-white ring-2 ring-[#8a5332]/30 flex items-center justify-center text-[10px] font-black">
+                      {String(user.name || 'U').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+                    </span>
+                  )}
                   <span className="hidden md:inline font-bold text-stone-800 text-xs max-w-[100px] truncate">
                     {user.name.split(' ')[0]}
                   </span>

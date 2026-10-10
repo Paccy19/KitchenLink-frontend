@@ -123,7 +123,7 @@ export function mapVendorAccount(raw = {}) {
     location: raw.location?.neighborhood || raw.location?.address || 'Kigali',
     address: raw.location?.address || '',
     description: raw.description || '',
-    avatar: raw.banner_image_url || '',
+    avatar: raw.profile_image_url || raw.banner_image_url || '',
     cover: raw.banner_image_url || '',
     rating: Number(raw.rating ?? 0),
     reviewsCount: 0,

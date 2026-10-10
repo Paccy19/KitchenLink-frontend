@@ -27,12 +27,25 @@ const VendorWalletPage = lazy(() => import('./pages/vendor/VendorWalletPage'));
 const VendorRegisterPage = lazy(() => import('./pages/vendor/VendorRegisterPage'));
 const VendorLoginPage = lazy(() => import('./pages/vendor/VendorLoginPage'));
 
+// Driver app (separate shell without the customer chrome).
+const DriverLayout = lazy(() => import('./components/driver-dashboard/DriverLayout'));
+const DriverLoginPage = lazy(() => import('./pages/driver/DriverLoginPage'));
+const DriverRegisterPage = lazy(() => import('./pages/driver/DriverRegisterPage'));
+const DriverDashboardPage = lazy(() => import('./pages/driver/DriverDashboardPage'));
+const DriverActiveDeliveryPage = lazy(() => import('./pages/driver/DriverActiveDeliveryPage'));
+const DriverHistoryPage = lazy(() => import('./pages/driver/DriverHistoryPage'));
+const DriverEarningsPage = lazy(() => import('./pages/driver/DriverEarningsPage'));
+const DriverProfilePage = lazy(() => import('./pages/driver/DriverProfilePage'));
+
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const isVendorArea =
     location.pathname.startsWith('/vendor-dashboard') ||
-    location.pathname.startsWith('/vendor-login');
+    location.pathname.startsWith('/vendor-login') ||
+    location.pathname.startsWith('/driver-dashboard') ||
+    location.pathname.startsWith('/driver-login') ||
+    location.pathname.startsWith('/driver-register');
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50/50">
@@ -59,6 +72,16 @@ export default function App() {
               <Route path="/wishlist" element={<WishlistPage />} />
               <Route path="/vendor-register" element={<VendorRegisterPage />} />
               <Route path="/vendor-login" element={<VendorLoginPage />} />
+              <Route path="/driver-register" element={<DriverRegisterPage />} />
+              <Route path="/driver-login" element={<DriverLoginPage />} />
+
+              <Route path="/driver-dashboard" element={<DriverLayout />}>
+                <Route index element={<DriverDashboardPage />} />
+                <Route path="active" element={<DriverActiveDeliveryPage />} />
+                <Route path="history" element={<DriverHistoryPage />} />
+                <Route path="earnings" element={<DriverEarningsPage />} />
+                <Route path="profile" element={<DriverProfilePage />} />
+              </Route>
 
               <Route path="/vendor-dashboard" element={<VendorLayout />}>
                 <Route index element={<VendorOverviewPage />} />

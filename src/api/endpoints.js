@@ -80,6 +80,9 @@ export const verifyOtp = (phoneNumber, code, name) =>
 
 export const fetchCurrentCustomer = () => apiJson('GET', '/auth/me');
 
+export const updateCurrentCustomerProfile = (payload) =>
+  apiJson('PATCH', '/auth/me/profile', payload);
+
 export const fetchCart = () => apiJson('GET', '/cart');
 export const addCartItem = (menuItemId, quantity = 1) =>
   apiJson('POST', '/cart', { menu_item_id: menuItemId, quantity });
@@ -110,3 +113,10 @@ export const cancelRemoteOrder = (orderId, reason = '') =>
 export const payRemoteOrder = (orderId, payload = {}) =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/pay`, payload);
 export const fetchPaymentMethods = () => apiJson('GET', '/orders/payment-methods');
+
+export const fetchNotifications = (params = {}) =>
+  apiRequest('/notifications', params);
+export const markNotificationRead = (notificationId) =>
+  apiJson('POST', `/notifications/${encodeURIComponent(notificationId)}/read`);
+export const markAllNotificationsRead = () =>
+  apiJson('POST', '/notifications/read-all');

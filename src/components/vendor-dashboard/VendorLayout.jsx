@@ -196,11 +196,17 @@ export default function VendorLayout() {
                   <Radio className={`w-3.5 h-3.5 ${connected ? 'animate-pulse' : ''}`} />
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
-                <img
-                  src={vendor.avatar}
-                  alt={vendor.name}
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-[#ebd7c5]"
-                />
+                {vendor.avatar ? (
+                  <img
+                    src={vendor.avatar}
+                    alt={vendor.name}
+                    className="w-9 h-9 rounded-full object-cover ring-2 ring-[#ebd7c5]"
+                  />
+                ) : (
+                  <span className="w-9 h-9 rounded-full bg-[#542813] text-white ring-2 ring-[#ebd7c5] flex items-center justify-center text-xs font-black">
+                    {(vendor.name || 'K').slice(0, 1).toUpperCase()}
+                  </span>
+                )}
               </div>
             </div>
           </header>

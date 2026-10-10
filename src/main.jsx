@@ -11,6 +11,8 @@ import { CartProvider } from './context/CartContext';
 import { OrderProvider } from './context/OrderContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { VendorProvider } from './context/VendorContext';
+import { DriverProvider } from './context/DriverContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { ToastProvider } from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -27,25 +29,29 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <LocationProvider>
-              <CartProvider>
-                <WishlistProvider>
-                  <OrderProvider>
-                    <VendorProvider>
-                      <ToastProvider>
-                        <App />
-                      </ToastProvider>
-                    </VendorProvider>
-                  </OrderProvider>
-                </WishlistProvider>
-              </CartProvider>
-            </LocationProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
+      <ToastProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <AuthProvider>
+              <LocationProvider>
+                <CartProvider>
+                  <WishlistProvider>
+                    <OrderProvider>
+                      <NotificationProvider>
+                        <VendorProvider>
+                          <DriverProvider>
+                            <App />
+                          </DriverProvider>
+                        </VendorProvider>
+                      </NotificationProvider>
+                    </OrderProvider>
+                  </WishlistProvider>
+                </CartProvider>
+              </LocationProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ToastProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 );

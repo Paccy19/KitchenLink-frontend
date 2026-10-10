@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShoppingBag,
@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   AlertTriangle,
   ChefHat,
+  Camera,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
@@ -20,8 +21,23 @@ import OrderStatusBadge from '../../components/vendor-dashboard/OrderStatusBadge
 const money = (value) => `${value.toLocaleString()} RWF`;
 
 export default function VendorOverviewPage() {
-  const { vendor, stats, orders, menuItems, lastSyncedAt, markSynced } = useVendor();
+  const { vendor, stats, orders, menuItems, lastSyncedAt, markSynced, updateVendorProfile } = useVendor();
   const [refreshing, setRefreshing] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(vendor.avatar);
+  const avatarInputRef = useRef(null);
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUri = String(reader.result);
+      setAvatarUrl(dataUri);
+      updateVendorProfile({ avatar: dataUri }).catch(() => setAvatarUrl(vendor.avatar));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const sync = useCallback(async () => {
     setRefreshing(true);
@@ -51,12 +67,42 @@ export default function VendorOverviewPage() {
       {/* Welcome banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] text-white p-6 sm:p-8 shadow-lg">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[#d9bda6]">Welcome back</p>
-            <h2 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight">{vendor.name}</h2>
-            <p className="mt-1 text-xs sm:text-sm text-[#ebd7c5]/80 font-medium">
-              {vendor.type} · {vendor.location} · Last synced {syncedLabel}
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={vendor.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white/30 shadow-lg bg-white/10"
+                />
+              ) : (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 ring-2 ring-white/30 flex items-center justify-center text-2xl font-black text-white/90">
+                  {(vendor.name || 'K').slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                title="Upload kitchen logo / profile picture"
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white text-[#542813] flex items-center justify-center shadow-md hover:bg-[#faf6f2] transition active:scale-90"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-[#d9bda6]">Welcome back</p>
+              <h2 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight">{vendor.name}</h2>
+              <p className="mt-1 text-xs sm:text-sm text-[#ebd7c5]/80 font-medium">
+                {vendor.type} · {vendor.location} · Last synced {syncedLabel}
+              </p>
+            </div>
           </div>
           <button
             type="button"

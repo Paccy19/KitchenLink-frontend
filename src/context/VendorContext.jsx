@@ -263,6 +263,12 @@ export function VendorProvider({ children }) {
       if (patch.description !== undefined) payload.description = patch.description;
       if (patch.phone !== undefined) payload.phone = patch.phone;
       if (patch.isOpen !== undefined) payload.is_open = patch.isOpen;
+      if (patch.avatar !== undefined && patch.avatar !== '') {
+        payload.profile_image_base64 = patch.avatar;
+      }
+      if (patch.bannerImage !== undefined && patch.bannerImage !== '') {
+        payload.banner_image_base64 = patch.bannerImage;
+      }
       if (Object.keys(payload).length === 0) return;
       const { vendor: raw } = await vendorApi.updateProfile(payload);
       if (mounted.current) setVendor(mapVendorAccount(raw));
