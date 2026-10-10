@@ -11,6 +11,7 @@ import HomePage from './pages/HomePage';
 
 // Route-level code splitting for the heavier screens.
 const VendorsPage = lazy(() => import('./pages/VendorsPage'));
+const VendorsMapPage = lazy(() => import('./pages/VendorsMapPage'));
 const VendorPage = lazy(() => import('./pages/VendorPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
@@ -63,6 +64,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/vendors" element={<VendorsPage />} />
+              <Route path="/vendors/map" element={<VendorsMapPage />} />
               <Route path="/vendor/:vendorId" element={<VendorPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/track" element={<OrderTrackingPage />} />

@@ -221,6 +221,7 @@ export function normalizeOrder(raw = {}) {
       methodCode: toText(payment.method, raw.payment_method),
       status: toText(raw.payment_status, payment.status, 'pending'),
       reference: toText(payment.reference),
+      details: raw.payment_details ?? payment.details ?? {},
     },
     deliveryAddress: {
       title: 'Delivery location',

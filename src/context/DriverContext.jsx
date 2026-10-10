@@ -14,6 +14,7 @@ import {
   mapDelivery,
   mapDriverAccount,
   mapDriverEarnings,
+  mapDriverNotification,
   mapDriverStats,
   setDriverToken,
 } from '../api/driverApi';
@@ -48,11 +49,16 @@ export function DriverProvider({ children }) {
   const [history, setHistory] = useState([]);
   const [earnings, setEarnings] = useState(null);
 
-  const [location, setLocation] = useState(null);
-  const [sharingLocation, setSharingLocation] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [lastSyncedAt, setLastSyncedAt] = useState(() => new Date().toISOString());
   const knownOfferIds = useRef(new Set());
+  const knownNotificationIds = useRef(new Set());
+
+  const [location, setLocation] = useState(null);
+  const [sharingLocation, setSharingLocation] = useState(false);
+
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -104,6 +110,52 @@ export function DriverProvider({ children }) {
         : prev,
     );
     return mapped;
+  }, []);
+
+  const refreshNotifications = useCallback(async () => {
+    const raw = await driverApi.notifications({ limit: 30 });
+    if (!mounted.current) return [];
+    const mapped = (raw.notifications || []).map(mapDriverNotification);
+    const count = Number(raw.unread_count ?? mapped.filter((n) => !n.read).length);
+
+    const firstBatch = knownNotificationIds.current.size === 0;
+    const freshOffers = mapped.filter(
+      (n) => n.type === 'delivery_offer' && !n.read && !knownNotificationIds.current.has(n.id),
+    );
+
+    if (!firstBatch && freshOffers.length > 0) {
+      const offer = freshOffers[0];
+      const vendor = offer.data.vendor_name || 'A nearby vendor';
+      const earnings = Number(offer.data.earnings_rwf || 0);
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
+        new Notification(offer.title || 'New order ready for pickup', {
+          body: `${vendor} · earn ${earnings.toLocaleString()} RWF`,
+          icon: '/favicon.svg',
+        });
+      }
+      toast.info(`${vendor} has an order ready for pickup · earn ${earnings.toLocaleString()} RWF`);
+    }
+    freshOffers.forEach((n) => knownNotificationIds.current.add(n.id));
+
+    setNotifications(mapped);
+    setUnreadCount(count);
+    return mapped;
+  }, [toast]);
+
+  const markNotificationRead = useCallback(async (id) => {
+    await driverApi.markNotificationRead(id);
+    if (!mounted.current) return;
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id && !n.read ? { ...n, read: true, readAt: new Date().toISOString() } : n)),
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    await driverApi.markAllNotificationsRead();
+    if (!mounted.current) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true, readAt: new Date().toISOString() })));
+    setUnreadCount(0);
   }, []);
 
   const refreshAvailable = useCallback(async () => {
@@ -164,14 +216,19 @@ export function DriverProvider({ children }) {
     setError('');
     try {
       await refreshProfile();
-      await Promise.all([refreshStats(), refreshActive(), refreshAvailable()]);
+      await Promise.all([
+        refreshStats(),
+        refreshActive(),
+        refreshAvailable(),
+        refreshNotifications(),
+      ]);
       markSynced();
     } catch (err) {
       if (mounted.current) setError(err.message || 'Failed to load your dashboard.');
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [refreshProfile, refreshStats, refreshActive, refreshAvailable, markSynced]);
+  }, [refreshProfile, refreshStats, refreshActive, refreshAvailable, refreshNotifications, markSynced]);
 
   /* ------------------------------- polling ------------------------------ */
 
@@ -182,12 +239,17 @@ export function DriverProvider({ children }) {
       return;
     }
     try {
-      await Promise.all([refreshStats(), refreshActive(), refreshAvailable()]);
+      await Promise.all([
+        refreshStats(),
+        refreshActive(),
+        refreshAvailable(),
+        refreshNotifications(),
+      ]);
       if (mounted.current) markSynced();
     } catch {
       /* transient poll failure is fine */
     }
-  }, [refreshStats, refreshActive, refreshAvailable, markSynced]);
+  }, [refreshStats, refreshActive, refreshAvailable, refreshNotifications, markSynced]);
 
   useEffect(() => {
     if (authToken) {
@@ -254,6 +316,10 @@ export function DriverProvider({ children }) {
     setStats(EMPTY_STATS);
     setAvailableDeliveries([]);
     setActiveDelivery(null);
+    setNotifications([]);
+    setUnreadCount(0);
+    knownOfferIds.current = new Set();
+    knownNotificationIds.current = new Set();
     setError('');
   }, []);
 
@@ -400,6 +466,11 @@ export function DriverProvider({ children }) {
       activeDelivery,
       history,
       earnings,
+      notifications,
+      unreadCount,
+      refreshNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
       location,
       sharingLocation,
       isAuthenticated,
@@ -436,6 +507,11 @@ export function DriverProvider({ children }) {
       activeDelivery,
       history,
       earnings,
+      notifications,
+      unreadCount,
+      refreshNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
       location,
       sharingLocation,
       isAuthenticated,

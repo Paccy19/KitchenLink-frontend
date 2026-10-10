@@ -210,6 +210,20 @@ export function mapDriverEarnings(raw = {}) {
   };
 }
 
+export function mapDriverNotification(raw = {}) {
+  return {
+    id: raw.id,
+    type: raw.type || 'general',
+    title: raw.title || '',
+    body: raw.body || '',
+    orderId: raw.order_id || '',
+    data: raw.data || {},
+    read: Boolean(raw.read),
+    readAt: raw.read_at || null,
+    createdAt: raw.created_at,
+  };
+}
+
 /* -------------------------------- endpoints ------------------------------- */
 
 export const driverApi = {
@@ -259,6 +273,15 @@ export const driverApi = {
       method: 'PATCH',
       body: { is_online: isOnline },
     }),
+
+  notifications: (params = {}) =>
+    driverRequest('/driver/notifications', { params }),
+  markNotificationRead: (id) =>
+    driverRequest(`/driver/notifications/${encodeURIComponent(id)}/read`, {
+      method: 'POST',
+    }),
+  markAllNotificationsRead: () =>
+    driverRequest('/driver/notifications/read-all', { method: 'POST' }),
 };
 
 export const DRIVER_VEHICLES = [

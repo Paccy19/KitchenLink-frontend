@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Heart,
   Store,
+  Map,
   Menu,
   X
 } from 'lucide-react';
@@ -144,6 +145,15 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Tomorrow's Specials</span>
+            </Link>
+
+            {/* Quick Link: Nearby Map */}
+            <Link
+              to="/vendors/map"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              <Map className="w-3.5 h-3.5 text-[#6d391d]" />
+              <span>Nearby Map</span>
             </Link>
 
             {/* Cart Trigger Button */}
@@ -404,6 +414,14 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
             >
               Track Order
+            </Link>
+            <Link
+              to="/vendors/map"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
+            >
+              <Map className="w-4 h-4 text-[#8a5332]" />
+              Nearby Map
             </Link>
             <Link
               to="/profile"

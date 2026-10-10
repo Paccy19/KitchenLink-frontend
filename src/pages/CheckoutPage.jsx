@@ -7,11 +7,64 @@ import {
   CheckCircle2, 
   AlertCircle,
   Plus,
+  Smartphone,
+  CreditCard,
+  Coins,
+  Wallet,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
+
+const PAYMENT_METHODS = [
+  {
+    code: 'mobile_money',
+    label: 'Mobile Money',
+    hint: 'MTN or Airtel — +25078, +25079 or +25073',
+    icon: Smartphone,
+  },
+  {
+    code: 'card',
+    label: 'Cards',
+    hint: 'Visa or Mastercard via secure checkout',
+    icon: CreditCard,
+  },
+  {
+    code: 'ekash',
+    label: 'eKash',
+    hint: 'Pay instantly from your eKash wallet',
+    icon: Coins,
+  },
+  {
+    code: 'wallet',
+    label: 'Wallet',
+    hint: 'Pay from the wallet linked to your phone',
+    icon: Wallet,
+  },
+];
+
+// Mobile Money only supports MTN (078, 079) and Airtel (073).
+const MOBILE_MONEY_PHONE_REGEX = /^0(78|79|73)\d{7}$/;
+const MOBILE_PHONE_REGEX = /^0(72|73|78|79)\d{7}$/;
+
+const normalizeRwandanPhone = (raw) => {
+  let digits = String(raw ?? '').replace(/[^\d]/g, '');
+  if (digits.startsWith('250')) digits = digits.slice(3);
+  if (!digits.startsWith('0')) digits = `0${digits}`;
+  return digits;
+};
+
+const formatCardNumber = (raw) =>
+  String(raw ?? '')
+    .replace(/[^\d]/g, '')
+    .slice(0, 19)
+    .replace(/(\d{4})(?=\d)/g, '$1 ');
+
+const formatCardExpiry = (raw) => {
+  const digits = String(raw ?? '').replace(/[^\d]/g, '').slice(0, 4);
+  return digits.length >= 3 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+};
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -46,10 +99,55 @@ export default function CheckoutPage() {
   const [newInstructions, setNewInstructions] = useState('');
 
   // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  const [paymentMethod, setPaymentMethod] = useState('mobile_money');
+  const [paymentInputs, setPaymentInputs] = useState({
+    mobile_money: { phone: '' },
+    card: { card_number: '', card_expiry: '', card_cvv: '' },
+    ekash: { phone: '' },
+    wallet: { phone: '' },
+  });
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const setPaymentInput = (code, field, value) =>
+    setPaymentInputs((prev) => ({
+      ...prev,
+      [code]: { ...prev[code], [field]: value },
+    }));
+
+  // Validates the inputs for the selected method and returns the payload that
+  // gets persisted with the order. The CVV is validated but never sent/stored.
+  const buildPaymentDetails = () => {
+    if (paymentMethod === 'card') {
+      const { card_number, card_expiry, card_cvv } = paymentInputs.card;
+      const cardNumber = String(card_number ?? '').replace(/\s/g, '');
+      if (!/^\d{13,19}$/.test(cardNumber)) {
+        return { error: 'Enter a valid card number (13–19 digits).' };
+      }
+      const expiry = String(card_expiry ?? '').trim();
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) {
+        return { error: 'Enter the card expiry as MM/YY.' };
+      }
+      if (!/^\d{3,4}$/.test(String(card_cvv ?? '').trim())) {
+        return { error: 'Enter the card CVV (3–4 digits).' };
+      }
+      return { details: { card_number: cardNumber, card_expiry: expiry } };
+    }
+
+    const phone = normalizeRwandanPhone(paymentInputs[paymentMethod]?.phone);
+    const regex =
+      paymentMethod === 'mobile_money' ? MOBILE_MONEY_PHONE_REGEX : MOBILE_PHONE_REGEX;
+    if (!regex.test(phone)) {
+      return {
+        error:
+          paymentMethod === 'mobile_money'
+            ? 'Enter a valid MTN or Airtel number (+25078, +25079 or +25073).'
+            : 'Enter a valid Rwandan mobile number (e.g. 0788123456).',
+      };
+    }
+    return { details: { phone } };
+  };
 
   if (cartItems.length === 0) {
     return (
@@ -108,9 +206,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    const { error: paymentError, details: paymentDetails } = buildPaymentDetails();
+    if (paymentError) {
+      setErrorMsg(paymentError);
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg('');
     clearApiError();
+    const method = PAYMENT_METHODS.find((m) => m.code === paymentMethod);
     try {
       const orderId = await placeOrder({
         items: cartItems,
@@ -124,10 +229,10 @@ export default function CheckoutPage() {
           note: [currentAddr.instructions, orderNotes].filter(Boolean).join(' | '),
         },
         paymentMethod: {
-          code: paymentMethod,
-          label: 'Cash on Delivery',
-          phone: '',
+          code: method.code,
+          label: method.label,
         },
+        paymentDetails,
         orderType,
         scheduledInfo: { date: scheduledDate, time: scheduledTime },
         pricing: { subtotal, deliveryFee, total: grandTotal },
@@ -342,33 +447,108 @@ export default function CheckoutPage() {
             </div>
 
             <div className="space-y-2.5">
-              {/* Cash on delivery */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition ${
-                  paymentMethod === 'cash_on_delivery'
-                    ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
-                    : 'border-stone-200 hover:bg-stone-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="pay_method"
-                    checked={paymentMethod === 'cash_on_delivery'}
-                    onChange={() => setPaymentMethod('cash_on_delivery')}
-                    className="accent-[#542813]"
-                  />
-                  <div>
-                    <div className="font-bold text-xs text-gray-900">Cash on Delivery</div>
-                    <p className="text-[11px] text-stone-500">Pay your rider when the order arrives</p>
+              {PAYMENT_METHODS.map((method) => {
+                const Icon = method.icon;
+                const selected = paymentMethod === method.code;
+                const inputClass =
+                  'w-full text-xs p-3 rounded-xl border border-stone-200 bg-white text-gray-900 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition';
+                return (
+                  <div
+                    key={method.code}
+                    className={`rounded-2xl border transition ${
+                      selected
+                        ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
+                        : 'border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    <label className="flex items-center justify-between p-4 cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="pay_method"
+                          checked={selected}
+                          onChange={() => setPaymentMethod(method.code)}
+                          className="accent-[#542813]"
+                        />
+                        <div>
+                          <div className="font-bold text-xs text-gray-900">{method.label}</div>
+                          <p className="text-[11px] text-stone-500">{method.hint}</p>
+                        </div>
+                      </div>
+                      <Icon className="w-5 h-5 text-stone-400" />
+                    </label>
+
+                    {selected && (
+                      <div className="px-4 pb-4 space-y-2">
+                        {method.code === 'card' ? (
+                          <>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="cc-number"
+                              value={paymentInputs.card.card_number}
+                              onChange={(e) =>
+                                setPaymentInput('card', 'card_number', formatCardNumber(e.target.value))
+                              }
+                              placeholder="Card number"
+                              className={inputClass}
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="cc-exp"
+                                value={paymentInputs.card.card_expiry}
+                                onChange={(e) =>
+                                  setPaymentInput('card', 'card_expiry', formatCardExpiry(e.target.value))
+                                }
+                                placeholder="Expiry (MM/YY)"
+                                className={inputClass}
+                              />
+                              <input
+                                type="password"
+                                inputMode="numeric"
+                                autoComplete="cc-csc"
+                                value={paymentInputs.card.card_cvv}
+                                onChange={(e) =>
+                                  setPaymentInput(
+                                    'card',
+                                    'card_cvv',
+                                    e.target.value.replace(/[^\d]/g, '').slice(0, 4)
+                                  )
+                                }
+                                placeholder="CVV"
+                                className={inputClass}
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="tel"
+                              inputMode="tel"
+                              value={paymentInputs[method.code].phone}
+                              onChange={(e) => setPaymentInput(method.code, 'phone', e.target.value)}
+                              placeholder={
+                                method.code === 'mobile_money'
+                                  ? 'Phone number e.g. +250788123456'
+                                  : 'Phone number e.g. 0788123456'
+                              }
+                              className={inputClass}
+                            />
+                            {method.code === 'mobile_money' && (
+                              <p className="text-[10px] font-medium text-stone-500">
+                                Supported networks: MTN (+25078, +25079) and Airtel (+25073).
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-                <Clock className="w-5 h-5 text-stone-400" />
-              </label>
+                );
+              })}
             </div>
-            <p className="text-[11px] text-stone-500">
-              Online payments are unavailable until a payment provider is connected.
-            </p>
           </div>
 
           {/* 4. Notes for Kitchen or Rider */}

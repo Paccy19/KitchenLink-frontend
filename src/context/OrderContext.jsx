@@ -10,6 +10,8 @@ export const ORDER_STATUSES = [
   { id: 'confirmed', label: 'Confirmed by kitchen', icon: 'check-circle', description: 'The kitchen accepted your order.' },
   { id: 'preparing', label: 'Preparing your food', icon: 'chef-hat', description: 'Fresh ingredients are being cooked.' },
   { id: 'ready', label: 'Ready for pickup', icon: 'shopping-bag', description: 'Food packed and waiting for delivery.' },
+  { id: 'assigned', label: 'Assigned to driver', icon: 'bike', description: 'A rider is heading to the vendor to collect your order.' },
+  { id: 'picked_up', label: 'Picked up', icon: 'package', description: 'Your order is with the rider — on the way to you.' },
   { id: 'out_for_delivery', label: 'Out for delivery', icon: 'bike', description: 'Your order is on the way.' },
   { id: 'delivered', label: 'Delivered', icon: 'package', description: 'Enjoy your meal!' },
   { id: 'cancelled', label: 'Cancelled', icon: '×', description: 'This order has been cancelled.' },
@@ -55,7 +57,7 @@ export const OrderProvider = ({ children }) => {
     return () => clearInterval(timer);
   }, [accessToken]);
 
-  const placeOrder = async ({ deliveryLocation, paymentMethod }) => {
+  const placeOrder = async ({ deliveryLocation, paymentMethod, paymentDetails }) => {
     if (!apiEnabled) {
       const error = new Error('Sign in before placing an order.');
       setApiError(error.message);
@@ -66,6 +68,7 @@ export const OrderProvider = ({ children }) => {
       const result = await createRemoteOrder({
         delivery_location: deliveryLocation,
         payment_method: paymentMethod.code,
+        payment_details: paymentDetails,
       });
       const order = normalizeOrder(result);
       setOrders((current) => [order, ...current.filter((item) => item.id !== order.id)]);

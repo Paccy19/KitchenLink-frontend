@@ -86,11 +86,11 @@ const titleToStatus = {
 };
 
 const PAYMENT_METHOD_LABELS = {
-  momo: 'MTN Mobile Money',
-  mobile_money: 'MTN Mobile Money',
-  card: 'Credit / Debit Card',
-  cash_on_delivery: 'Cash on Delivery',
-  cash: 'Cash on Delivery',
+  mobile_money: 'Mobile Money',
+  momo: 'Mobile Money',
+  card: 'Cards',
+  ekash: 'eKash',
+  wallet: 'Wallet',
 };
 
 const paymentStatusLabel = (value) => {

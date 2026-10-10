@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Navigation,
@@ -13,6 +13,8 @@ import {
   Radio,
   MapPin,
   Power,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
 import useDriverRealtime from '../../hooks/useDriverRealtime';
@@ -35,6 +37,19 @@ const VEHICLE_LABEL = {
   truck: 'Truck',
 };
 
+function formatRelative(iso) {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function DriverLayout() {
   const {
     driver,
@@ -43,9 +58,37 @@ export default function DriverLayout() {
     sharingLocation,
     hasToken,
     isAuthenticated,
+    notifications,
+    unreadCount,
+    markNotificationRead,
+    markAllNotificationsRead,
   } = useDriver();
   const { connected } = useDriverRealtime({ enabled: true });
+  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+
+  useEffect(() => {
+    if (!notifOpen) return undefined;
+    const onPointerDown = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [notifOpen]);
+
+  const openNotification = (notification) => {
+    if (!notification.read) markNotificationRead(notification.id);
+    setNotifOpen(false);
+    if (notification.type === 'delivery_offer' && notification.orderId) {
+      navigate('/driver-dashboard', { state: { focusOffer: notification.orderId } });
+    } else {
+      navigate('/driver-dashboard');
+    }
+  };
 
   if (!hasToken) {
     return <Navigate to="/driver-login" replace />;
@@ -196,6 +239,82 @@ export default function DriverLayout() {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setNotifOpen((value) => !value)}
+                    aria-label="Notifications"
+                    className="relative w-10 h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center justify-center transition"
+                  >
+                    {unreadCount > 0 ? (
+                      <BellRing className="w-5 h-5 text-[#3b5327]" />
+                    ) : (
+                      <Bell className="w-5 h-5" />
+                    )}
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1.5 min-w-[19px] h-[19px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {notifOpen && (
+                    <div
+                      ref={notifRef}
+                      className="absolute right-0 top-12 w-80 sm:w-96 max-w-[85vw] bg-white rounded-2xl shadow-xl border border-stone-200 z-50 animate-fade-in"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100">
+                        <p className="text-sm font-black text-gray-900">Notifications</p>
+                        {unreadCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={markAllNotificationsRead}
+                            className="text-[11px] font-bold text-[#3b5327] hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      <div className="max-h-80 overflow-y-auto divide-y divide-stone-50">
+                        {notifications.length === 0 && (
+                          <p className="px-4 py-6 text-center text-sm text-stone-400 font-medium">
+                            No notifications yet
+                          </p>
+                        )}
+                        {notifications.map((notification) => (
+                          <button
+                            key={notification.id}
+                            type="button"
+                            onClick={() => openNotification(notification)}
+                            className={`w-full text-left px-4 py-3 hover:bg-[#f5f8f2] transition ${
+                              notification.read ? '' : 'bg-[#f0f6ea]'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div
+                                className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                                  notification.read ? 'bg-stone-200' : 'bg-[#3b5327]'
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <p className="text-[13px] font-bold text-gray-900 leading-snug">
+                                  {notification.title}
+                                </p>
+                                <p className="text-xs text-stone-500 leading-snug mt-0.5 line-clamp-2">
+                                  {notification.body}
+                                </p>
+                                <p className="text-[10px] text-stone-400 font-medium mt-1">
+                                  {formatRelative(notification.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <span
                   className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${
                     connected

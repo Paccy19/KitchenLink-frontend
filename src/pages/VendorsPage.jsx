@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChefHat, Loader2, MapPin, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ChefHat, Loader2, Map, MapPin, SlidersHorizontal } from 'lucide-react';
 import VendorCard from '../components/home/VendorCard';
 import CategoryBar from '../components/home/CategoryBar';
 import EmptyState, { ErrorState } from '../components/common/EmptyState';
@@ -107,6 +107,13 @@ export default function VendorsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to={{ pathname: '/vendors/map', search: searchParams.toString() }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#2b1206] to-[#4e2410] shadow-md shadow-[#2b1206]/20 transition active:scale-95"
+          >
+            <Map className="w-3.5 h-3.5" aria-hidden="true" />
+            Map view
+          </Link>
           <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
             <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
             Sort

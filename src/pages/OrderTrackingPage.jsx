@@ -154,7 +154,7 @@ export default function OrderTrackingPage() {
             />
 
             {/* Stepper nodes */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 relative z-10">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 relative z-10">
               {progressStatuses.map((step, idx) => {
                 const isPassed = idx <= currentStatusIndex;
                 const isCurrent = idx === currentStatusIndex;
@@ -235,7 +235,7 @@ export default function OrderTrackingPage() {
         <div className="lg:col-span-7 space-y-6">
           
           {/* Driver Card */}
-          {order.driver && ['out_for_delivery', 'delivered'].includes(order.status) && (
+          {order.driver && ['assigned', 'picked_up', 'out_for_delivery', 'delivered'].includes(order.status) && (
             <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                 Assigned Delivery Partner
@@ -334,7 +334,13 @@ export default function OrderTrackingPage() {
             </div>
 
             <div className="p-3 bg-stone-50 rounded-xl text-[11px] text-stone-500 font-medium border border-stone-100">
-              Payment via <span className="font-bold text-gray-700">{order.payment.method}</span> · Status:{' '}
+              Payment via <span className="font-bold text-gray-700">{order.payment.method}</span>
+              {order.payment.details?.phone ? (
+                <> · <span className="font-bold text-gray-700">{order.payment.details.phone}</span></>
+              ) : order.payment.details?.card_last4 ? (
+                <> · <span className="font-bold text-gray-700">•••• {order.payment.details.card_last4}</span></>
+              ) : null}
+              {' '}· Status:{' '}
               <span className={`font-bold ${order.payment.status === 'paid' ? 'text-emerald-600' : order.payment.status === 'refunded' ? 'text-blue-600' : 'text-amber-600'}`}>
                 {order.payment.status}
               </span>

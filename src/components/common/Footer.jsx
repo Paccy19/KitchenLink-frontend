@@ -103,17 +103,20 @@ export default function Footer() {
               Supported Payments
             </h4>
             <p className="text-xs text-stone-400 mb-3">
-              Pay with MTN Mobile Money, a bank card, or cash on delivery:
+              Pay with Mobile Money, cards, eKash, or your wallet:
             </p>
             <div className="flex flex-wrap gap-2 text-xs font-bold">
               <span className="px-2.5 py-1 rounded-md bg-yellow-400/20 text-yellow-300 border border-yellow-400/30">
-                MTN MoMo
+                Mobile Money
               </span>
               <span className="px-2.5 py-1 rounded-md bg-blue-400/20 text-blue-300 border border-blue-400/30">
-                Visa / Cards
+                Cards
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-purple-400/20 text-purple-300 border border-purple-400/30">
+                eKash
               </span>
               <span className="px-2.5 py-1 rounded-md bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
-                Cash on Delivery
+                Wallet
               </span>
             </div>
           </div>
