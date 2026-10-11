@@ -16,6 +16,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
+import { buildScheduledFor, formatScheduledFor } from '../utils/schedule';
 
 const PAYMENT_METHODS = [
   {
@@ -80,11 +81,33 @@ export default function CheckoutPage() {
     isSyncing,
     orderType,
     scheduledDate,
-    scheduledTime
+    scheduledTime,
+    preorderSpecial,
   } = useCart();
   const { user, isAuthenticated, openAuthModal, addAddress } = useAuth();
   const { placeOrder, apiEnabled, apiError, clearApiError } = useOrders();
   const { coords } = useLocation();
+
+  const scheduledFor =
+    orderType === 'scheduled'
+      ? buildScheduledFor(scheduledDate, scheduledTime)
+      : orderType === 'preorder' && preorderSpecial?.deliveryAt
+        ? preorderSpecial.deliveryAt
+        : null;
+
+  const scheduleLabel =
+    orderType === 'immediate'
+      ? 'Immediate Delivery'
+      : orderType === 'preorder'
+        ? 'Pre-Order'
+        : 'Scheduled Delivery';
+
+  const scheduleDescription =
+    orderType === 'immediate'
+      ? 'Estimated delivery time: 25–35 minutes after kitchen preparation'
+      : orderType === 'preorder' && preorderSpecial
+        ? `${preorderSpecial.text} — arrives by ${formatScheduledFor(scheduledFor)}`
+        : `Scheduled to arrive: ${scheduledDate} at ${scheduledTime}`;
 
   // Selected address state
   const [selectedAddressId, setSelectedAddressId] = useState(() => {
@@ -194,10 +217,6 @@ export default function CheckoutPage() {
       openAuthModal();
       return;
     }
-    if (apiEnabled && orderType === 'scheduled') {
-      setErrorMsg('Scheduled delivery is not available through the backend yet. Change the order to immediate delivery in your basket.');
-      return;
-    }
 
     const currentAddr = user.addresses?.find((a) => a.id === selectedAddressId)
       || user.addresses?.[0];
@@ -234,7 +253,9 @@ export default function CheckoutPage() {
         },
         paymentDetails,
         orderType,
+        scheduledFor,
         scheduledInfo: { date: scheduledDate, time: scheduledTime },
+        specialText: orderType === 'preorder' ? preorderSpecial?.text ?? '' : '',
         pricing: { subtotal, deliveryFee, total: grandTotal },
         specialNotes: orderNotes
       });
@@ -413,24 +434,18 @@ export default function CheckoutPage() {
             <div className="p-3.5 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] flex items-center gap-3">
               <Clock className="w-5 h-5 text-[#8a5332] flex-shrink-0" />
               <div className="text-xs">
-                <span className="font-bold text-[#3d1b0c]">
-                  {orderType === 'immediate' ? 'Immediate Delivery' : 'Scheduled Pre-Order'}
-                </span>
-                <p className="text-stone-600 mt-0.5">
-                  {orderType === 'immediate'
-                    ? 'Estimated delivery time: 25–35 minutes after kitchen preparation'
-                    : `Scheduled to arrive: ${scheduledDate} at ${scheduledTime}`}
-                </p>
+                <span className="font-bold text-[#3d1b0c]">{scheduleLabel}</span>
+                <p className="text-stone-600 mt-0.5">{scheduleDescription}</p>
+                {orderType === 'preorder' && preorderSpecial && (
+                  <p className="text-[11px] font-semibold text-[#8a5332] mt-1">
+                    Order before {preorderSpecial.cutoffLabel} · you pay now, the kitchen is notified straight away
+                  </p>
+                )}
               </div>
             </div>
-            {apiEnabled && orderType === 'scheduled' && (
-              <p role="alert" className="text-xs font-semibold text-amber-800">
-                Scheduled orders are not supported by the connected API. Switch to immediate delivery in your basket.
-              </p>
-            )}
-            {apiEnabled && orderType === 'scheduled' && (
-              <p role="alert" className="text-xs font-semibold text-amber-800">
-                Scheduled orders are not supported by the connected API. Switch to immediate delivery in your basket.
+            {apiEnabled && orderType !== 'immediate' && (
+              <p className="text-xs font-semibold text-stone-500">
+                Please keep this delivery time free — your driver is dispatched close to the scheduled time.
               </p>
             )}
           </div>

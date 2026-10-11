@@ -65,6 +65,17 @@ export function fetchVendorStorefront(vendorId) {
   return apiRequest(`/vendors/${encodeURIComponent(vendorId)}`);
 }
 
+/**
+ * GET /vendors/specials?lat&lng
+ * Active "Tomorrow's Special" announcements across nearby kitchens.
+ *
+ * @param {{lat:number|string, lng:number|string}} params
+ * @returns {Promise<{specials: import('./types').RawVendorSpecialCard[]}>}
+ */
+export function fetchVendorSpecials(params = {}) {
+  return apiRequest('/vendors/specials', params);
+}
+
 export const sendOtp = (phoneNumber, name) =>
   apiJson('POST', '/auth/send-otp', {
     phone_number: phoneNumber,

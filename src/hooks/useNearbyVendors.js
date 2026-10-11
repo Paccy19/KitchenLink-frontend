@@ -22,6 +22,7 @@ export default function useNearbyVendors({
   categoryId = null,
   sort = 'distance',
   perPage = 6,
+  enabled = true,
 } = {}) {
   const { coords } = useLocation();
 
@@ -31,6 +32,7 @@ export default function useNearbyVendors({
       round(coords.lat), round(coords.lng),
       radius, categoryId ?? 'all', sort, perPage,
     ],
+    enabled,
     queryFn: ({ pageParam = 1 }) =>
       fetchNearbyVendors({
         lat: coords.lat,

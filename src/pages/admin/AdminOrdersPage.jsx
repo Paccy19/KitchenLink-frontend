@@ -246,6 +246,21 @@ export default function AdminOrdersPage() {
               <Info label="Subtotal" value={formatRwf(order.subtotal_rwf)} />
               <Info label="Delivery fee" value={formatRwf(order.delivery_fee_rwf)} />
               <Info label="Total" value={formatRwf(order.total_amount_rwf)} />
+              <Info
+                label="Order type"
+                value={order.order_type_label || toTitle(order.order_type || 'immediate')}
+              />
+              {order.scheduled_for && (
+                <Info
+                  label="Scheduled for"
+                  value={new Date(order.scheduled_for).toLocaleString([], {
+                    weekday: 'short',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                />
+              )}
+              {order.special_text && <Info label="Special" value={order.special_text} />}
             </div>
 
             <div>

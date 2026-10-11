@@ -6,6 +6,7 @@ import SearchBar from './SearchBar';
 import CategoryBar from './CategoryBar';
 import VendorCard from './VendorCard';
 import DishCard from './DishCard';
+import SpecialCard from './SpecialCard';
 import LocationIndicator from './LocationIndicator';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
 import FoodItemModal from '../vendor/FoodItemModal';
@@ -15,6 +16,7 @@ import { useToast } from '../common/Toast';
 
 import useHomeFeed from '../../hooks/useHomeFeed';
 import useCategories from '../../hooks/useCategories';
+import useVendorSpecials from '../../hooks/useVendorSpecials';
 import useDebounce from '../../hooks/useDebounce';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
 import { useLocation } from '../../context/LocationContext';
@@ -62,6 +64,7 @@ export default function HomeFeed() {
 
   const feed = useHomeFeed();
   const categories = useCategories({ enabled: !urlQuery.trim() });
+  const specials = useVendorSpecials();
 
   // Keep the URL shareable: debounce input → `?q=` (replace, no history spam).
   useEffect(() => {
@@ -198,6 +201,27 @@ export default function HomeFeed() {
               />
             )}
           </section>
+
+          {/* Tomorrow's Specials — vendor pre-order announcements */}
+          {(specials.data?.length ?? 0) > 0 && (
+            <section aria-label="Tomorrow's specials">
+              <SectionHeader
+                title="Tomorrow's Specials"
+                subtitle="Pre-order home cooks' specials before they run out"
+                to="/vendors?filter=preorder"
+                linkLabel="See all"
+              />
+              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
+                {specials.data.map((entry) => (
+                  <SpecialCard
+                    key={entry.vendor.id}
+                    vendor={entry.vendor}
+                    special={entry.special}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Popular dishes near you */}
           <section aria-label="Popular dishes near you">

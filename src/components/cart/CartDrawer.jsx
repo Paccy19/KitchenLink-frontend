@@ -14,6 +14,10 @@ import {
   Zap
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import {
+  SCHEDULE_DAY_OPTIONS,
+  SCHEDULE_TIME_SLOTS,
+} from '../../utils/schedule';
 
 export default function CartDrawer() {
   const navigate = useNavigate();
@@ -38,6 +42,8 @@ export default function CartDrawer() {
     setScheduledDate,
     scheduledTime,
     setScheduledTime,
+    preorderSpecial,
+    setPreorderSpecial,
     vendorConflict,
     resolveConflictReplace,
     resolveConflictCancel
@@ -182,11 +188,11 @@ export default function CartDrawer() {
                         onChange={(e) => setScheduledDate(e.target.value)}
                         className="w-full text-xs font-bold p-2 rounded-xl bg-white border border-stone-200 outline-none focus:border-[#542813]"
                       >
-                        <option value="Today">Today</option>
-                        <option value="Tomorrow">Tomorrow</option>
-                        <option value="Friday">Friday</option>
-                        <option value="Saturday">Saturday</option>
-                        <option value="Sunday">Sunday</option>
+                        {SCHEDULE_DAY_OPTIONS.map((day) => (
+                          <option key={day} value={day}>
+                            {day}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -197,13 +203,36 @@ export default function CartDrawer() {
                         onChange={(e) => setScheduledTime(e.target.value)}
                         className="w-full text-xs font-bold p-2 rounded-xl bg-white border border-stone-200 outline-none focus:border-[#542813]"
                       >
-                        <option value="11:30 AM">11:30 AM</option>
-                        <option value="12:30 PM">12:30 PM</option>
-                        <option value="01:30 PM">01:30 PM</option>
-                        <option value="06:30 PM">06:30 PM</option>
-                        <option value="07:30 PM">07:30 PM</option>
+                        {SCHEDULE_TIME_SLOTS.map((slot) => (
+                          <option key={slot} value={slot}>
+                            {slot}
+                          </option>
+                        ))}
                       </select>
                     </div>
+                  </div>
+                )}
+
+                {orderType === 'preorder' && preorderSpecial && (
+                  <div className="pt-1 space-y-2">
+                    <div className="p-3 rounded-xl bg-[#c9cda2]/20 border border-[#c9cda2]/40">
+                      <p className="text-xs font-extrabold text-[#3b3a1a]">
+                        {preorderSpecial.text}
+                      </p>
+                      <p className="text-[11px] text-stone-600 font-medium mt-0.5">
+                        Order before {preorderSpecial.cutoffLabel} · Arrives by {preorderSpecial.deliveryLabel}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrderType('immediate');
+                        setPreorderSpecial(null);
+                      }}
+                      className="text-[11px] font-bold text-[#542813] hover:underline"
+                    >
+                      Cancel pre-order (switch to immediate)
+                    </button>
                   </div>
                 )}
               </div>

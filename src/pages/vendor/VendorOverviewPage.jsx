@@ -17,6 +17,7 @@ import { useVendor } from '../../context/VendorContext';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
 import StatCard from '../../components/vendor-dashboard/StatCard';
 import OrderStatusBadge from '../../components/vendor-dashboard/OrderStatusBadge';
+import SpecialComposer from '../../components/vendor-dashboard/SpecialComposer';
 
 const money = (value) => `${value.toLocaleString()} RWF`;
 
@@ -199,6 +200,8 @@ export default function VendorOverviewPage() {
               Manage menu <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
+
+          <SpecialComposer />
 
           <div className="rounded-3xl bg-gradient-to-br from-[#faf6f2] to-[#f5ebe1] border border-[#ebd7c5] p-5">
             <h3 className="font-black text-sm text-[#3d1b0c] mb-2">Payout Summary</h3>

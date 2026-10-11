@@ -57,7 +57,14 @@ export const OrderProvider = ({ children }) => {
     return () => clearInterval(timer);
   }, [accessToken]);
 
-  const placeOrder = async ({ deliveryLocation, paymentMethod, paymentDetails }) => {
+  const placeOrder = async ({
+    deliveryLocation,
+    paymentMethod,
+    paymentDetails,
+    orderType = 'immediate',
+    scheduledFor = null,
+    specialText = '',
+  }) => {
     if (!apiEnabled) {
       const error = new Error('Sign in before placing an order.');
       setApiError(error.message);
@@ -69,6 +76,9 @@ export const OrderProvider = ({ children }) => {
         delivery_location: deliveryLocation,
         payment_method: paymentMethod.code,
         payment_details: paymentDetails,
+        order_type: orderType,
+        scheduled_for: scheduledFor,
+        special_text: specialText,
       });
       const order = normalizeOrder(result);
       setOrders((current) => [order, ...current.filter((item) => item.id !== order.id)]);

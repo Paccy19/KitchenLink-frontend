@@ -198,8 +198,10 @@ export function mapOrder(raw = {}) {
     subtotal: Number(raw.subtotal_rwf ?? 0),
     deliveryFee: Number(raw.delivery_fee_rwf ?? 0),
     total: Number(raw.total_amount_rwf ?? raw.total_rwf ?? 0),
-    orderType: 'Immediate',
-    scheduledFor: null,
+    orderType: raw.order_type_label || titleCase(raw.order_type) || 'Immediate',
+    orderTypeCode: raw.order_type || 'immediate',
+    scheduledFor: raw.scheduled_for || null,
+    specialText: raw.special_text || '',
     paymentStatus: paymentStatusLabel(raw.payment_status),
     paymentMethod:
       PAYMENT_METHOD_LABELS[raw.payment_method] || raw.payment_method || 'Payment',
@@ -208,6 +210,17 @@ export function mapOrder(raw = {}) {
     allowedNextStatuses: (raw.allowed_next_statuses || []).map(
       (value) => statusToTitle[value] || value,
     ),
+  };
+}
+
+export function mapSpecial(raw = {}) {
+  if (!raw || (!raw.text && !raw.delivery_at)) return null;
+  return {
+    text: raw.text || '',
+    cutoffAt: raw.cutoff_at || '',
+    deliveryAt: raw.delivery_at || '',
+    isActive: Boolean(raw.is_active),
+    isOrderable: Boolean(raw.is_orderable),
   };
 }
 
@@ -263,6 +276,12 @@ export const vendorApi = {
   dashboard: () => vendorRequest('/vendor/dashboard'),
   updateProfile: (payload) =>
     vendorRequest('/vendor/profile', { method: 'PATCH', body: payload }),
+
+  special: async () => mapSpecial((await vendorRequest('/vendor/special'))?.special),
+  saveSpecial: async (payload) =>
+    mapSpecial((await vendorRequest('/vendor/special', { method: 'PUT', body: payload }))?.special),
+  clearSpecial: async () =>
+    mapSpecial((await vendorRequest('/vendor/special', { method: 'DELETE' }))?.special),
 
   // Public discovery categories (no auth) so it works during registration too.
   menuCategories: () => vendorRequest('/home/categories'),

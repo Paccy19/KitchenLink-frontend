@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ChefHat, Loader2, Map, MapPin, SlidersHorizontal } from 'lucide-react';
 import VendorCard from '../components/home/VendorCard';
+import SpecialCard from '../components/home/SpecialCard';
 import CategoryBar from '../components/home/CategoryBar';
 import EmptyState, { ErrorState } from '../components/common/EmptyState';
 import { VendorCardSkeleton } from '../components/common/Skeleton';
 import useNearbyVendors, { DEFAULT_RADIUS_KM, SORT_OPTIONS } from '../hooks/useNearbyVendors';
+import useVendorSpecials from '../hooks/useVendorSpecials';
 import useCategories from '../hooks/useCategories';
 import { useLocation } from '../context/LocationContext';
 
@@ -38,6 +40,7 @@ export default function VendorsPage() {
   const { currentLocation } = useLocation();
 
   const categoryId = searchParams.get('category');
+  const preorderMode = searchParams.get('filter') === 'preorder';
   const sort = ['distance', 'rating'].includes(searchParams.get('sort'))
     ? searchParams.get('sort')
     : 'distance';
@@ -45,8 +48,9 @@ export default function VendorsPage() {
     ? Number(searchParams.get('radius'))
     : DEFAULT_RADIUS_KM;
 
-  const categories = useCategories();
-  const query = useNearbyVendors({ radius, categoryId, sort, perPage: 6 });
+  const categories = useCategories({ enabled: !preorderMode });
+  const query = useNearbyVendors({ radius, categoryId, sort, perPage: 6, enabled: !preorderMode });
+  const specials = useVendorSpecials({ enabled: preorderMode });
   const sentinelRef = useRef(null);
 
   const setParam = (key, value) => {
@@ -79,6 +83,63 @@ export default function VendorsPage() {
   const vendors = query.data?.vendors ?? [];
   const total = query.data?.total ?? 0;
   const firstLoad = query.isPending;
+
+  if (preorderMode) {
+    const entries = specials.data ?? [];
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20 animate-fade-in">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-xs font-bold text-stone-500 hover:text-[#542813] transition mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to home</span>
+        </Link>
+
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+            Tomorrow's Specials
+          </h1>
+          <p className="text-xs text-stone-500 mt-1">
+            Pre-order home cooks' specials before their order-before time runs out.
+          </p>
+        </div>
+
+        {specials.isPending ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <VendorCardSkeleton key={index} />
+            ))}
+          </div>
+        ) : specials.isError ? (
+          <ErrorState
+            title="Specials could not load"
+            message={specials.error?.message || 'We could not reach the specials endpoint.'}
+            onRetry={specials.refetch}
+            isRetrying={specials.isFetching}
+          />
+        ) : entries.length === 0 ? (
+          <EmptyState
+            icon={<ChefHat className="w-8 h-8 text-[#542813]" />}
+            title="No specials today"
+            message="No kitchen has announced a special for tomorrow yet. Check back soon."
+            actionLabel="Browse all kitchens"
+            onAction={() => setParam('filter', null)}
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {entries.map((entry) => (
+              <SpecialCard
+                key={entry.vendor.id}
+                vendor={entry.vendor}
+                special={entry.special}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20 animate-fade-in">

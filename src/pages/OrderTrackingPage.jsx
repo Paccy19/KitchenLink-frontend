@@ -14,9 +14,11 @@ import {
   ClipboardList,
   PackageCheck,
   ShoppingBag,
-  ShieldCheck
+  ShieldCheck,
+  CalendarClock
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES } from '../context/OrderContext';
+import { formatScheduledFor } from '../utils/schedule';
 
 function StepIcon({ iconKey, className = "w-4 h-4" }) {
   switch (iconKey) {
@@ -120,6 +122,13 @@ export default function OrderTrackingPage() {
             <p className="text-xs sm:text-sm text-stone-600 mt-1 font-medium">
               {ORDER_STATUSES[currentStatusIndex]?.description}
             </p>
+            {order.orderType && order.orderType !== 'immediate' && (
+              <span className="inline-flex items-center gap-1.5 mt-3 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-[#f5f6e9] text-[#6b6f3a] border border-[#d9dcc0]">
+                <CalendarClock className="w-3.5 h-3.5" />
+                {order.orderTypeLabel}
+                {order.scheduledFor ? ` · ${formatScheduledFor(order.scheduledFor)}` : ''}
+              </span>
+            )}
           </div>
 
           <div className="text-left sm:text-right">

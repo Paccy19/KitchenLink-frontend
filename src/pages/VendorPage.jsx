@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Bike,
+  CalendarClock,
   Clock,
   Heart,
   Info,
@@ -21,6 +22,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../components/common/Toast';
 import { useWishlist } from '../context/WishlistContext';
 import { formatRwf } from '../api/normalize';
+import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
 /**
  * Vendor storefront: `GET /vendors/{vendor_id}`.
@@ -31,7 +33,7 @@ export default function VendorPage() {
   const { vendorId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
-  const { addToCart, setIsCartOpen, cartItems, subtotal, totalItemCount } = useCart();
+  const { addToCart, setIsCartOpen, cartItems, subtotal, totalItemCount, orderType, setOrderType, preorderSpecial, setPreorderSpecial } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const { data: vendor, isPending, isError, error, refetch, isFetching } =
@@ -133,6 +135,21 @@ export default function VendorPage() {
 
   const cartVendorItems = cartItems.filter((item) => item.vendorId === vendor.id);
 
+  const activeSpecial = vendor.special;
+  const isPreorderForThisVendor =
+    orderType === 'preorder' && preorderSpecial?.vendorId === vendor.id;
+
+  const handlePreorderToggle = () => {
+    if (isPreorderForThisVendor) {
+      setOrderType('immediate');
+      setPreorderSpecial(null);
+      return;
+    }
+    if (!activeSpecial) return;
+    setPreorderSpecial(buildPreorderSpecial(vendor, activeSpecial));
+    setOrderType('preorder');
+  };
+
   return (
     <div className="min-h-screen bg-[#faf7f4] pb-28 animate-fade-in">
       {/* ── Header banner ─────────────────────────────────────── */}
@@ -224,6 +241,42 @@ export default function VendorPage() {
             </p>
           )}
         </div>
+
+        {/* ── Tomorrow's Special banner ───────────────────────── */}
+        {activeSpecial && (
+          <div className="mb-7 rounded-3xl border border-[#d9dcc0] bg-gradient-to-br from-[#f5f6e9] to-[#eef0dc] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <span className="inline-block px-2.5 py-1 rounded-full bg-[#c9cda2] text-[#2b3317] text-[11px] font-black mb-2">
+                Tomorrow's Special
+              </span>
+              <p className="text-base font-extrabold text-[#2b3317] leading-snug">
+                {activeSpecial.text}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs font-semibold text-stone-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
+                  Order before {formatScheduledFor(activeSpecial.cutoffAt)}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarClock className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
+                  Arrives {formatScheduledFor(activeSpecial.deliveryAt)}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handlePreorderToggle}
+              disabled={!activeSpecial.isOrderable && !isPreorderForThisVendor}
+              className={`flex-shrink-0 px-5 py-3 rounded-2xl font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-50 ${
+                isPreorderForThisVendor
+                  ? 'bg-white text-[#3d1b0c] border border-[#c9cda2]'
+                  : 'bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white'
+              }`}
+            >
+              {isPreorderForThisVendor ? 'Pre-order on · Cancel' : 'Pre-order this special'}
+            </button>
+          </div>
+        )}
 
         {/* ── Menu category tabs ──────────────────────────────── */}
         <div

@@ -64,6 +64,22 @@ export function normalizeCategory(raw = {}) {
 }
 
 /**
+ * Normalise a vendor "Tomorrow's Special" announcement.
+ * @param {import('./types').RawVendorSpecial} raw
+ */
+export function normalizeSpecial(raw = {}) {
+  if (!raw || (!raw.text && !raw.delivery_at)) return null;
+  return {
+    text: toText(raw.text),
+    cutoffAt: toText(raw.cutoff_at),
+    deliveryAt: toText(raw.delivery_at),
+    isActive: Boolean(raw.is_active),
+    isOrderable: Boolean(raw.is_orderable),
+    updatedAt: toText(raw.updated_at),
+  };
+}
+
+/**
  * @param {import('./types').RawVendorSummary} raw
  * @returns {Object} Vendor view-model
  */
@@ -96,6 +112,7 @@ export function normalizeVendor(raw = {}) {
     description: toText(raw.description, raw.tagline, raw.summary),
     deliveryFee: toNumber(raw.delivery_fee ?? raw.deliveryFee, 0),
     minimumOrder: toNumber(raw.minimum_order ?? raw.minOrder, 0),
+    special: normalizeSpecial(raw.special),
     operatingHours: toText(raw.operating_hours, raw.operatingHours, ''),
     tags: Array.isArray(raw.categories)
       ? raw.categories.map((c) => (typeof c === 'string' ? c : c?.name)).filter(Boolean)
@@ -197,6 +214,10 @@ export function normalizeOrder(raw = {}) {
     id: toText(raw.id, raw.order_id),
     orderNumber: toText(raw.order_number),
     createdAt: toText(raw.created_at, raw.placed_at),
+    orderType: toText(raw.order_type, 'immediate'),
+    orderTypeLabel: toText(raw.order_type_label, 'Immediate'),
+    scheduledFor: toText(raw.scheduled_for),
+    specialText: toText(raw.special_text),
     vendorId: toText(vendor.id),
     vendorName: toText(vendor.name, 'Kitchen'),
     vendorType: toText(vendor.vendor_type, 'Food Vendor'),
@@ -230,9 +251,11 @@ export function normalizeOrder(raw = {}) {
       instructions: toText(deliveryLocation.note),
     },
     driver: raw.rider?.name ? { name: raw.rider.name, phone: raw.rider.phone } : null,
-    estimatedDeliveryTime: raw.estimated_delivery_at
-      ? new Date(raw.estimated_delivery_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : raw.eta_minutes != null ? `${raw.eta_minutes} minutes` : 'Pending',
+    estimatedDeliveryTime: raw.order_type && raw.order_type !== 'immediate' && raw.scheduled_for
+      ? `Scheduled · ${new Date(raw.scheduled_for).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`
+      : raw.estimated_delivery_at
+        ? new Date(raw.estimated_delivery_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : raw.eta_minutes != null ? `${raw.eta_minutes} minutes` : 'Pending',
     rated: false,
     cancelReason: toText(raw.cancel_reason),
     deliveryCode: toText(delivery.proof_of_delivery_code) || '',

@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Phone, MapPin, Check, X as XIcon, Clock, CreditCard, FileText } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
 import { ORDER_ACTION_LABEL, ORDER_NEXT_STATUS } from '../../data/vendorOptions';
+import { formatScheduledFor } from '../../utils/schedule';
 
 const FLOW = ['New', 'Accepted', 'Preparing', 'Ready', 'Completed'];
 
@@ -32,7 +33,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
             <h3 className="text-lg font-black text-gray-900">{order.id}</h3>
             <p className="text-[11px] text-stone-400 font-medium">
               {new Date(order.createdAt).toLocaleString()} · {order.orderType}
+              {order.scheduledFor ? ` · Delivery ${formatScheduledFor(order.scheduledFor)}` : ''}
             </p>
+            {order.specialText && (
+              <p className="text-[11px] font-bold text-[#6b6f3a] mt-0.5">
+                Special: {order.specialText}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <OrderStatusBadge status={order.status} />

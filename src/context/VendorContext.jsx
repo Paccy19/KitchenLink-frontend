@@ -15,6 +15,7 @@ import {
   getVendorToken,
   mapMenuItem,
   mapOrder,
+  mapSpecial,
   mapStats,
   mapVendorAccount,
   mapWallet,
@@ -45,6 +46,7 @@ export function VendorProvider({ children }) {
   const [vendor, setVendor] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [special, setSpecial] = useState(null);
   const [wallet, setWallet] = useState({ withdrawn: 0, baseSales: 0, withdrawalHistory: [] });
   const [dashboard, setDashboard] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -93,6 +95,13 @@ export function VendorProvider({ children }) {
     return mapped;
   }, []);
 
+  const refreshSpecial = useCallback(async () => {
+    const mapped = await vendorApi.special();
+    if (!mounted.current) return mapped;
+    setSpecial(mapped);
+    return mapped;
+  }, []);
+
   const refreshWallet = useCallback(async () => {
     const data = await vendorApi.wallet();
     if (!mounted.current) return data;
@@ -121,14 +130,14 @@ export function VendorProvider({ children }) {
     setError('');
     try {
       await refreshProfile();
-      await Promise.all([refreshDashboard(), refreshMenu(), refreshOrders(), refreshWallet()]);
+      await Promise.all([refreshDashboard(), refreshMenu(), refreshOrders(), refreshWallet(), refreshSpecial()]);
       markSynced();
     } catch (err) {
       if (mounted.current) setError(err.message || 'Failed to load your dashboard.');
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [refreshProfile, refreshDashboard, refreshMenu, refreshOrders, refreshWallet, markSynced]);
+  }, [refreshProfile, refreshDashboard, refreshMenu, refreshOrders, refreshWallet, refreshSpecial, markSynced]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -150,6 +159,7 @@ export function VendorProvider({ children }) {
       setVendor(null);
       setMenuItems([]);
       setOrders([]);
+      setSpecial(null);
       setWallet({ withdrawn: 0, baseSales: 0, withdrawalHistory: [] });
       setDashboard(null);
       setMarketplaceMode(false);
@@ -308,6 +318,29 @@ export function VendorProvider({ children }) {
     }
   }, [vendor?.isOpen, updateVendorProfile]);
 
+  /* ------------------------------ special ------------------------------ */
+
+  const saveSpecial = useCallback(
+    async ({ text, cutoffAt, deliveryAt }) => {
+      const mapped = await vendorApi.saveSpecial({
+        text,
+        cutoff_at: cutoffAt,
+        delivery_at: deliveryAt,
+      });
+      if (mounted.current) setSpecial(mapped);
+      await refreshPublicCatalog();
+      return mapped;
+    },
+    [refreshPublicCatalog],
+  );
+
+  const clearSpecial = useCallback(async () => {
+    const mapped = await vendorApi.clearSpecial();
+    if (mounted.current) setSpecial(mapped);
+    await refreshPublicCatalog();
+    return mapped;
+  }, [refreshPublicCatalog]);
+
   /* -------------------------------- menu ------------------------------- */
 
   const categoriesByName = useMemo(() => {
@@ -418,6 +451,7 @@ export function VendorProvider({ children }) {
       rawVendor: vendor,
       menuItems,
       orders,
+      special,
       wallet,
       categories,
       categoryNames: categories.map((category) => category.name),
@@ -443,6 +477,8 @@ export function VendorProvider({ children }) {
       updateVendorProfile,
       toggleStoreOpen,
       registerVendor,
+      saveSpecial,
+      clearSpecial,
       addMenuItem,
       updateMenuItem,
       deleteMenuItem,
@@ -457,6 +493,7 @@ export function VendorProvider({ children }) {
       vendor,
       menuItems,
       orders,
+      special,
       wallet,
       categories,
       stats,
@@ -481,6 +518,8 @@ export function VendorProvider({ children }) {
       updateVendorProfile,
       toggleStoreOpen,
       registerVendor,
+      saveSpecial,
+      clearSpecial,
       addMenuItem,
       updateMenuItem,
       deleteMenuItem,

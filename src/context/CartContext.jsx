@@ -27,9 +27,12 @@ export const CartProvider = ({ children }) => {
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [orderType, setOrderType] = useState('immediate'); // 'immediate' | 'scheduled'
+  const [orderType, setOrderType] = useState('immediate'); // 'immediate' | 'scheduled' | 'preorder'
   const [scheduledDate, setScheduledDate] = useState('Tomorrow');
   const [scheduledTime, setScheduledTime] = useState('12:30 PM');
+  // When orderType is 'preorder', this is the vendor announcement the basket
+  // is being pre-ordered against (its delivery time is the order's scheduled_for).
+  const [preorderSpecial, setPreorderSpecial] = useState(null);
   
   // Conflict modal state when adding from a different vendor
   const [vendorConflict, setVendorConflict] = useState(null);
@@ -132,6 +135,13 @@ export const CartProvider = ({ children }) => {
         location: vendor.location,
         deliveryFee: vendor.deliveryFee || 1000
       });
+    }
+
+    // A basket-level pre-order target only applies to its announcing vendor.
+    // Adding food from a different kitchen falls back to immediate ordering.
+    if (orderType === 'preorder' && preorderSpecial?.vendorId !== vendor.id) {
+      setOrderType('immediate');
+      setPreorderSpecial(null);
     }
 
     const itemKey = `${dish.id}-${JSON.stringify(selectedOptions)}`;
@@ -333,6 +343,8 @@ export const CartProvider = ({ children }) => {
       setScheduledDate,
       scheduledTime,
       setScheduledTime,
+      preorderSpecial,
+      setPreorderSpecial,
       vendorConflict,
       resolveConflictReplace,
       resolveConflictCancel
