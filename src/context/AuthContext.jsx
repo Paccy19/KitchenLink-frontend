@@ -5,7 +5,7 @@ import {
   verifyOtp as verifyOtpRequest,
   updateCurrentCustomerProfile,
 } from '../api/endpoints';
-import { clearVendorToken } from '../api/vendorApi';
+import { clearAllSessions } from '../api/session';
 
 const AuthContext = createContext(null);
 const ACCESS_TOKEN_KEY = 'ofk_access_token';
@@ -44,10 +44,11 @@ const customerUser = (customer, existing = guestUser) => ({
 });
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    return readStoredUser();
-  });
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_KEY));
+  const [user, setUser] = useState(() => {
+    // A stored profile is only meaningful while its access token is present.
+    return localStorage.getItem(ACCESS_TOKEN_KEY) ? readStoredUser() : guestUser;
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authStep, setAuthStep] = useState('phone');
   const [pendingPhone, setPendingPhone] = useState('');
@@ -71,7 +72,20 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (!accessToken) return;
+    // Any role signing in or out wipes every session; drop the customer view too.
+    const onSessionsCleared = () => {
+      setAccessToken(null);
+      setUser(guestUser);
+    };
+    window.addEventListener('ofk:sessions-cleared', onSessionsCleared);
+    return () => window.removeEventListener('ofk:sessions-cleared', onSessionsCleared);
+  }, []);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setUser(guestUser);
+      return;
+    }
     fetchCurrentCustomer()
       .then(({ customer }) => setUser((current) => customerUser(customer, current)))
       .catch((error) => {
@@ -103,12 +117,11 @@ export const AuthProvider = ({ children }) => {
 
   const verifyOtp = async (code, name = pendingName) => {
     const result = await verifyOtpRequest(pendingPhone, code, name);
+    // Roles are exclusive: wipe any vendor/driver/admin session first.
+    clearAllSessions();
     localStorage.setItem(ACCESS_TOKEN_KEY, result.token);
     setAccessToken(result.token);
     setUser((current) => customerUser(result.customer, current));
-    // Roles are exclusive: signing in as a customer ends any vendor session.
-    clearVendorToken();
-    window.dispatchEvent(new Event('ofk:vendor-signed-out'));
     setIsAuthModalOpen(false);
     setAuthStep('phone');
     setOtpPreview('');
@@ -116,7 +129,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    clearAllSessions();
     setAccessToken(null);
     setUser(guestUser);
     setAuthError('');

@@ -83,7 +83,6 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const showBackToVendor = vendorSignedIn && marketplaceMode && isMarketplacePath;
   const showBackToDriver = driverSignedIn && driverMarketplaceMode && isMarketplacePath;
   const showBackToAdmin = adminSignedIn && isMarketplacePath;
-  const showBecomeVendor = !isAuthenticated && !vendorSignedIn && !driverSignedIn && !adminSignedIn;
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLocDropdownOpen, setIsLocDropdownOpen] = useState(false);
@@ -244,7 +243,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                 marketplace/shop pages after choosing to visit the marketplace.
                 The vendor's return link now lives in the account menu. Guests
                 may become vendors; signed-in customers see nothing. */}
-            {showBackToDriver ? (
+            {showBackToDriver && (
               <Link
                 to="/driver-dashboard"
                 onClick={exitDriverMarketplace}
@@ -253,15 +252,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                 <Bike className="w-3.5 h-3.5 text-[#3b5327]" />
                 <span>Back to Driver Dashboard</span>
               </Link>
-            ) : showBecomeVendor ? (
-              <Link
-                to="/vendor-register"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
-              >
-                <Store className="w-3.5 h-3.5 text-[#6d391d]" />
-                <span>Become a Vendor</span>
-              </Link>
-            ) : null}
+            )}
 
             {/* Quick Link: Pre-Orders */}
             <Link
@@ -628,7 +619,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             >
               My Profile
             </Link>
-            {showBackToDriver ? (
+            {showBackToDriver && (
               <Link
                 to="/driver-dashboard"
                 onClick={() => {
@@ -640,16 +631,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                 <Bike className="w-4 h-4" />
                 Back to Driver Dashboard
               </Link>
-            ) : showBecomeVendor ? (
-              <Link
-                to="/vendor-register"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#542813] hover:bg-[#faf6f2] rounded-lg"
-              >
-                <Store className="w-4 h-4" />
-                Become a Vendor
-              </Link>
-            ) : null}
+            )}
           </div>
         )}
       </div>

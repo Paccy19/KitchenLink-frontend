@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChefHat, MapPinOff, RefreshCw, Store } from 'lucide-react';
+import { ChefHat, MapPinOff, RefreshCw } from 'lucide-react';
 
 import SearchBar from './SearchBar';
 import CategoryBar from './CategoryBar';
@@ -18,9 +18,6 @@ import useCategories from '../../hooks/useCategories';
 import useDebounce from '../../hooks/useDebounce';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
 import { useLocation } from '../../context/LocationContext';
-import { useVendor } from '../../context/VendorContext';
-import { useDriver } from '../../context/DriverContext';
-import { useAuth } from '../../context/AuthContext';
 
 // Code-split the search results experience (heavy list rendering).
 const SearchResults = lazy(() => import('./SearchResults'));
@@ -56,11 +53,6 @@ export default function HomeFeed() {
   const navigate = useNavigate();
   const toast = useToast();
   const { isUsingFallback, isPrimerOpen } = useLocation();
-  const { isAuthenticated: isVendorSignedIn, hasToken } = useVendor();
-  const vendorSignedIn = isVendorSignedIn || hasToken;
-  const { isAuthenticated: isDriverSignedIn, hasToken: hasDriverToken } = useDriver();
-  const driverSignedIn = isDriverSignedIn || hasDriverToken;
-  const { isAuthenticated: isCustomerSignedIn } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlQuery = searchParams.get('q') ?? '';
@@ -228,36 +220,6 @@ export default function HomeFeed() {
               )}
             </div>
           </section>
-
-          {/* Vendor call-to-action — only for guests; hidden for signed-in
-              customers, vendors and drivers (no dashboard button on the welcome page). */}
-          {!isCustomerSignedIn && !vendorSignedIn && !driverSignedIn && (
-          <section aria-label="Sell on FoodKitchen">
-            <Link
-              to="/vendor-register"
-              className="group relative block overflow-hidden rounded-2xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#200d05] p-6 sm:p-8 shadow-lg"
-            >
-              <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-[#e8a33d]/20 blur-2xl transition group-hover:bg-[#e8a33d]/30" />
-              <div className="relative flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-8">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
-                  <Store className="h-7 w-7 text-[#f0c078]" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                    Turn your kitchen into a business
-                  </h2>
-                  <p className="mt-1 text-sm text-[#e6cdb6] max-w-xl">
-                    Join FoodKitchen and start receiving orders from hungry customers near you. It only takes a few minutes.
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-2 self-start sm:self-center rounded-full bg-[#e8a33d] px-5 py-2.5 text-sm font-black text-[#2b1206] transition group-hover:bg-[#f0b955]">
-                  Become a vendor
-                  <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-                </span>
-              </div>
-            </Link>
-          </section>
-          )}
 
           {selectedDish && (
             <FoodItemModal

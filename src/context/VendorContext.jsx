@@ -21,6 +21,7 @@ import {
   setVendorToken,
   titleToStatus,
 } from '../api/vendorApi';
+import { clearAllSessions } from '../api/session';
 
 const VendorContext = createContext(null);
 
@@ -170,9 +171,11 @@ export function VendorProvider({ children }) {
     };
     window.addEventListener('ofk:vendor-unauthorized', onUnauthorized);
     window.addEventListener('ofk:vendor-signed-out', onSignedOut);
+    window.addEventListener('ofk:sessions-cleared', onSignedOut);
     return () => {
       window.removeEventListener('ofk:vendor-unauthorized', onUnauthorized);
       window.removeEventListener('ofk:vendor-signed-out', onSignedOut);
+      window.removeEventListener('ofk:sessions-cleared', onSignedOut);
     };
   }, []);
 
@@ -203,6 +206,7 @@ export function VendorProvider({ children }) {
       setError('');
       try {
         const result = await vendorApi.verifyLoginOtp(pendingLoginPhone, code);
+        clearAllSessions();
         setVendorToken(result.token);
         setAuthToken(result.token);
         setVendor(mapVendorAccount(result.vendor));
@@ -219,7 +223,7 @@ export function VendorProvider({ children }) {
   );
 
   const logout = useCallback(() => {
-    clearVendorToken();
+    clearAllSessions();
     setAuthToken('');
     setVendor(null);
     setMarketplaceMode(false);

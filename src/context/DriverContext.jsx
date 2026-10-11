@@ -18,6 +18,7 @@ import {
   mapDriverStats,
   setDriverToken,
 } from '../api/driverApi';
+import { clearAllSessions } from '../api/session';
 import { useToast } from '../components/common/Toast';
 
 const DriverContext = createContext(null);
@@ -262,14 +263,29 @@ export function DriverProvider({ children }) {
   }, [authToken, refreshAll, poll]);
 
   useEffect(() => {
-    const onUnauthorized = () => {
+    const reset = () => {
       clearDriverToken();
       setAuthToken('');
+      setDriver(null);
+      setStats(EMPTY_STATS);
+      setAvailableDeliveries([]);
+      setActiveDelivery(null);
+      setNotifications([]);
+      setUnreadCount(0);
+      knownOfferIds.current = new Set();
+      knownNotificationIds.current = new Set();
       setMarketplaceMode(false);
+    };
+    const onUnauthorized = () => {
+      reset();
       setError('Your driver session has expired. Please log in again.');
     };
     window.addEventListener('ofk:driver-unauthorized', onUnauthorized);
-    return () => window.removeEventListener('ofk:driver-unauthorized', onUnauthorized);
+    window.addEventListener('ofk:sessions-cleared', reset);
+    return () => {
+      window.removeEventListener('ofk:driver-unauthorized', onUnauthorized);
+      window.removeEventListener('ofk:sessions-cleared', reset);
+    };
   }, []);
 
   /* ------------------------------- auth -------------------------------- */
@@ -296,6 +312,7 @@ export function DriverProvider({ children }) {
       setError('');
       try {
         const result = await driverApi.verifyLoginOtp(pendingLoginPhone, code);
+        clearAllSessions();
         setDriverToken(result.token);
         setAuthToken(result.token);
         setDriver(mapDriverAccount(result.driver));
@@ -312,7 +329,7 @@ export function DriverProvider({ children }) {
   );
 
   const logout = useCallback(() => {
-    clearDriverToken();
+    clearAllSessions();
     setAuthToken('');
     setDriver(null);
     setStats(EMPTY_STATS);

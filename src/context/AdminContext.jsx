@@ -13,6 +13,7 @@ import {
   getAdminToken,
   setAdminToken,
 } from '../api/adminApi';
+import { clearAllSessions } from '../api/session';
 
 const AdminContext = createContext(null);
 
@@ -65,8 +66,17 @@ export function AdminProvider({ children }) {
       setAdmin(null);
       setError('Your admin session has expired. Please log in again.');
     };
+    const onSessionsCleared = () => {
+      clearAdminToken();
+      setAuthToken('');
+      setAdmin(null);
+    };
     window.addEventListener('ofk:admin-unauthorized', onUnauthorized);
-    return () => window.removeEventListener('ofk:admin-unauthorized', onUnauthorized);
+    window.addEventListener('ofk:sessions-cleared', onSessionsCleared);
+    return () => {
+      window.removeEventListener('ofk:admin-unauthorized', onUnauthorized);
+      window.removeEventListener('ofk:sessions-cleared', onSessionsCleared);
+    };
   }, []);
 
   const login = useCallback(async (email, password) => {
@@ -74,6 +84,7 @@ export function AdminProvider({ children }) {
     setError('');
     try {
       const result = await adminApi.login(email, password);
+      clearAllSessions();
       setAdminToken(result.token);
       setAuthToken(result.token);
       setAdmin(result.admin);
@@ -87,7 +98,7 @@ export function AdminProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
-    clearAdminToken();
+    clearAllSessions();
     setAuthToken('');
     setAdmin(null);
     setError('');
