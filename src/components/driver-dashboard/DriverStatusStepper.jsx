@@ -2,11 +2,11 @@ import React from 'react';
 import { Check, Bike, Store, Package, MapPin, Flag } from 'lucide-react';
 
 const STEPS = [
-  { key: 'assigned', label: 'Assigned', icon: Bike },
-  { key: 'heading', label: 'Heading to vendor', icon: Store },
-  { key: 'picked_up', label: 'Picked up', icon: Package },
-  { key: 'out_for_delivery', label: 'Out for delivery', icon: MapPin },
-  { key: 'delivered', label: 'Delivered', icon: Flag },
+  { key: 'assigned', label: 'Assigned', short: 'Assigned', icon: Bike },
+  { key: 'heading', label: 'Heading to vendor', short: 'To vendor', icon: Store },
+  { key: 'picked_up', label: 'Picked up', short: 'Picked', icon: Package },
+  { key: 'out_for_delivery', label: 'Out for delivery', short: 'On the way', icon: MapPin },
+  { key: 'delivered', label: 'Delivered', short: 'Delivered', icon: Flag },
 ];
 
 const STATUS_INDEX = {
@@ -48,7 +48,8 @@ export default function DriverStatusStepper({ status, className }) {
                   active ? 'text-[#3b5327]' : done ? 'text-stone-600' : 'text-stone-400'
                 }`}
               >
-                {step.label}
+                <span className="sm:hidden">{step.short}</span>
+                <span className="hidden sm:inline">{step.label}</span>
               </span>
             </li>
           );

@@ -227,7 +227,7 @@ export default function VendorPage() {
 
         {/* ── Menu category tabs ──────────────────────────────── */}
         <div
-          className="flex items-center gap-2 overflow-x-auto pb-2 mb-5 sticky top-[132px] sm:top-[112px] z-30 bg-[#faf7f4]/90 backdrop-blur-md py-2 -mx-1 px-1 rounded-2xl"
+          className="flex items-center gap-2 overflow-x-auto pb-2 mb-5 sticky top-[var(--app-header-h,132px)] z-30 bg-[#faf7f4]/90 backdrop-blur-md py-2 -mx-1 px-1 rounded-2xl"
           role="tablist"
           aria-label="Menu categories"
         >

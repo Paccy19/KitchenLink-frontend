@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Store, Bike, ArrowRight } from 'lucide-react';
+import { X, User, Store, Bike, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RoleSelectModal({ open, onClose }) {
@@ -43,6 +43,14 @@ export default function RoleSelectModal({ open, onClose }) {
       icon: Bike,
       onClick: () => chooseRole('/driver-login'),
       accent: 'from-[#1c2b12] via-[#3b5327] to-[#12200b]',
+    },
+    {
+      key: 'admin',
+      title: 'Admin',
+      description: 'Manage the marketplace, users, orders, payments & analytics',
+      icon: ShieldCheck,
+      onClick: () => chooseRole('/admin-login'),
+      accent: 'from-[#111827] via-[#1f2937] to-[#0b1220]',
     },
   ];
 

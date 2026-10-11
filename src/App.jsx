@@ -39,6 +39,23 @@ const DriverHistoryPage = lazy(() => import('./pages/driver/DriverHistoryPage'))
 const DriverEarningsPage = lazy(() => import('./pages/driver/DriverEarningsPage'));
 const DriverProfilePage = lazy(() => import('./pages/driver/DriverProfilePage'));
 
+// Admin panel (separate shell without the customer chrome).
+const AdminLayout = lazy(() => import('./components/admin-dashboard/AdminLayout'));
+const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
+const AdminOverviewPage = lazy(() => import('./pages/admin/AdminOverviewPage'));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminVendorsPage = lazy(() => import('./pages/admin/AdminVendorsPage'));
+const AdminDriversPage = lazy(() => import('./pages/admin/AdminDriversPage'));
+const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
+const AdminDeliveriesPage = lazy(() => import('./pages/admin/AdminDeliveriesPage'));
+const AdminPaymentsPage = lazy(() => import('./pages/admin/AdminPaymentsPage'));
+const AdminPayoutsPage = lazy(() => import('./pages/admin/AdminPayoutsPage'));
+const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage'));
+const AdminComplaintsPage = lazy(() => import('./pages/admin/AdminComplaintsPage'));
+const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'));
+const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
@@ -47,7 +64,9 @@ export default function App() {
     location.pathname.startsWith('/vendor-login') ||
     location.pathname.startsWith('/driver-dashboard') ||
     location.pathname.startsWith('/driver-login') ||
-    location.pathname.startsWith('/driver-register');
+    location.pathname.startsWith('/driver-register') ||
+    location.pathname.startsWith('/admin-login') ||
+    location.pathname.startsWith('/admin-dashboard');
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50/50">
@@ -77,6 +96,23 @@ export default function App() {
               <Route path="/vendor-login" element={<VendorLoginPage />} />
               <Route path="/driver-register" element={<DriverRegisterPage />} />
               <Route path="/driver-login" element={<DriverLoginPage />} />
+              <Route path="/admin-login" element={<AdminLoginPage />} />
+
+              <Route path="/admin-dashboard" element={<AdminLayout />}>
+                <Route index element={<AdminOverviewPage />} />
+                <Route path="orders" element={<AdminOrdersPage />} />
+                <Route path="deliveries" element={<AdminDeliveriesPage />} />
+                <Route path="vendors" element={<AdminVendorsPage />} />
+                <Route path="drivers" element={<AdminDriversPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="payments" element={<AdminPaymentsPage />} />
+                <Route path="payouts" element={<AdminPayoutsPage />} />
+                <Route path="categories" element={<AdminCategoriesPage />} />
+                <Route path="complaints" element={<AdminComplaintsPage />} />
+                <Route path="analytics" element={<AdminAnalyticsPage />} />
+                <Route path="audit" element={<AdminAuditPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+              </Route>
 
               <Route path="/driver-dashboard" element={<DriverLayout />}>
                 <Route index element={<DriverDashboardPage />} />

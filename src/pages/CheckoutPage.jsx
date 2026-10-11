@@ -569,7 +569,7 @@ export default function CheckoutPage() {
 
         {/* Right Column: Order Summary & Placement */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xl sticky top-24 space-y-6">
+          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xl sticky top-[calc(var(--app-header-h,112px)+1rem)] space-y-6">
             
             <div className="border-b border-stone-100 pb-4">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#542813]">

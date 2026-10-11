@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { 
   ShoppingBag, 
@@ -22,7 +22,8 @@ import {
   LayoutDashboard,
   Navigation,
   History,
-  Settings
+  Settings,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -30,6 +31,7 @@ import { useLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useVendor } from '../../context/VendorContext';
 import { useDriver } from '../../context/DriverContext';
+import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext';
 import RoleSelectModal from '../auth/RoleSelectModal';
 import {
@@ -63,6 +65,13 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
     driver,
   } = useDriver();
   const driverSignedIn = isDriverSignedIn || hasDriverToken;
+  const {
+    isAuthenticated: isAdminSignedIn,
+    hasToken: hasAdminToken,
+    logout: adminLogout,
+    admin,
+  } = useAdmin();
+  const adminSignedIn = isAdminSignedIn || hasAdminToken;
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
   // A vendor/driver only gets a way back to their dashboard after explicitly
@@ -73,7 +82,8 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
     /^\/vendor\/[^/]+$/.test(pathname);
   const showBackToVendor = vendorSignedIn && marketplaceMode && isMarketplacePath;
   const showBackToDriver = driverSignedIn && driverMarketplaceMode && isMarketplacePath;
-  const showBecomeVendor = !isAuthenticated && !vendorSignedIn && !driverSignedIn;
+  const showBackToAdmin = adminSignedIn && isMarketplacePath;
+  const showBecomeVendor = !isAuthenticated && !vendorSignedIn && !driverSignedIn && !adminSignedIn;
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLocDropdownOpen, setIsLocDropdownOpen] = useState(false);
@@ -81,14 +91,38 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isRoleSelectOpen, setIsRoleSelectOpen] = useState(false);
 
+  // Expose the live header height so sticky sub-headers (vendor tabs, checkout
+  // summary) can offset themselves regardless of breakpoint/banner wrapping.
+  const headerRef = useRef(null);
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node) return undefined;
+    const apply = () =>
+      document.documentElement.style.setProperty('--app-header-h', `${node.offsetHeight}px`);
+    apply();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(apply);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   // The account button is shared by every signed-in role. Vendors/drivers take
   // precedence over a lingering customer session so they always reach their own pages.
-  const accountRole = vendorSignedIn ? 'vendor' : driverSignedIn ? 'driver' : isAuthenticated ? 'customer' : null;
+  const accountRole = vendorSignedIn
+    ? 'vendor'
+    : driverSignedIn
+      ? 'driver'
+      : adminSignedIn
+        ? 'admin'
+        : isAuthenticated
+          ? 'customer'
+          : null;
   const accountName =
     accountRole === 'vendor' ? vendor?.name || 'Your Kitchen'
       : accountRole === 'driver' ? driver?.name || 'Driver'
-        : accountRole === 'customer' ? user?.name || 'Account'
-          : '';
+        : accountRole === 'admin' ? admin?.name || 'Administrator'
+          : accountRole === 'customer' ? user?.name || 'Account'
+            : '';
   const accountAvatar =
     accountRole === 'vendor' ? vendor?.avatar
       : accountRole === 'driver' ? driver?.avatar
@@ -97,8 +131,9 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const accountSubtitle =
     accountRole === 'vendor' ? vendor?.ownerName || vendor?.type || 'Vendor account'
       : accountRole === 'driver' ? driver?.phone || 'Driver account'
-        : accountRole === 'customer' ? user?.phone
-          : '';
+        : accountRole === 'admin' ? admin?.email || 'Admin account'
+          : accountRole === 'customer' ? user?.phone
+            : '';
   const accountFirstName = String(accountName).split(' ')[0] || 'Account';
   const accountInitials = String(accountName || 'U')
     .split(' ')
@@ -114,6 +149,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
     setIsUserMenuOpen(false);
     if (accountRole === 'vendor') vendorLogout?.();
     else if (accountRole === 'driver') driverLogout?.();
+    else if (accountRole === 'admin') adminLogout?.();
     else logout();
   };
 
@@ -126,29 +162,29 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
+      <header ref={headerRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
       {/* Top Banner for Pre-order & Scheduled Meals reminder */}
-      <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] border-b border-[#4e2410]/50 text-[#f5ebe1] text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
-        <span className="bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+      <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] border-b border-[#4e2410]/50 text-[#f5ebe1] text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2 overflow-hidden">
+        <span className="flex-shrink-0 bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
           New
         </span>
-        <span>Empowering Kigali's Home Cooks & Kitchens! Order immediate meals or pre-order tomorrow's home specials.</span>
+        <span className="min-w-0 truncate">Empowering Kigali's Home Cooks & Kitchens! Order immediate meals or pre-order tomorrow's home specials.</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 gap-4">
           
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 flex-shrink-0 group">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] flex items-center justify-center text-white shadow-md shadow-[#2b1206]/25 group-hover:scale-105 group-hover:shadow-lg transition-all duration-300">
-              <UtensilsCrossed className="w-6 h-6 stroke-[2.2] text-[#f5ebe1]" />
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 flex-shrink-0 group">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] flex items-center justify-center text-white shadow-md shadow-[#2b1206]/25 group-hover:scale-105 group-hover:shadow-lg transition-all duration-300">
+              <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2] text-[#f5ebe1]" />
             </div>
-            <div>
-              <div className="font-extrabold text-xl tracking-tight text-gray-900 group-hover:text-[#542813] transition-colors flex items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 group-hover:text-[#542813] transition-colors flex items-center gap-1.5">
                 Food<span className="text-[#8a5332]">Kitchen</span>
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5]">Market</span>
+                <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5]">Market</span>
               </div>
-              <p className="text-[11px] text-stone-500 font-medium">Any Cook · Any Food · Anywhere</p>
+              <p className="hidden sm:block text-[11px] text-stone-500 font-medium">Any Cook · Any Food · Anywhere</p>
             </div>
           </Link>
 
@@ -248,7 +284,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Cart Trigger Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] font-bold text-sm border border-[#ebd7c5] transition group active:scale-95"
+              className="relative flex items-center gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] font-bold text-sm border border-[#ebd7c5] transition group active:scale-95"
               aria-label="View Cart"
             >
               <ShoppingBag className="w-4 h-4 group-hover:scale-110 text-[#6d391d] transition-transform" />
@@ -264,7 +300,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               to="/wishlist"
               aria-label={`Saved dishes${wishlistItems.length ? `, ${wishlistItems.length} ${wishlistItems.length === 1 ? 'item' : 'items'}` : ''}`}
               title="Saved dishes"
-              className="relative p-2.5 rounded-xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
+              className="relative hidden sm:flex p-2.5 rounded-xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
             >
               <Heart className="w-4 h-4" />
               {wishlistItems.length > 0 && (
@@ -478,6 +514,25 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                         <Link to="/driver-dashboard/profile" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
                           <Settings className="w-4 h-4 text-stone-400" />
                           <span>Profile &amp; Settings</span>
+                        </Link>
+                      </>
+                    )}
+
+                    {accountRole === 'admin' && (
+                      <>
+                        {showBackToAdmin && (
+                          <Link to="/admin-dashboard" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                            <LayoutDashboard className="w-4 h-4 text-stone-400" />
+                            <span>Back to Admin Panel</span>
+                          </Link>
+                        )}
+                        <Link to="/admin-dashboard" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <ShieldCheck className="w-4 h-4 text-stone-400" />
+                          <span>Admin Dashboard</span>
+                        </Link>
+                        <Link to="/admin-dashboard/settings" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Settings className="w-4 h-4 text-stone-400" />
+                          <span>Panel Settings</span>
                         </Link>
                       </>
                     )}

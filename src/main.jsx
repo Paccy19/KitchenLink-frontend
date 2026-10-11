@@ -12,6 +12,7 @@ import { OrderProvider } from './context/OrderContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { VendorProvider } from './context/VendorContext';
 import { DriverProvider } from './context/DriverContext';
+import { AdminProvider } from './context/AdminContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ToastProvider } from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
@@ -40,7 +41,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                       <NotificationProvider>
                         <VendorProvider>
                           <DriverProvider>
-                            <App />
+                            <AdminProvider>
+                              <App />
+                            </AdminProvider>
                           </DriverProvider>
                         </VendorProvider>
                       </NotificationProvider>
