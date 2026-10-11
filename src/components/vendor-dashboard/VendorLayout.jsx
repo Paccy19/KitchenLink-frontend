@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, Link, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -8,12 +8,13 @@ import {
   Menu as MenuIcon,
   X,
   Store,
-  ExternalLink,
   BadgeCheck,
   Radio,
+  LogOut,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import useVendorRealtime from '../../hooks/useVendorRealtime';
+import RoleAccountMenu from '../common/RoleAccountMenu';
 
 const NAV = [
   { to: '/vendor-dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -23,7 +24,7 @@ const NAV = [
 ];
 
 export default function VendorLayout() {
-  const { vendor, stats, menuItems, toggleStoreOpen, isRegistered, hasToken, isAuthenticated } = useVendor();
+  const { vendor, stats, menuItems, toggleStoreOpen, hasToken, isAuthenticated, logout } = useVendor();
   const { connected } = useVendorRealtime({ enabled: true });
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -109,29 +110,14 @@ export default function VendorLayout() {
       </nav>
 
       <div className="pt-4 mt-4 border-t border-stone-100 space-y-1.5">
-        {!isRegistered && (
-          <Link
-            to="/vendor-register"
-            className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-[#2b1206] to-[#542813] transition active:scale-95"
-          >
-            <BadgeCheck className="w-4 h-4 text-[#d9bda6]" />
-            Create vendor account
-          </Link>
-        )}
-        <Link
-          to={`/vendor/${vendor.id}`}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold text-stone-600 hover:bg-[#faf6f2] hover:text-[#542813] transition"
+        <button
+          type="button"
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
         >
-          <ExternalLink className="w-4 h-4" />
-          View public storefront
-        </Link>
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold text-stone-600 hover:bg-[#faf6f2] hover:text-[#542813] transition"
-        >
-          <Store className="w-4 h-4" />
-          Back to marketplace
-        </Link>
+          <LogOut className="w-4 h-4" />
+          Sign out
+        </button>
       </div>
     </div>
   );
@@ -196,17 +182,7 @@ export default function VendorLayout() {
                   <Radio className={`w-3.5 h-3.5 ${connected ? 'animate-pulse' : ''}`} />
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
-                {vendor.avatar ? (
-                  <img
-                    src={vendor.avatar}
-                    alt={vendor.name}
-                    className="w-9 h-9 rounded-full object-cover ring-2 ring-[#ebd7c5]"
-                  />
-                ) : (
-                  <span className="w-9 h-9 rounded-full bg-[#542813] text-white ring-2 ring-[#ebd7c5] flex items-center justify-center text-xs font-black">
-                    {(vendor.name || 'K').slice(0, 1).toUpperCase()}
-                  </span>
-                )}
+                <RoleAccountMenu role="vendor" />
               </div>
             </div>
           </header>

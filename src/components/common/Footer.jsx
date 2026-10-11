@@ -1,36 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { UtensilsCrossed, Phone, Mail, MapPin, Heart, ShieldCheck, ArrowRight } from 'lucide-react';
+import { UtensilsCrossed, Phone, Mail, MapPin, Heart, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
   return (
     <footer className="bg-[#190a03] text-stone-300 pt-16 pb-12 border-t border-[#3d1b0c]/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Top Callout for Vendors */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#240e05] via-[#3d1b0c] to-[#1c0a03] rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 mb-12 shadow-2xl border border-[#522712]/80">
-          <div className="absolute -top-16 -right-16 w-60 h-60 bg-[#8a5332]/20 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="space-y-2 text-center md:text-left relative z-10">
-            <span className="text-[11px] font-black uppercase tracking-wider bg-white/15 px-3 py-1 rounded-full border border-white/10">
-              Vendor Opportunities
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black">
-              Do you cook at home or run a food business?
-            </h3>
-            <p className="text-sm text-[#ebd7c5] max-w-xl">
-              Turn your kitchen into a thriving online business. Join Home Cooks, Bakeries, Food Trucks, and Chefs selling directly to hungry neighbors across Kigali.
-            </p>
-          </div>
-          <button
-            onClick={() => alert('Vendor Registration module is part of the next step! Stay tuned.')}
-            className="relative z-10 px-6 py-3.5 bg-gradient-to-r from-[#f5ebe1] to-[#ebd7c5] hover:from-white hover:to-[#f5ebe1] text-[#2b1206] font-black text-sm rounded-2xl shadow-xl transition-all duration-300 hover:scale-[1.03] active:scale-95 whitespace-nowrap flex items-center gap-2"
-          >
-            <span>Apply as Food Vendor</span>
-            <ArrowRight className="w-4 h-4 text-[#542813]" />
-          </button>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           {/* Col 1: Brand Info */}
           <div className="space-y-4">

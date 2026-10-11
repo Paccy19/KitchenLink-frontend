@@ -5,6 +5,7 @@ import {
   verifyOtp as verifyOtpRequest,
   updateCurrentCustomerProfile,
 } from '../api/endpoints';
+import { clearVendorToken } from '../api/vendorApi';
 
 const AuthContext = createContext(null);
 const ACCESS_TOKEN_KEY = 'ofk_access_token';
@@ -105,6 +106,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(ACCESS_TOKEN_KEY, result.token);
     setAccessToken(result.token);
     setUser((current) => customerUser(result.customer, current));
+    // Roles are exclusive: signing in as a customer ends any vendor session.
+    clearVendorToken();
+    window.dispatchEvent(new Event('ofk:vendor-signed-out'));
     setIsAuthModalOpen(false);
     setAuthStep('phone');
     setOtpPreview('');

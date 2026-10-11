@@ -25,6 +25,7 @@ const VendorOverviewPage = lazy(() => import('./pages/vendor/VendorOverviewPage'
 const VendorOrdersPage = lazy(() => import('./pages/vendor/VendorOrdersPage'));
 const VendorMenuPage = lazy(() => import('./pages/vendor/VendorMenuPage'));
 const VendorWalletPage = lazy(() => import('./pages/vendor/VendorWalletPage'));
+const VendorProfilePage = lazy(() => import('./pages/vendor/VendorProfilePage'));
 const VendorRegisterPage = lazy(() => import('./pages/vendor/VendorRegisterPage'));
 const VendorLoginPage = lazy(() => import('./pages/vendor/VendorLoginPage'));
 
@@ -90,6 +91,7 @@ export default function App() {
                 <Route path="orders" element={<VendorOrdersPage />} />
                 <Route path="menu" element={<VendorMenuPage />} />
                 <Route path="wallet" element={<VendorWalletPage />} />
+                <Route path="profile" element={<VendorProfilePage />} />
               </Route>
 
               <Route path="*" element={<HomePage />} />

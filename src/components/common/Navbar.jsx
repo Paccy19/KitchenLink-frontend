@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { 
   ShoppingBag, 
   MapPin, 
@@ -13,16 +13,25 @@ import {
   CalendarDays,
   Heart,
   Store,
+  Bike,
   Map,
   Menu,
-  X
+  X,
+  Wallet,
+  ExternalLink,
+  LayoutDashboard,
+  Navigation,
+  History,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useVendor } from '../../context/VendorContext';
+import { useDriver } from '../../context/DriverContext';
 import { useNotifications } from '../../context/NotificationContext';
+import RoleSelectModal from '../auth/RoleSelectModal';
 import {
   Bell,
   CheckCheck,
@@ -30,18 +39,83 @@ import {
 
 export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const navigate = useNavigate();
-  const { user, isAuthenticated, openAuthModal, logout } = useAuth();
+  const { pathname } = useRouterLocation();
+  const { user, isAuthenticated, logout } = useAuth();
   const { totalItemCount, setIsCartOpen } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { currentLocation, setIsLocationModalOpen, neighborhoods, selectLocation } = useLocation();
-  const { isAuthenticated: isVendorSignedIn, hasToken } = useVendor();
+  const {
+    isAuthenticated: isVendorSignedIn,
+    hasToken,
+    marketplaceMode,
+    exitMarketplace,
+    enterMarketplace,
+    logout: vendorLogout,
+    vendor,
+  } = useVendor();
   const vendorSignedIn = isVendorSignedIn || hasToken;
+  const {
+    isAuthenticated: isDriverSignedIn,
+    hasToken: hasDriverToken,
+    marketplaceMode: driverMarketplaceMode,
+    exitMarketplace: exitDriverMarketplace,
+    logout: driverLogout,
+    driver,
+  } = useDriver();
+  const driverSignedIn = isDriverSignedIn || hasDriverToken;
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+
+  // A vendor/driver only gets a way back to their dashboard after explicitly
+  // choosing to visit the marketplace, and only while browsing marketplace/shop pages.
+  const isMarketplacePath =
+    pathname === '/vendors' ||
+    pathname === '/vendors/map' ||
+    /^\/vendor\/[^/]+$/.test(pathname);
+  const showBackToVendor = vendorSignedIn && marketplaceMode && isMarketplacePath;
+  const showBackToDriver = driverSignedIn && driverMarketplaceMode && isMarketplacePath;
+  const showBecomeVendor = !isAuthenticated && !vendorSignedIn && !driverSignedIn;
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isLocDropdownOpen, setIsLocDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isRoleSelectOpen, setIsRoleSelectOpen] = useState(false);
+
+  // The account button is shared by every signed-in role. Vendors/drivers take
+  // precedence over a lingering customer session so they always reach their own pages.
+  const accountRole = vendorSignedIn ? 'vendor' : driverSignedIn ? 'driver' : isAuthenticated ? 'customer' : null;
+  const accountName =
+    accountRole === 'vendor' ? vendor?.name || 'Your Kitchen'
+      : accountRole === 'driver' ? driver?.name || 'Driver'
+        : accountRole === 'customer' ? user?.name || 'Account'
+          : '';
+  const accountAvatar =
+    accountRole === 'vendor' ? vendor?.avatar
+      : accountRole === 'driver' ? driver?.avatar
+        : accountRole === 'customer' ? user?.avatar
+          : '';
+  const accountSubtitle =
+    accountRole === 'vendor' ? vendor?.ownerName || vendor?.type || 'Vendor account'
+      : accountRole === 'driver' ? driver?.phone || 'Driver account'
+        : accountRole === 'customer' ? user?.phone
+          : '';
+  const accountFirstName = String(accountName).split(' ')[0] || 'Account';
+  const accountInitials = String(accountName || 'U')
+    .split(' ')
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const accountLinkClass =
+    'flex items-center gap-2.5 px-4 py-2.5 text-sm text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] transition';
+
+  const handleAccountLogout = () => {
+    setIsUserMenuOpen(false);
+    if (accountRole === 'vendor') vendorLogout?.();
+    else if (accountRole === 'driver') driverLogout?.();
+    else logout();
+  };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -51,7 +125,8 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
+    <>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
       {/* Top Banner for Pre-order & Scheduled Meals reminder */}
       <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] border-b border-[#4e2410]/50 text-[#f5ebe1] text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2">
         <span className="bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
@@ -129,14 +204,28 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
 
-            {/* Vendor portal */}
-            <Link
-              to={vendorSignedIn ? '/vendor-dashboard' : '/vendor-register'}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
-            >
-              <Store className="w-3.5 h-3.5 text-[#6d391d]" />
-              <span>{vendorSignedIn ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
-            </Link>
+            {/* Driver portal. A driver sees a return button only on
+                marketplace/shop pages after choosing to visit the marketplace.
+                The vendor's return link now lives in the account menu. Guests
+                may become vendors; signed-in customers see nothing. */}
+            {showBackToDriver ? (
+              <Link
+                to="/driver-dashboard"
+                onClick={exitDriverMarketplace}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#12301c] bg-[#f2f8ee] hover:bg-[#e6f2de] border border-[#d9e5d0] transition hover:-translate-y-0.5 hover:shadow-sm"
+              >
+                <Bike className="w-3.5 h-3.5 text-[#3b5327]" />
+                <span>Back to Driver Dashboard</span>
+              </Link>
+            ) : showBecomeVendor ? (
+              <Link
+                to="/vendor-register"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              >
+                <Store className="w-3.5 h-3.5 text-[#6d391d]" />
+                <span>Become a Vendor</span>
+              </Link>
+            ) : null}
 
             {/* Quick Link: Pre-Orders */}
             <Link
@@ -260,89 +349,143 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               </div>
             )}
 
-            {/* User Account / Login */}
-            {isAuthenticated ? (
+            {/* User Account / Login (role aware: customer, vendor, driver) */}
+            {accountRole ? (
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 text-sm font-medium transition"
                 >
-                  {user.avatar ? (
+                  {accountAvatar ? (
                     <img
-                      src={user.avatar}
-                      alt={user.name}
+                      src={accountAvatar}
+                      alt={accountName}
                       className="w-7 h-7 rounded-full object-cover ring-2 ring-[#8a5332]/30"
                     />
                   ) : (
                     <span className="w-7 h-7 rounded-full bg-[#542813] text-white ring-2 ring-[#8a5332]/30 flex items-center justify-center text-[10px] font-black">
-                      {String(user.name || 'U').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+                      {accountInitials}
                     </span>
                   )}
                   <span className="hidden md:inline font-bold text-stone-800 text-xs max-w-[100px] truncate">
-                    {user.name.split(' ')[0]}
+                    {accountFirstName}
                   </span>
                   <ChevronDown className="w-3.5 h-3.5 text-stone-400 hidden sm:inline" />
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                     <div className="px-4 py-2 border-b border-stone-100">
-                      <p className="text-sm font-bold text-gray-900">{user.name}</p>
-                      <p className="text-xs text-stone-500">{user.phone}</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{accountName}</p>
+                      <p className="text-xs text-stone-500 truncate">{accountSubtitle}</p>
                     </div>
 
-                    <Link
-                      to="/profile"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] transition"
-                    >
-                      <User className="w-4 h-4 text-stone-400" />
-                      <span>My Profile & Addresses</span>
-                    </Link>
+                    {accountRole === 'customer' && (
+                      <>
+                        <Link to="/profile" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <User className="w-4 h-4 text-stone-400" />
+                          <span>My Profile &amp; Addresses</span>
+                        </Link>
+                        <Link to="/orders" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <ListOrdered className="w-4 h-4 text-stone-400" />
+                          <span>Order History</span>
+                        </Link>
+                        <Link to="/wishlist" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Heart className="w-4 h-4 text-rose-500" />
+                          <span>Saved Dishes</span>
+                        </Link>
+                        <Link to="/track" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Clock className="w-4 h-4 text-stone-400" />
+                          <span>Track Active Order</span>
+                        </Link>
+                      </>
+                    )}
 
-                    <Link
-                      to="/orders"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] transition"
-                    >
-                      <ListOrdered className="w-4 h-4 text-stone-400" />
-                      <span>Order History</span>
-                    </Link>
+                    {accountRole === 'vendor' && (
+                      <>
+                        {showBackToVendor && (
+                          <Link
+                            to="/vendor-dashboard"
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              exitMarketplace();
+                            }}
+                            className={accountLinkClass}
+                          >
+                            <Store className="w-4 h-4 text-stone-400" />
+                            <span>Back to Vendor Dashboard</span>
+                          </Link>
+                        )}
+                        <Link to="/vendor-dashboard/orders" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <ListOrdered className="w-4 h-4 text-stone-400" />
+                          <span>Order History</span>
+                        </Link>
+                        <Link to="/vendor-dashboard/profile" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <User className="w-4 h-4 text-stone-400" />
+                          <span>Profile</span>
+                        </Link>
+                        <Link to="/vendor-dashboard/wallet" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Wallet className="w-4 h-4 text-stone-400" />
+                          <span>Earnings</span>
+                        </Link>
+                        {vendor?.id && (
+                          <Link
+                            to={`/vendor/${vendor.id}`}
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              enterMarketplace();
+                            }}
+                            className={accountLinkClass}
+                          >
+                            <ExternalLink className="w-4 h-4 text-stone-400" />
+                            <span>View public storefront</span>
+                          </Link>
+                        )}
+                      </>
+                    )}
 
-                    <Link
-                      to="/wishlist"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition"
-                    >
-                      <Heart className="w-4 h-4 text-rose-500" />
-                      <span>Saved Dishes</span>
-                    </Link>
-
-                    <Link
-                      to={vendorSignedIn ? '/vendor-dashboard' : '/vendor-register'}
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] transition"
-                    >
-                      <Store className="w-4 h-4 text-stone-400" />
-                      <span>{vendorSignedIn ? 'Vendor Dashboard' : 'Become a Vendor'}</span>
-                    </Link>
-
-                    <Link
-                      to="/track"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] transition"
-                    >
-                      <Clock className="w-4 h-4 text-stone-400" />
-                      <span>Track Active Order</span>
-                    </Link>
+                    {accountRole === 'driver' && (
+                      <>
+                        {showBackToDriver && (
+                          <Link
+                            to="/driver-dashboard"
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              exitDriverMarketplace();
+                            }}
+                            className={accountLinkClass}
+                          >
+                            <Bike className="w-4 h-4 text-stone-400" />
+                            <span>Back to Driver Dashboard</span>
+                          </Link>
+                        )}
+                        <Link to="/driver-dashboard" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <LayoutDashboard className="w-4 h-4 text-stone-400" />
+                          <span>Dashboard</span>
+                        </Link>
+                        <Link to="/driver-dashboard/active" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Navigation className="w-4 h-4 text-stone-400" />
+                          <span>Active Delivery</span>
+                        </Link>
+                        <Link to="/driver-dashboard/history" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <History className="w-4 h-4 text-stone-400" />
+                          <span>Delivery History</span>
+                        </Link>
+                        <Link to="/driver-dashboard/earnings" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Wallet className="w-4 h-4 text-stone-400" />
+                          <span>Earnings</span>
+                        </Link>
+                        <Link to="/driver-dashboard/profile" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Settings className="w-4 h-4 text-stone-400" />
+                          <span>Profile &amp; Settings</span>
+                        </Link>
+                      </>
+                    )}
 
                     <div className="border-t border-stone-100 my-1"></div>
 
                     <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        logout();
-                      }}
+                      onClick={handleAccountLogout}
                       className="w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
                     >
                       <LogOut className="w-4 h-4 text-red-500" />
@@ -353,7 +496,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               </div>
             ) : (
               <button
-                onClick={openAuthModal}
+                onClick={() => setIsRoleSelectOpen(true)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-xs shadow-md shadow-[#2b1206]/20 transition-all active:scale-95"
               >
                 <User className="w-3.5 h-3.5 text-[#d9bda6]" />
@@ -430,17 +573,36 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             >
               My Profile
             </Link>
-            <Link
-              to={vendorSignedIn ? '/vendor-dashboard' : '/vendor-register'}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#542813] hover:bg-[#faf6f2] rounded-lg"
-            >
-              <Store className="w-4 h-4" />
-              {vendorSignedIn ? 'Vendor Dashboard' : 'Become a Vendor'}
-            </Link>
+            {showBackToDriver ? (
+              <Link
+                to="/driver-dashboard"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  exitDriverMarketplace();
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#3b5327] hover:bg-[#f2f8ee] rounded-lg"
+              >
+                <Bike className="w-4 h-4" />
+                Back to Driver Dashboard
+              </Link>
+            ) : showBecomeVendor ? (
+              <Link
+                to="/vendor-register"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#542813] hover:bg-[#faf6f2] rounded-lg"
+              >
+                <Store className="w-4 h-4" />
+                Become a Vendor
+              </Link>
+            ) : null}
           </div>
         )}
       </div>
     </header>
+      <RoleSelectModal
+        open={isRoleSelectOpen}
+        onClose={() => setIsRoleSelectOpen(false)}
+      />
+    </>
   );
 }

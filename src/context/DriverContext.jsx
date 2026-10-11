@@ -37,6 +37,7 @@ export function DriverProvider({ children }) {
   const toast = useToast();
   const [driver, setDriver] = useState(null);
   const [authToken, setAuthToken] = useState(() => getDriverToken());
+  const [marketplaceMode, setMarketplaceMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [error, setError] = useState('');
@@ -264,6 +265,7 @@ export function DriverProvider({ children }) {
     const onUnauthorized = () => {
       clearDriverToken();
       setAuthToken('');
+      setMarketplaceMode(false);
       setError('Your driver session has expired. Please log in again.');
     };
     window.addEventListener('ofk:driver-unauthorized', onUnauthorized);
@@ -320,8 +322,12 @@ export function DriverProvider({ children }) {
     setUnreadCount(0);
     knownOfferIds.current = new Set();
     knownNotificationIds.current = new Set();
+    setMarketplaceMode(false);
     setError('');
   }, []);
+
+  const enterMarketplace = useCallback(() => setMarketplaceMode(true), []);
+  const exitMarketplace = useCallback(() => setMarketplaceMode(false), []);
 
   const registerDriver = useCallback(
     async (data) => {
@@ -475,6 +481,9 @@ export function DriverProvider({ children }) {
       sharingLocation,
       isAuthenticated,
       hasToken,
+      marketplaceMode,
+      enterMarketplace,
+      exitMarketplace,
       isOnline,
       loading,
       authBusy,
@@ -516,6 +525,9 @@ export function DriverProvider({ children }) {
       sharingLocation,
       isAuthenticated,
       hasToken,
+      marketplaceMode,
+      enterMarketplace,
+      exitMarketplace,
       isOnline,
       loading,
       authBusy,

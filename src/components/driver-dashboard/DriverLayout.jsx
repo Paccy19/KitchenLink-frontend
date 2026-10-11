@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, Link, Navigate, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Navigation,
@@ -9,15 +9,16 @@ import {
   Menu as MenuIcon,
   X,
   Bike,
-  Store,
   Radio,
   MapPin,
   Power,
   Bell,
   BellRing,
+  LogOut,
 } from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
 import useDriverRealtime from '../../hooks/useDriverRealtime';
+import RoleAccountMenu from '../common/RoleAccountMenu';
 
 const NAV = [
   { to: '/driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -62,6 +63,7 @@ export default function DriverLayout() {
     unreadCount,
     markNotificationRead,
     markAllNotificationsRead,
+    logout,
   } = useDriver();
   const { connected } = useDriverRealtime({ enabled: true });
   const navigate = useNavigate();
@@ -175,13 +177,14 @@ export default function DriverLayout() {
             {stats.earningsTotal.toLocaleString()} RWF earned
           </span>
         </div>
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold text-stone-600 hover:bg-[#f5f8f2] hover:text-[#3b5327] transition"
+        <button
+          type="button"
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold text-red-600 hover:bg-red-50 transition"
         >
-          <Store className="w-4 h-4" />
-          Back to marketplace
-        </Link>
+          <LogOut className="w-4 h-4" />
+          Sign out
+        </button>
       </div>
     </div>
   );
@@ -325,9 +328,7 @@ export default function DriverLayout() {
                   <Radio className={`w-3.5 h-3.5 ${connected ? 'animate-pulse' : ''}`} />
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3b5327] to-[#1c2b12] text-white flex items-center justify-center font-black text-sm ring-2 ring-[#d9e5d0]">
-                  {driver.name.slice(0, 1).toUpperCase()}
-                </div>
+                <RoleAccountMenu role="driver" />
               </div>
             </div>
           </header>

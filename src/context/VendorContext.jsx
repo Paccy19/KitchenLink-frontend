@@ -50,6 +50,7 @@ export function VendorProvider({ children }) {
   const [isRegistered, setIsRegistered] = useState(() => readFlag(STORAGE.registered));
   const [lastSyncedAt, setLastSyncedAt] = useState(() => new Date().toISOString());
   const [authToken, setAuthToken] = useState(() => getVendorToken());
+  const [marketplaceMode, setMarketplaceMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [error, setError] = useState('');
@@ -150,6 +151,7 @@ export function VendorProvider({ children }) {
       setOrders([]);
       setWallet({ withdrawn: 0, baseSales: 0, withdrawalHistory: [] });
       setDashboard(null);
+      setMarketplaceMode(false);
     }
   }, [authToken, refreshAll]);
 
@@ -157,10 +159,21 @@ export function VendorProvider({ children }) {
     const onUnauthorized = () => {
       clearVendorToken();
       setAuthToken('');
+      setMarketplaceMode(false);
       setError('Your vendor session has expired. Please log in again.');
     };
+    const onSignedOut = () => {
+      clearVendorToken();
+      setAuthToken('');
+      setVendor(null);
+      setMarketplaceMode(false);
+    };
     window.addEventListener('ofk:vendor-unauthorized', onUnauthorized);
-    return () => window.removeEventListener('ofk:vendor-unauthorized', onUnauthorized);
+    window.addEventListener('ofk:vendor-signed-out', onSignedOut);
+    return () => {
+      window.removeEventListener('ofk:vendor-unauthorized', onUnauthorized);
+      window.removeEventListener('ofk:vendor-signed-out', onSignedOut);
+    };
   }, []);
 
   /* ------------------------------- auth -------------------------------- */
@@ -209,8 +222,12 @@ export function VendorProvider({ children }) {
     clearVendorToken();
     setAuthToken('');
     setVendor(null);
+    setMarketplaceMode(false);
     setError('');
   }, []);
+
+  const enterMarketplace = useCallback(() => setMarketplaceMode(true), []);
+  const exitMarketplace = useCallback(() => setMarketplaceMode(false), []);
 
   const registerVendor = useCallback(async (data, files = []) => {
     const form = new FormData();
@@ -404,6 +421,9 @@ export function VendorProvider({ children }) {
       isRegistered,
       isAuthenticated,
       hasToken,
+      marketplaceMode,
+      enterMarketplace,
+      exitMarketplace,
       loading,
       authBusy,
       error,
@@ -439,6 +459,9 @@ export function VendorProvider({ children }) {
       isRegistered,
       isAuthenticated,
       hasToken,
+      marketplaceMode,
+      enterMarketplace,
+      exitMarketplace,
       loading,
       authBusy,
       error,
