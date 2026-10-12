@@ -14,6 +14,8 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  Landmark,
+  AlertTriangle,
   Menu as MenuIcon,
   X,
   ExternalLink,
@@ -32,6 +34,7 @@ const NAV = [
   { to: '/admin-dashboard/users', label: 'Users', icon: Users },
   { to: '/admin-dashboard/payments', label: 'Payments', icon: CreditCard },
   { to: '/admin-dashboard/payouts', label: 'Payouts', icon: Wallet },
+  { to: '/admin-dashboard/platform', label: 'Platform Wallet', icon: Landmark, ownerOnly: true },
   { to: '/admin-dashboard/categories', label: 'Categories', icon: Tags },
   { to: '/admin-dashboard/complaints', label: 'Complaints', icon: MessageSquareWarning },
   { to: '/admin-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
@@ -89,7 +92,7 @@ export default function AdminLayout() {
       </div>
 
       <nav className="space-y-1 flex-1 overflow-y-auto">
-        {NAV.map((item) => {
+        {NAV.filter((item) => !item.ownerOnly || admin?.role === 'super_admin').map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
@@ -180,6 +183,15 @@ export default function AdminLayout() {
           </header>
 
           <main className="p-4 sm:p-6 pb-16">
+            {admin?.uses_default_password && (
+              <Link
+                to="/admin-dashboard/settings"
+                className="mb-4 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-xs font-bold text-red-800 hover:bg-red-100"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                You are using the default admin password. Change it now in Settings.
+              </Link>
+            )}
             <Outlet />
           </main>
         </div>

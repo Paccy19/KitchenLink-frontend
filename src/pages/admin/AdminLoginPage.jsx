@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, ShieldCheck, Store } from 'lucide-react';
+import { Mail, Lock, ArrowRight, ShieldCheck, Store, Smartphone } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
-  const { login, authBusy, error: contextError } = useAdmin();
+  const { login, verifyTwoFactor, authBusy, error: contextError } = useAdmin();
+  // Set when the password was right and an SMS code is now required.
+  const [challenge, setChallenge] = useState(null);
+  const [code, setCode] = useState('');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,10 +22,31 @@ export default function AdminLoginPage() {
     }
     setError('');
     try {
-      await login(email.trim(), password);
+      const result = await login(email.trim(), password);
+      if (result?.twoFactorRequired) {
+        setChallenge(result);
+        setCode('');
+        return;
+      }
       navigate('/admin-dashboard');
     } catch (err) {
       setError(err?.message || 'Could not sign in.');
+    }
+  };
+
+  const submitCode = async (event) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(code.trim())) {
+      setError('Enter the 6-digit code sent to your phone.');
+      return;
+    }
+    setError('');
+    try {
+      await verifyTwoFactor(challenge.challengeToken, code.trim());
+      navigate('/admin-dashboard');
+    } catch (err) {
+      setError(err?.message || 'Could not verify the code.');
+      if (err?.code === 'CHALLENGE_EXPIRED') setChallenge(null);
     }
   };
 
@@ -39,6 +63,58 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
+        {challenge ? (
+          <form
+            onSubmit={submitCode}
+            className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 sm:p-8 space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <span className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center flex-shrink-0">
+                <Smartphone className="w-5 h-5 text-[#1f2937]" />
+              </span>
+              <p className="text-sm text-stone-600">
+                We sent a 6-digit code to <strong className="text-gray-900">{challenge.sentTo}</strong>. Enter it to finish signing in.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="admin-code" className="text-xs font-bold text-stone-500 block mb-1.5">Sign-in code</label>
+              <input
+                id="admin-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+                placeholder="123456"
+                autoFocus
+                className="w-full px-3 py-3 text-center text-lg tracking-[0.4em] font-bold rounded-xl border border-stone-200 focus:border-[#1f2937] focus:ring-2 focus:ring-[#1f2937]/10 outline-none"
+              />
+              {challenge.devOtp && (
+                <p className="mt-1.5 text-[11px] text-stone-400">Development code: {challenge.devOtp}</p>
+              )}
+            </div>
+            {(error || contextError) && (
+              <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                {error || contextError}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={authBusy}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#111827] via-[#1f2937] to-[#0b1220] hover:from-[#1f2937] text-white font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-60"
+            >
+              {authBusy ? 'Verifying…' : 'Verify & sign in'}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => { setChallenge(null); setError(''); }}
+              className="w-full text-xs font-bold text-stone-500 hover:text-[#1f2937]"
+            >
+              Use a different account
+            </button>
+          </form>
+        ) : (
         <form
           onSubmit={submit}
           className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 sm:p-8 space-y-4"
@@ -90,6 +166,7 @@ export default function AdminLoginPage() {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+        )}
 
         <div className="mt-4 text-center text-xs font-bold text-stone-500">
           <Link to="/" className="hover:text-[#1f2937] inline-flex items-center gap-1.5">

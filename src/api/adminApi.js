@@ -48,7 +48,7 @@ async function adminRequest(path, { method = 'GET', body } = {}) {
   if (!response.ok) {
     throw new ApiError(
       data?.error?.message || data?.message || `Request failed (${response.status}).`,
-      { status: response.status, path },
+      { status: response.status, path, code: data?.error?.code || '' },
     );
   }
   return data;
@@ -70,6 +70,29 @@ export const adminApi = {
   me: () => adminRequest('/admin/auth/me'),
   changePassword: (payload) =>
     adminRequest('/admin/auth/change-password', { method: 'POST', body: payload }),
+  // SMS codes: second sign-in step, setup, and codes confirming money actions.
+  verifyTwoFactor: (challengeToken, code) =>
+    adminRequest('/admin/auth/verify-2fa', { method: 'POST', body: { challenge_token: challengeToken, code } }),
+  startTwoFactor: (phone) => adminRequest('/admin/auth/2fa/start', { method: 'POST', body: { phone } }),
+  enableTwoFactor: (phone, code) =>
+    adminRequest('/admin/auth/2fa/enable', { method: 'POST', body: { phone, code } }),
+  disableTwoFactor: (code) => adminRequest('/admin/auth/2fa/disable', { method: 'POST', body: { code } }),
+  sendActionCode: (purpose) => adminRequest('/admin/auth/action-code', { method: 'POST', body: { purpose } }),
+
+  // The owner's platform money (super admin only).
+  ownerOverview: () => adminRequest('/admin/platform/owner'),
+  ownerWithdraw: (body) => adminRequest('/admin/platform/owner/withdrawals', { method: 'POST', body }),
+  ownerCompleteWithdrawal: (id, body) =>
+    adminRequest(`/admin/platform/owner/withdrawals/${encodeURIComponent(id)}/complete`, { method: 'POST', body }),
+  ownerCancelWithdrawal: (id, body) =>
+    adminRequest(`/admin/platform/owner/withdrawals/${encodeURIComponent(id)}/cancel`, { method: 'POST', body }),
+  ownerAddDestination: (body) => adminRequest('/admin/platform/owner/destinations', { method: 'POST', body }),
+  ownerRemoveDestination: (id, body) =>
+    adminRequest(`/admin/platform/owner/destinations/${encodeURIComponent(id)}/remove`, { method: 'POST', body }),
+  ownerAdjustment: (body) => adminRequest('/admin/platform/owner/adjustments', { method: 'POST', body }),
+  ownerReconciliation: (body) => adminRequest('/admin/platform/owner/reconciliations', { method: 'POST', body }),
+  ownerSavePayoutSettings: (body) =>
+    adminRequest('/admin/platform/owner/payout-settings', { method: 'PUT', body }),
 
   dashboard: () => adminRequest('/admin/dashboard/overview'),
 

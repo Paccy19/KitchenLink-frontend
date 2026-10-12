@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Smartphone } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
+import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
 import {
   Badge,
   Button,
@@ -16,7 +17,7 @@ import {
 } from '../../components/admin-dashboard/ui';
 
 export default function AdminSettingsPage() {
-  const { admin } = useAdmin();
+  const { admin, refreshProfile } = useAdmin();
   const [form, setForm] = useState({ current_password: '', new_password: '', confirm: '' });
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -30,6 +31,7 @@ export default function AdminSettingsPage() {
     onSuccess: () => {
       setDone(true);
       setForm({ current_password: '', new_password: '', confirm: '' });
+      refreshProfile().catch(() => null);
     },
   });
 
@@ -50,6 +52,18 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-5">
       <PageHeader title="Settings" description="Your admin profile and account security." />
+
+      {admin?.uses_default_password && (
+        <div role="alert" className="flex items-start gap-3 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <span>
+            You are still using the <strong>default admin password</strong>. Anyone who knows it can sign in.
+            Change it below; moving platform money stays blocked until you do.
+          </span>
+        </div>
+      )}
+
+      <TwoFactorCard admin={admin} onChanged={refreshProfile} />
 
       <Card title="Profile">
         <div className="flex items-center gap-4">
@@ -120,5 +134,89 @@ export default function AdminSettingsPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** Turn SMS codes on (verify a phone) or off (confirmed with a code). */
+function TwoFactorCard({ admin, onChanged }) {
+  const enabled = Boolean(admin?.two_factor_enabled);
+  const [phone, setPhone] = useState(admin?.phone || '');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const run = async (action, success) => {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      await action();
+      setCode('');
+      setMessage(success);
+      await onChanged();
+    } catch (err) {
+      setError(err?.message || 'Something went wrong.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card title="SMS codes (two-step sign-in)">
+      <div className="max-w-md space-y-4">
+        <div className="flex items-start gap-3">
+          <span className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center flex-shrink-0">
+            <Smartphone className="w-5 h-5 text-stone-700" />
+          </span>
+          <p className="text-sm text-stone-600">
+            {enabled ? (
+              <>Codes go to <strong className="text-gray-900">{admin.phone}</strong>. You need one to sign in and to confirm every money action.</>
+            ) : (
+              <>Get a code on your phone when you sign in and before every money action. <strong>Required</strong> to withdraw platform commission.</>
+            )}
+          </p>
+          <Badge tone={enabled ? 'green' : 'amber'}>{enabled ? 'On' : 'Off'}</Badge>
+        </div>
+
+        {!enabled ? (
+          <>
+            <Field label="Your phone number">
+              <Input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="0788123456" />
+            </Field>
+            <ActionCodeField
+              label="Code sent to that phone"
+              value={code}
+              onChange={setCode}
+              send={() => {
+                if (!phone.trim()) throw new Error('Enter your phone number first.');
+                return adminApi.startTwoFactor(phone.trim());
+              }}
+            />
+            <Button
+              onClick={() => run(() => adminApi.enableTwoFactor(phone.trim(), code), 'SMS codes are on.')}
+              disabled={busy || code.length !== 6}
+            >
+              {busy ? 'Turning on…' : 'Turn on SMS codes'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <ActionCodeField purpose="disable_2fa" value={code} onChange={setCode} />
+            <Button
+              variant="danger"
+              onClick={() => run(() => adminApi.disableTwoFactor(code), 'SMS codes are off.')}
+              disabled={busy || code.length !== 6}
+            >
+              {busy ? 'Turning off…' : 'Turn off SMS codes'}
+            </Button>
+          </>
+        )}
+        {error && <ErrorNote error={error} />}
+        {message && (
+          <p className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">{message}</p>
+        )}
+      </div>
+    </Card>
   );
 }

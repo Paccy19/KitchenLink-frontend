@@ -13,12 +13,14 @@ const BASE_URL = String(RAW_BASE).replace(/\/+$/, '');
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT ?? 8000);
 
 export class ApiError extends Error {
-  constructor(message, { status = 0, path = '', cause = null } = {}) {
+  constructor(message, { status = 0, path = '', cause = null, code = '' } = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.path = path;
     this.cause = cause;
+    // Machine-readable error code from the API (e.g. 'BOOKS_UNBALANCED').
+    this.code = code;
   }
 }
 

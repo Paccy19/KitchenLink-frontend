@@ -79,11 +79,21 @@ export function AdminProvider({ children }) {
     };
   }, []);
 
+  // Returns { twoFactorRequired, challengeToken, sentTo, devOtp } when an SMS
+  // code is needed; finish with verifyTwoFactor.
   const login = useCallback(async (email, password) => {
     setAuthBusy(true);
     setError('');
     try {
       const result = await adminApi.login(email, password);
+      if (result.two_factor_required) {
+        return {
+          twoFactorRequired: true,
+          challengeToken: result.challenge_token,
+          sentTo: result.sent_to,
+          devOtp: result.dev_otp || '',
+        };
+      }
       clearAllSessions();
       setAdminToken(result.token);
       setAuthToken(result.token);
@@ -91,6 +101,24 @@ export function AdminProvider({ children }) {
       return result;
     } catch (err) {
       setError(err.message || 'Could not sign in.');
+      throw err;
+    } finally {
+      if (mounted.current) setAuthBusy(false);
+    }
+  }, []);
+
+  const verifyTwoFactor = useCallback(async (challengeToken, code) => {
+    setAuthBusy(true);
+    setError('');
+    try {
+      const result = await adminApi.verifyTwoFactor(challengeToken, code);
+      clearAllSessions();
+      setAdminToken(result.token);
+      setAuthToken(result.token);
+      setAdmin(result.admin);
+      return result;
+    } catch (err) {
+      setError(err.message || 'Could not verify the code.');
       throw err;
     } finally {
       if (mounted.current) setAuthBusy(false);
@@ -118,10 +146,12 @@ export function AdminProvider({ children }) {
       role: admin?.role || null,
       permissions: admin?.permissions || [],
       login,
+      verifyTwoFactor,
       logout,
       refreshProfile,
+      isOwner: admin?.role === 'super_admin',
     }),
-    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, logout, refreshProfile],
+    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, verifyTwoFactor, logout, refreshProfile],
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
