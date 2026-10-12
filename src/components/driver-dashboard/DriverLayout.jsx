@@ -24,7 +24,7 @@ const NAV = [
   { to: '/driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/driver-dashboard/active', label: 'Active Delivery', icon: Navigation, badgeKey: 'activeDeliveries' },
   { to: '/driver-dashboard/history', label: 'Delivery History', icon: History },
-  { to: '/driver-dashboard/earnings', label: 'Earnings', icon: Wallet },
+  { to: '/driver-dashboard/earnings', label: 'Earnings & Wallet', icon: Wallet },
   { to: '/driver-dashboard/profile', label: 'Profile & Settings', icon: Settings },
 ];
 

@@ -16,6 +16,7 @@ import {
   mapDriverEarnings,
   mapDriverNotification,
   mapDriverStats,
+  mapDriverWallet,
   setDriverToken,
 } from '../api/driverApi';
 import { clearAllSessions } from '../api/session';
@@ -50,6 +51,7 @@ export function DriverProvider({ children }) {
   const [activeDelivery, setActiveDelivery] = useState(null);
   const [history, setHistory] = useState([]);
   const [earnings, setEarnings] = useState(null);
+  const [wallet, setWallet] = useState(null);
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -211,6 +213,24 @@ export function DriverProvider({ children }) {
     setEarnings(mapped);
     return mapped;
   }, []);
+
+  const refreshWallet = useCallback(async () => {
+    const raw = await driverApi.wallet();
+    if (!mounted.current) return null;
+    const mapped = mapDriverWallet(raw);
+    setWallet(mapped);
+    return mapped;
+  }, []);
+
+  /** Request a payout of `amount` RWF to a mobile money number. */
+  const requestWithdrawal = useCallback(
+    async ({ amount, method, phone }) => {
+      const result = await driverApi.requestWithdrawal({ amount_rwf: amount, method, phone });
+      await refreshWallet();
+      return result.withdrawal;
+    },
+    [refreshWallet],
+  );
 
   const refreshAll = useCallback(async () => {
     if (!getDriverToken()) return;
@@ -469,10 +489,10 @@ export function DriverProvider({ children }) {
         setActiveDelivery(null);
         toast.success(`Delivery completed — earned ${result.earned_rwf.toLocaleString()} RWF`);
       }
-      await Promise.all([refreshStats(), refreshEarnings(), refreshHistory()]);
+      await Promise.all([refreshStats(), refreshEarnings(), refreshHistory(), refreshWallet()]);
       return result;
     },
-    [refreshStats, refreshEarnings, refreshHistory, toast],
+    [refreshStats, refreshEarnings, refreshHistory, refreshWallet, toast],
   );
 
   /* ------------------------------ computed ------------------------------ */
@@ -510,6 +530,9 @@ export function DriverProvider({ children }) {
       refreshAll,
       refreshHistory,
       refreshEarnings,
+      wallet,
+      refreshWallet,
+      requestWithdrawal,
       refreshProfile,
       updateDriverProfile,
       requestLoginOtp,
@@ -554,6 +577,9 @@ export function DriverProvider({ children }) {
       refreshAll,
       refreshHistory,
       refreshEarnings,
+      wallet,
+      refreshWallet,
+      requestWithdrawal,
       refreshProfile,
       updateDriverProfile,
       requestLoginOtp,

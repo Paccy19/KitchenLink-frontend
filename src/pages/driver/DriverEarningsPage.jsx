@@ -1,18 +1,60 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet, CheckCircle2, Star, RotateCcw, TrendingUp } from 'lucide-react';
+import {
+  Wallet,
+  CheckCircle2,
+  Star,
+  RotateCcw,
+  TrendingUp,
+  Banknote,
+  Smartphone,
+  ArrowUpRight,
+  Clock,
+} from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
 import { deliveryStatusLabel } from '../../api/driverApi';
+import { useToast } from '../../components/common/Toast';
 import StatCard from '../../components/vendor-dashboard/StatCard';
+import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
+
+const money = (value) => `${Number(value || 0).toLocaleString()} RWF`;
+
+// Riders are paid by mobile money (same options as the vendor wallet).
+const METHODS = [
+  { id: 'MTN Mobile Money', hint: '078 / 079' },
+  { id: 'Airtel Money', hint: '072 / 073' },
+];
+
+const STATUS_STYLES = {
+  processing: { label: 'Processing', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  completed: { label: 'Paid', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  failed: { label: 'Failed · refunded', className: 'bg-rose-50 text-rose-700 border-rose-200' },
+};
 
 export default function DriverEarningsPage() {
-  const { earnings, refreshEarnings, stats } = useDriver();
+  const { earnings, refreshEarnings, stats, wallet, refreshWallet, requestWithdrawal } = useDriver();
+  const { success, error } = useToast();
   const [busy, setBusy] = useState(false);
+
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState(METHODS[0].id);
+  const [phone, setPhone] = useState('');
+  const [confirm, setConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    refreshWallet().catch(() => null);
+  }, [refreshWallet]);
+
+  // Default the payout number to the rider's own phone once it is known.
+  useEffect(() => {
+    if (!phone && wallet?.payoutPhone) setPhone(wallet.payoutPhone);
+  }, [wallet?.payoutPhone, phone]);
 
   const refresh = async () => {
     setBusy(true);
     try {
-      await refreshEarnings();
+      await Promise.all([refreshEarnings(), refreshWallet()]);
     } finally {
       setBusy(false);
     }
@@ -23,8 +65,33 @@ export default function DriverEarningsPage() {
     todayDeliveries: stats.completedToday,
     totalRwf: stats.earningsTotal,
     totalDeliveries: stats.completedTotal,
-    sharePercent: 80,
+    sharePercent: 100,
     rating: stats.rating,
+  };
+
+  const available = wallet?.availableBalance ?? 0;
+  const numericAmount = Number(amount);
+  const invalid = !amount || !Number.isInteger(numericAmount) || numericAmount <= 0;
+  const exceeds = !invalid && numericAmount > available;
+  const phoneInvalid = !/^(\+?250)?0?7[2389]\d{7}$/.test(phone.replace(/[\s-]/g, ''));
+
+  const submit = () => {
+    if (invalid || exceeds || phoneInvalid) return;
+    setConfirm(true);
+  };
+
+  const confirmWithdrawal = async () => {
+    setSubmitting(true);
+    try {
+      await requestWithdrawal({ amount: numericAmount, method, phone });
+      success(`Withdrawal of ${money(numericAmount)} requested to ${method} ${phone}.`);
+      setAmount('');
+    } catch (err) {
+      error(err?.message || 'Could not submit your withdrawal.');
+    } finally {
+      setSubmitting(false);
+      setConfirm(false);
+    }
   };
 
   const bars = (summary.deliveries || []).slice(-10).map((delivery) => ({
@@ -39,9 +106,9 @@ export default function DriverEarningsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Earnings</h1>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Earnings & Wallet</h1>
           <p className="text-sm font-medium text-stone-500">
-            You keep {summary.sharePercent}% of every delivery fee + tips
+            You keep {summary.sharePercent}% of every delivery fee · withdraw to mobile money anytime
           </p>
         </div>
         <button
@@ -58,24 +125,24 @@ export default function DriverEarningsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Wallet}
-          label="Today"
-          value={`${summary.todayRwf.toLocaleString()} RWF`}
-          hint={`${summary.todayDeliveries} deliveries`}
+          label="Available Balance"
+          value={money(available)}
+          hint="Ready to withdraw"
           tone="emerald"
+        />
+        <StatCard
+          icon={Clock}
+          label="Processing"
+          value={money(wallet?.processing)}
+          hint="Being paid out"
+          tone="amber"
         />
         <StatCard
           icon={TrendingUp}
           label="All time"
-          value={`${summary.totalRwf.toLocaleString()} RWF`}
-          hint={`${summary.totalDeliveries} deliveries`}
+          value={money(summary.totalRwf)}
+          hint={`${summary.totalDeliveries} deliveries · today ${money(summary.todayRwf)}`}
           tone="cream"
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label="Delivery fee share"
-          value={`${summary.sharePercent}%`}
-          hint="credited per delivery"
-          tone="amber"
         />
         <StatCard
           icon={Star}
@@ -84,6 +151,154 @@ export default function DriverEarningsPage() {
           hint="Customer reviews"
           tone="sky"
         />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Withdraw card */}
+        <div className="lg:col-span-1 rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 space-y-4 h-fit">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+              <Banknote className="w-5 h-5 text-[#3b5327]" />
+            </div>
+            <div>
+              <h3 className="font-black text-sm text-gray-900">Withdraw Funds</h3>
+              <p className="text-[11px] text-stone-400 font-medium">Available {money(available)}</p>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="withdraw-amount" className="text-xs font-bold text-stone-500 block mb-1.5">
+              Amount (RWF)
+            </label>
+            <input
+              id="withdraw-amount"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="0"
+              className={`w-full text-sm p-3 rounded-xl border outline-none transition ${
+                amount && (invalid || exceeds) ? 'border-red-300 focus:border-red-400' : 'border-stone-200 focus:border-[#3b5327]'
+              }`}
+            />
+            <div className="flex gap-2 mt-2">
+              {[25, 50, 100].map((percent) => (
+                <button
+                  key={percent}
+                  type="button"
+                  onClick={() => setAmount(String(Math.floor((available * percent) / 100)))}
+                  className="flex-1 text-[11px] font-bold py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 transition active:scale-95"
+                >
+                  {percent === 100 ? 'Max' : `${percent}%`}
+                </button>
+              ))}
+            </div>
+            {exceeds && <p className="text-[11px] text-red-500 font-semibold mt-1.5">Amount exceeds available balance.</p>}
+          </div>
+
+          <div>
+            <span className="text-xs font-bold text-stone-500 block mb-1.5">Payout method</span>
+            <div className="space-y-2">
+              {METHODS.map((option) => {
+                const active = method === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setMethod(option.id)}
+                    aria-pressed={active}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-xs font-bold transition ${
+                      active
+                        ? 'border-[#3b5327] bg-emerald-50/60 text-[#1c2b12]'
+                        : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4 text-[#3b5327]" />
+                    {option.id}
+                    <span className="text-[10px] font-medium text-stone-400">{option.hint}</span>
+                    {active && <CheckCircle2 className="w-4 h-4 ml-auto text-[#3b5327]" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="withdraw-phone" className="text-xs font-bold text-stone-500 block mb-1.5">
+              Mobile money number
+            </label>
+            <input
+              id="withdraw-phone"
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="07XXXXXXXX"
+              className={`w-full text-sm p-3 rounded-xl border outline-none transition ${
+                phone && phoneInvalid ? 'border-red-300 focus:border-red-400' : 'border-stone-200 focus:border-[#3b5327]'
+              }`}
+            />
+            {phone && phoneInvalid && (
+              <p className="text-[11px] text-red-500 font-semibold mt-1.5">Enter an MTN or Airtel number, e.g. 0788123456.</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={submit}
+            disabled={invalid || exceeds || phoneInvalid || submitting}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1c2b12] to-[#3b5327] text-white font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+          >
+            Withdraw
+          </button>
+          <p className="text-[10px] text-stone-400 font-medium leading-snug">
+            The amount is reserved right away and sent by the Online Food Kitchen team, usually within 24 hours.
+            If a payout fails, the money returns to your balance.
+          </p>
+        </div>
+
+        {/* Withdrawal history */}
+        <div className="lg:col-span-2 rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-black text-base text-gray-900">Withdrawals</h3>
+              <p className="text-[11px] text-stone-400 font-medium">Your payout requests</p>
+            </div>
+            <span className="text-xs font-bold text-stone-500">Withdrawn {money(wallet?.withdrawn)}</span>
+          </div>
+          {!wallet || wallet.withdrawals.length === 0 ? (
+            <p className="text-sm text-stone-500 py-8 text-center">No withdrawals yet.</p>
+          ) : (
+            <ul className="divide-y divide-stone-100">
+              {wallet.withdrawals.map((entry) => {
+                const style = STATUS_STYLES[entry.status] || STATUS_STYLES.processing;
+                return (
+                  <li key={entry.id} className="flex items-center gap-3 py-3">
+                    <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
+                      <ArrowUpRight className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {entry.method} · {entry.accountNumber}
+                      </p>
+                      <p className="text-[11px] text-stone-400 font-medium truncate">
+                        {new Date(entry.date).toLocaleString()}
+                        {entry.status === 'completed' && entry.reference ? ` · ref ${entry.reference}` : ''}
+                        {entry.status === 'failed' && entry.failureReason ? ` · ${entry.failureReason}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className="text-sm font-black text-gray-900">− {money(entry.amount)}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${style.className}`}>
+                        {style.label}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
 
       {bars.length > 0 && (
@@ -142,6 +357,16 @@ export default function DriverEarningsPage() {
       <Link to="/driver-dashboard" className="block text-center text-xs font-bold text-stone-500 hover:text-[#3b5327]">
         ← Back to dashboard
       </Link>
+
+      <ConfirmDialog
+        isOpen={confirm}
+        title="Confirm withdrawal"
+        message={`Withdraw ${money(numericAmount)} to ${method} ${phone}? It will be sent within 24 hours.`}
+        confirmLabel={submitting ? 'Submitting…' : 'Confirm Withdrawal'}
+        tone="default"
+        onConfirm={confirmWithdrawal}
+        onCancel={() => setConfirm(false)}
+      />
     </div>
   );
 }

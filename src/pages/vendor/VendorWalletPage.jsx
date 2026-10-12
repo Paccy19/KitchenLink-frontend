@@ -56,7 +56,7 @@ export default function VendorWalletPage() {
       id: entry.id,
       type: 'debit',
       title: 'Withdrawal',
-      subtitle: `${entry.method} · ${entry.status}`,
+      subtitle: `${entry.method} · ${entry.status === 'Failed' ? 'Failed · refunded to your balance' : entry.status}`,
       amount: entry.amount,
       date: entry.date,
     }));

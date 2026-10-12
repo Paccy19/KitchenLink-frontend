@@ -111,6 +111,7 @@ export function mapDriverAccount(raw = {}) {
     maxActiveDeliveries: Number(raw.max_active_deliveries ?? 3),
     completedDeliveries: Number(raw.completed_deliveries ?? 0),
     totalEarnings: Number(raw.total_earnings_rwf ?? 0),
+    availableBalance: Number(raw.available_balance_rwf ?? 0),
     verificationStatus: titleCase(raw.verification_status || 'approved'),
     currentLocation: {
       latitude: raw.current_location?.latitude ?? null,
@@ -210,6 +211,27 @@ export function mapDriverEarnings(raw = {}) {
   };
 }
 
+export function mapDriverWallet(raw = {}) {
+  return {
+    availableBalance: Number(raw.available_balance_rwf ?? 0),
+    totalEarnings: Number(raw.total_earnings_rwf ?? 0),
+    withdrawn: Number(raw.withdrawn_rwf ?? 0),
+    processing: Number(raw.processing_rwf ?? 0),
+    payoutPhone: raw.payout_phone || '',
+    withdrawals: (raw.withdrawals || []).map((entry) => ({
+      id: entry.id,
+      amount: Number(entry.amount_rwf ?? 0),
+      method: entry.method_label || entry.method || 'Mobile Money',
+      accountNumber: entry.account_number || '',
+      status: entry.status || 'processing',
+      reference: entry.reference || '',
+      failureReason: entry.failure_reason || '',
+      date: entry.created_at,
+      processedAt: entry.processed_at || null,
+    })),
+  };
+}
+
 export function mapDriverNotification(raw = {}) {
   return {
     id: raw.id,
@@ -282,6 +304,11 @@ export const driverApi = {
     }),
   markAllNotificationsRead: () =>
     driverRequest('/driver/notifications/read-all', { method: 'POST' }),
+
+  // Wallet: balance from completed deliveries, withdrawals to mobile money.
+  wallet: () => driverRequest('/driver/wallet'),
+  requestWithdrawal: (payload) =>
+    driverRequest('/driver/wallet/withdrawals', { method: 'POST', body: payload }),
 };
 
 export const DRIVER_VEHICLES = [
