@@ -179,9 +179,13 @@ export default function VendorPage() {
             <span className="px-3 py-1 rounded-full text-xs font-black bg-[#2b1206] text-white border border-[#522712] shadow-md">
               {vendor.type}
             </span>
-            {vendor.isOpen && (
+            {vendor.isOpen ? (
               <span className="px-2.5 py-1 rounded-full text-xs font-black bg-forest-600 shadow-md">
                 Open now
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-stone-700/90 shadow-md">
+                Closed now · schedule for later
               </span>
             )}
             {vendor.deliveryAvailable && (

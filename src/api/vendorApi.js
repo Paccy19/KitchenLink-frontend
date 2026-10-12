@@ -128,6 +128,14 @@ export function mapVendorAccount(raw = {}) {
     rating: Number(raw.rating ?? 0),
     reviewsCount: 0,
     isOpen: raw.is_open !== false,
+    // Open AND location shared recently: what customers actually see.
+    isLive: raw.is_live ?? raw.is_open !== false,
+    liveLocation: {
+      lat: raw.location?.latitude ?? null,
+      lng: raw.location?.longitude ?? null,
+      updatedAt: raw.location?.updated_at ?? null,
+      accuracyM: raw.location?.accuracy_m ?? null,
+    },
     operatingHours: (raw.operating_hours || [])
       .filter((entry) => !entry.is_closed)
       .map((entry) => `${titleCase(entry.day)} ${entry.open_time}-${entry.close_time}`)
@@ -281,6 +289,9 @@ export const vendorApi = {
   dashboard: () => vendorRequest('/vendor/dashboard'),
   updateProfile: (payload) =>
     vendorRequest('/vendor/profile', { method: 'PATCH', body: payload }),
+  // Open (with live GPS position) / close the store, or refresh the position.
+  setAvailability: (payload) =>
+    vendorRequest('/vendor/availability', { method: 'PATCH', body: payload }),
 
   special: async () => mapSpecial((await vendorRequest('/vendor/special'))?.special),
   saveSpecial: async (payload) =>

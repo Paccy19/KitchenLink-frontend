@@ -11,6 +11,8 @@ import {
   BadgeCheck,
   Radio,
   LogOut,
+  Loader2,
+  MapPin,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import useVendorRealtime from '../../hooks/useVendorRealtime';
@@ -24,7 +26,17 @@ const NAV = [
 ];
 
 export default function VendorLayout() {
-  const { vendor, stats, menuItems, toggleStoreOpen, hasToken, isAuthenticated, logout } = useVendor();
+  const {
+    vendor,
+    stats,
+    menuItems,
+    toggleStoreOpen,
+    storeStatus,
+    storeError,
+    hasToken,
+    isAuthenticated,
+    logout,
+  } = useVendor();
   const { connected } = useVendorRealtime({ enabled: true });
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -73,16 +85,12 @@ export default function VendorLayout() {
           <BadgeCheck className="w-3.5 h-3.5" />
           {vendor.verificationStatus} Vendor
         </div>
-        <button
-          type="button"
-          onClick={toggleStoreOpen}
-          className={`mt-2 w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition ${
-            vendor.isOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'
-          }`}
-        >
-          <span>{vendor.isOpen ? 'Store Open' : 'Store Closed'}</span>
-          <span className={`w-2 h-2 rounded-full ${vendor.isOpen ? 'bg-emerald-500' : 'bg-stone-400'}`} />
-        </button>
+        <StoreToggle
+          vendor={vendor}
+          status={storeStatus}
+          error={storeError}
+          onToggle={toggleStoreOpen}
+        />
       </div>
 
       <nav className="space-y-1.5 flex-1">
@@ -202,5 +210,70 @@ export default function VendorLayout() {
         </div>
       </div>
     </div>
+  );
+}
+
+const timeAgo = (iso) => {
+  if (!iso) return '';
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  return `${Math.round(minutes / 60)} h ago`;
+};
+
+/**
+ * Open/close switch. Opening asks the browser for the vendor's GPS position:
+ * customers only see the kitchen as nearby while it is open with a fresh
+ * location.
+ */
+function StoreToggle({ vendor, status, error, onToggle }) {
+  const busy = status !== 'idle';
+  const live = vendor.isLive;
+  const needsLocation = vendor.isOpen && !live;
+
+  let label = 'Store Closed';
+  let hint = 'Open to share your location and appear to nearby customers.';
+  let tone = 'bg-stone-200 text-stone-600';
+  let dot = 'bg-stone-400';
+  if (status === 'locating') {
+    label = 'Getting your location…';
+    hint = 'Allow location access when your browser asks.';
+  } else if (status === 'saving') {
+    label = 'Saving…';
+    hint = '';
+  } else if (live) {
+    label = 'Store Open';
+    hint = `Visible to nearby customers · location ${timeAgo(vendor.liveLocation?.updatedAt)}`;
+    tone = 'bg-emerald-100 text-emerald-800';
+    dot = 'bg-emerald-500';
+  } else if (needsLocation) {
+    label = 'Share location to go live';
+    hint = 'Your store is hidden until you share your current location.';
+    tone = 'bg-amber-100 text-amber-800';
+    dot = 'bg-amber-500';
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={busy}
+        aria-pressed={live}
+        className={`mt-2 w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition disabled:opacity-75 ${tone}`}
+      >
+        <span className="flex items-center gap-1.5 text-left">
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : needsLocation && <MapPin className="w-3.5 h-3.5" />}
+          {label}
+        </span>
+        {!busy && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />}
+      </button>
+      {hint && <p className="mt-1.5 text-[10px] leading-snug text-stone-500 font-medium">{hint}</p>}
+      {error && (
+        <p role="alert" className="mt-1.5 text-[10px] leading-snug text-red-700 font-semibold">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
