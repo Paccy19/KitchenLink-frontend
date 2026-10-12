@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   Zap
 } from 'lucide-react';
-import { useCart } from '../../context/CartContext';
+import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../../context/CartContext';
 import {
   SCHEDULE_DAY_OPTIONS,
   SCHEDULE_TIME_SLOTS,
@@ -34,6 +34,7 @@ export default function CartDrawer() {
     clearCart,
     subtotal,
     deliveryFee,
+    deliveryQuote,
     grandTotal,
     totalItemCount,
     orderType,
@@ -312,8 +313,8 @@ export default function CartDrawer() {
                 <span className="font-bold">{subtotal.toLocaleString()} RWF</span>
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Delivery fee (free over 15,000 RWF)</span>
-                <span className="font-bold">{deliveryFee.toLocaleString()} RWF</span>
+                <span>{deliveryFeeLabel(deliveryQuote)}</span>
+                <span className="font-bold">{deliveryFeeValue(deliveryFee, deliveryQuote)}</span>
               </div>
               <div className="flex justify-between text-base font-black text-gray-900 pt-2 border-t border-gray-200">
                 <span>Total Amount</span>

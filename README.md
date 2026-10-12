@@ -27,7 +27,7 @@ Copy `.env.example` to `.env.local`:
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | `/api/v1` | Base URL for all API calls. In development, Vite proxies `/api` to `http://localhost:4000`; set `VITE_API_PROXY` to override the backend host. |
 | `VITE_API_TIMEOUT` | `8000` | Request timeout in ms. |
-| `VITE_GOOGLE_MAPS_API_KEY` | _(empty)_ | Google Maps JavaScript API key for the nearby-kitchens map at `/vendors/map`. Enable "Maps JavaScript API" on the key. When empty, the page shows the vendor list and a setup hint instead of the map. |
+| `VITE_CARTO_API_KEY` | _(empty)_ | Optional CARTO basemap key for the nearby-kitchens map at `/vendors/map` (CARTO Voyager tiles rendered with MapLibre GL). The map works without a key on CARTO's free tier; commercial use requires a CARTO plan. |
 
 Start the backend and MongoDB alongside Vite to use the connected API. Customer
 OTP authentication, cart, wishlist, checkout, order history, tracking, and
@@ -51,7 +51,6 @@ src/
 │   ├── useNearbyVendors.js   GET /home/vendors/nearby (infinite scroll)
 │   ├── useSearch.js          GET /home/search (350 ms debounce)
 │   ├── useVendorStorefront.js GET /vendors/{id}
-│   ├── useGoogleMaps.js      lazy Google Maps JS API loader
 │   ├── useDebounce.js, usePullToRefresh.js, useRecentSearches.js
 ├── context/              LocationContext (GPS, fallback, manual),
 │                         AuthContext, CartContext, OrderContext

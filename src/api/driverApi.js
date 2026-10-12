@@ -239,7 +239,7 @@ export const driverApi = {
 
   stats: () => driverRequest('/driver/stats'),
   available: ({ lat, lng, radius } = {}) =>
-    driverRequest('/driver/deliveries/available', { lat, lng, radius }),
+    driverRequest('/driver/deliveries/available', { params: { lat, lng, radius } }),
   active: () => driverRequest('/driver/deliveries/active'),
   history: (params = {}) => driverRequest('/driver/deliveries/history', { params }),
   earnings: (params = {}) => driverRequest('/driver/deliveries/earnings', { params }),

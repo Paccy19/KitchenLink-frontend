@@ -34,14 +34,23 @@ export default function VendorWalletPage() {
   const transactions = useMemo(() => {
     const payouts = orders
       .filter((order) => order.status === 'Completed')
-      .map((order) => ({
-        id: order.id,
-        type: 'credit',
-        title: `Payout · ${order.customer.name}`,
-        subtitle: `${order.id} · after ${Math.round(vendor.commissionRate * 100)}% commission`,
-        amount: Math.round(order.total * (1 - vendor.commissionRate)),
-        date: order.createdAt,
-      }));
+      .map((order) => {
+        const commissionPercent = order.commissionPercent || Math.round(vendor.commissionRate * 100);
+        /**
+         * Payout is commission on the food subtotal only; the delivery fee is
+         * passed straight to the rider and never counts toward vendor earnings.
+         */
+        const amount =
+          order.payout || Math.round(order.subtotal * (1 - commissionPercent / 100));
+        return {
+          id: order.id,
+          type: 'credit',
+          title: `Payout · ${order.customer.name}`,
+          subtitle: `${order.id} · after ${commissionPercent}% commission`,
+          amount,
+          date: order.createdAt,
+        };
+      });
 
     const withdrawals = (wallet.withdrawalHistory || []).map((entry) => ({
       id: entry.id,

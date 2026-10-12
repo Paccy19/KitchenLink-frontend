@@ -76,6 +76,18 @@ export function fetchVendorSpecials(params = {}) {
   return apiRequest('/vendors/specials', params);
 }
 
+/**
+ * GET /vendors/{vendor_id}/delivery-quote?lat&lng
+ * Delivery fee priced by road distance from the kitchen to the drop-off.
+ *
+ * @param {string} vendorId
+ * @param {{lat:number, lng:number}} coords
+ * @returns {Promise<{delivery_fee_rwf:number, distance_km:number, duration_minutes:number|null, distance_source:'google'|'estimate'}>}
+ */
+export function fetchDeliveryQuote(vendorId, { lat, lng }) {
+  return apiRequest(`/vendors/${encodeURIComponent(vendorId)}/delivery-quote`, { lat, lng });
+}
+
 export const sendOtp = (phoneNumber, name) =>
   apiJson('POST', '/auth/send-otp', {
     phone_number: phoneNumber,

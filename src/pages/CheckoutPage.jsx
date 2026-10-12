@@ -12,7 +12,7 @@ import {
   Coins,
   Wallet,
 } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
@@ -73,8 +73,9 @@ export default function CheckoutPage() {
     cartItems, 
     activeVendor, 
     subtotal, 
-    deliveryFee, 
-    grandTotal, 
+    deliveryFee,
+    deliveryQuote,
+    grandTotal,
     clearCart,
     clearAfterCheckout,
     apiError: cartApiError,
@@ -224,6 +225,10 @@ export default function CheckoutPage() {
       setErrorMsg('Add or select a delivery address before placing your order.');
       return;
     }
+    if (deliveryFee == null) {
+      setErrorMsg("We couldn't calculate the delivery fee for your location. Please check your location and try again.");
+      return;
+    }
 
     const { error: paymentError, details: paymentDetails } = buildPaymentDetails();
     if (paymentError) {
@@ -256,7 +261,7 @@ export default function CheckoutPage() {
         scheduledFor,
         scheduledInfo: { date: scheduledDate, time: scheduledTime },
         specialText: orderType === 'preorder' ? preorderSpecial?.text ?? '' : '',
-        pricing: { subtotal, deliveryFee, total: grandTotal },
+        pricing: { subtotal, deliveryFee: deliveryFee ?? 0, total: grandTotal },
         specialNotes: orderNotes
       });
 
@@ -626,9 +631,12 @@ export default function CheckoutPage() {
                 <span className="font-bold">{subtotal.toLocaleString()} RWF</span>
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Delivery fee (free over 15,000 RWF)</span>
-                <span className="font-bold">{deliveryFee.toLocaleString()} RWF</span>
+                <span>{deliveryFeeLabel(deliveryQuote)}</span>
+                <span className="font-bold">{deliveryFeeValue(deliveryFee, deliveryQuote)}</span>
               </div>
+              <p className="text-[10px] leading-relaxed text-stone-400 font-medium">
+                The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your rider.
+              </p>
               <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
                 <span>Total Due</span>
                 <span className="text-[#4e2410]">{grandTotal.toLocaleString()} RWF</span>
@@ -643,7 +651,7 @@ export default function CheckoutPage() {
             )}
             <button
               onClick={handleConfirmOrder}
-              disabled={isSubmitting || isSyncing}
+              disabled={isSubmitting || isSyncing || deliveryQuote.isLoading}
               className={`w-full py-4 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-black text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 ${
                 isSubmitting ? 'opacity-75 cursor-wait' : ''
               }`}

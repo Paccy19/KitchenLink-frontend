@@ -13,8 +13,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
   const nextLabel = ORDER_ACTION_LABEL[order.status];
   const canAct = Boolean(nextStatus);
   const currentIndex = FLOW.indexOf(order.status);
-  const commission = Math.round(order.total * 0.15);
-  const payout = order.total - order.deliveryFee - commission;
+  const commissionPercent = order.commissionPercent || 15;
+  const commission = order.commission || Math.round(order.subtotal * (commissionPercent / 100));
+  const payout = order.payout || Math.max(0, order.subtotal - commission);
 
   return (
     <div
@@ -148,17 +149,20 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
               <span className="font-semibold">{order.deliveryFee.toLocaleString()} RWF</span>
             </div>
             <div className="flex justify-between text-stone-600">
-              <span>Platform commission ({Math.round(order.total ? (commission / order.total) * 100 : 15)}%)</span>
+              <span>Platform commission ({commissionPercent}% of subtotal)</span>
               <span className="font-semibold text-rose-600">− {commission.toLocaleString()} RWF</span>
             </div>
             <div className="flex justify-between pt-2 border-t border-[#ebd7c5]">
-              <span className="font-black text-[#3d1b0c]">Order total</span>
+              <span className="font-black text-[#3d1b0c]">Customer pays</span>
               <span className="font-black text-[#4e2410]">{order.total.toLocaleString()} RWF</span>
             </div>
             <div className="flex justify-between text-[#3d1b0c]">
               <span className="font-bold">Your payout</span>
               <span className="font-black">{payout.toLocaleString()} RWF</span>
             </div>
+            <p className="text-[10px] text-stone-400 font-medium pt-1">
+              The {order.deliveryFee.toLocaleString()} RWF delivery fee goes to the rider.
+            </p>
           </div>
         </div>
 

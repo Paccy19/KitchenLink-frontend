@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { addCartItem as addRemoteCartItem, clearRemoteCart, fetchCart, removeCartItem as removeRemoteCartItem, replaceRemoteCart, updateCartItem as updateRemoteCartItem } from '../api/endpoints';
+import { useQuery } from '@tanstack/react-query';
+import { addCartItem as addRemoteCartItem, clearRemoteCart, fetchCart, fetchDeliveryQuote, removeCartItem as removeRemoteCartItem, replaceRemoteCart, updateCartItem as updateRemoteCartItem } from '../api/endpoints';
 import { useAuth } from './AuthContext';
+import { useLocation } from './LocationContext';
 
 const CartContext = createContext(null);
 const MAX_CART_QUANTITY = 99;
@@ -19,6 +21,7 @@ const readStoredCart = () => {
 
 export const CartProvider = ({ children }) => {
   const { accessToken } = useAuth();
+  const { coords } = useLocation();
   const [cartItems, setCartItems] = useState(readStoredCart);
 
   const [activeVendor, setActiveVendor] = useState(() => {
@@ -315,8 +318,23 @@ export const CartProvider = ({ children }) => {
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const deliveryFee = !cartItems.length ? 0 : subtotal >= 15000 ? 0 : 1000;
-  const grandTotal = subtotal + deliveryFee;
+  // Delivery is priced by road distance from the kitchen to the customer, so
+  // it is re-quoted whenever the kitchen or the delivery location changes.
+  const quoteEnabled = Boolean(cartItems.length && activeVendor?.id && coords);
+  const quoteQuery = useQuery({
+    queryKey: ['delivery-quote', activeVendor?.id, coords?.lat, coords?.lng],
+    queryFn: () => fetchDeliveryQuote(activeVendor.id, coords),
+    enabled: quoteEnabled,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+  const deliveryFee = !cartItems.length ? 0 : quoteQuery.data?.delivery_fee_rwf ?? null;
+  const deliveryQuote = {
+    distanceKm: quoteQuery.data?.distance_km ?? null,
+    isLoading: quoteEnabled && quoteQuery.isPending,
+    isError: quoteQuery.isError,
+  };
+  const grandTotal = subtotal + (deliveryFee ?? 0);
   const totalItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
@@ -335,6 +353,7 @@ export const CartProvider = ({ children }) => {
       clearAfterCheckout,
       subtotal,
       deliveryFee,
+      deliveryQuote,
       grandTotal,
       totalItemCount,
       orderType,
@@ -355,3 +374,12 @@ export const CartProvider = ({ children }) => {
 };
 
 export const useCart = () => useContext(CartContext);
+
+export const deliveryFeeLabel = (quote) =>
+  quote?.distanceKm != null ? `Delivery fee (${quote.distanceKm} km)` : 'Delivery fee';
+
+export const deliveryFeeValue = (fee, quote) => {
+  if (quote?.isLoading) return 'Calculating…';
+  if (fee == null) return 'Unavailable';
+  return `${fee.toLocaleString()} RWF`;
+};

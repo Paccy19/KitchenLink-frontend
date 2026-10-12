@@ -1,46 +1,52 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   ChefHat,
-  KeyRound,
   Loader2,
   MapPin,
   Navigation,
   Star,
   Store,
 } from 'lucide-react';
+import {
+  FullscreenControl,
+  LngLatBounds,
+  Map as MapLibreMap,
+  Marker,
+  NavigationControl,
+  Popup,
+  setWorkerUrl,
+} from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { fetchNearbyVendors } from '../api/endpoints';
 import { normalizeVendor, pickList } from '../api/normalize';
 import { useLocation } from '../context/LocationContext';
-import useGoogleMaps, { GOOGLE_MAPS_API_KEY } from '../hooks/useGoogleMaps';
 import useCategories from '../hooks/useCategories';
 import { ErrorState } from '../components/common/EmptyState';
 
 const RADIUS_OPTIONS = [3, 5, 7, 10, 15];
 const MAP_LIMIT = 50;
 
+/**
+ * CARTO Voyager vector basemap rendered with MapLibre GL. The key is optional
+ * (free tier works without one); set `VITE_CARTO_API_KEY` for a CARTO plan.
+ */
+const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY || '';
+const CARTO_STYLE_URL = `https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json${
+  CARTO_API_KEY ? `?key=${encodeURIComponent(CARTO_API_KEY)}` : ''
+}`;
+
+// MapLibre resolves its worker relative to its own bundle, which Vite's
+// pre-bundling breaks; point it at the worker file Vite serves/emits instead.
+setWorkerUrl(maplibreWorkerUrl);
+
+const CUSTOMER_COLOR = '#2563eb';
+const VENDOR_COLOR = '#8a5332';
+
 const round = (value) => Number(Number(value).toFixed(4));
-
-const CUSTOMER_ICON = {
-  path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-  fillColor: '#2563eb',
-  fillOpacity: 1,
-  strokeColor: '#ffffff',
-  strokeWeight: 2,
-  scale: 1.6,
-  anchor: undefined,
-};
-
-const VENDOR_ICON = {
-  path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-  fillColor: '#8a5332',
-  fillOpacity: 1,
-  strokeColor: '#ffffff',
-  strokeWeight: 2,
-  scale: 1.4,
-};
 
 function buildInfoContent(vendor) {
   const wrapper = document.createElement('div');
@@ -95,12 +101,12 @@ function buildCustomerInfo(label) {
 
 /**
  * Dedicated "nearby kitchens on a map" page. Plots every active vendor that has
- * coordinates, plus the customer position, using the Google Maps JS API.
+ * coordinates, plus the customer position, on a CARTO basemap (MapLibre GL).
  */
 export default function VendorsMapPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { coords, currentLocation, label } = useLocation();
-  const { status: mapsStatus, maps } = useGoogleMaps();
+  const [mapsStatus, setMapsStatus] = useState('loading');
   const categories = useCategories();
 
   const categoryId = searchParams.get('category');
@@ -145,129 +151,116 @@ export default function VendorsMapPage() {
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const infoWindowRef = useRef(null);
+  // { vendorId | 'customer', marker } so list clicks can open the right popup.
   const markersRef = useRef([]);
 
-  // Create the map once the API is ready.
+  // The map panel is replaced by an error card when the vendor list fails, so
+  // the map is (re)created whenever its container is shown.
+  const showMap = !(query.isError && vendors.length === 0);
+
+  // Create the map; MapLibre owns the container until it is hidden/unmounted.
   useEffect(() => {
-    if (mapsStatus !== 'ready' || !maps || !mapContainerRef.current || mapInstanceRef.current) {
-      return;
-    }
-    mapInstanceRef.current = new maps.Map(mapContainerRef.current, {
-      center: { lat: coords.lat, lng: coords.lng },
+    if (!showMap || !mapContainerRef.current) return undefined;
+
+    setMapsStatus('loading');
+    const map = new MapLibreMap({
+      container: mapContainerRef.current,
+      style: CARTO_STYLE_URL,
+      center: [coords.lng, coords.lat],
       zoom: 13,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
-      clickableIcons: false,
+      // CARTO's style already carries the OpenStreetMap/CARTO attribution.
+      attributionControl: { compact: true },
     });
-    infoWindowRef.current = new maps.InfoWindow();
-  }, [mapsStatus, maps, coords.lat, coords.lng]);
+    map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+    map.addControl(new FullscreenControl(), 'top-right');
+    map.on('load', () => setMapsStatus('ready'));
+    // Only failing to fetch the style itself is fatal (bad key / offline);
+    // a missing tile, font or icon is recoverable and must not hide the map.
+    let styleFetched = false;
+    map.once('styledata', () => {
+      styleFetched = true;
+    });
+    map.on('error', (event) => {
+      console.warn('[map]', event?.error?.message || event?.error || event);
+      if (!styleFetched) setMapsStatus('error');
+    });
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+      markersRef.current = [];
+    };
+    // Initial centre only; later position changes are handled by fitBounds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMap]);
 
   // (Re)draw markers whenever the vendor set or customer position changes.
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !maps) return undefined;
+    if (!map || mapsStatus !== 'ready') return;
 
-    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current.forEach(({ marker }) => marker.remove());
     markersRef.current = [];
 
-    const bounds = new maps.LatLngBounds();
-    const origin = { lat: coords.lat, lng: coords.lng };
-    bounds.extend(origin);
+    const origin = [coords.lng, coords.lat];
+    const bounds = new LngLatBounds(origin, origin);
 
-    const customerMarker = new maps.Marker({
-      position: origin,
-      map,
-      title: 'Your location',
-      icon: { ...CUSTOMER_ICON, anchor: new maps.Point(12, 22), scale: 1.6 },
-      zIndex: 999,
-    });
-    customerMarker.addListener('click', () => {
-      infoWindowRef.current.setContent(buildCustomerInfo(label));
-      infoWindowRef.current.open({ anchor: customerMarker, map });
-    });
-    markersRef.current.push(customerMarker);
+    const customerMarker = new Marker({ color: CUSTOMER_COLOR, scale: 1.1 })
+      .setLngLat(origin)
+      .setPopup(new Popup({ offset: 30 }).setDOMContent(buildCustomerInfo(label)))
+      .addTo(map);
+    customerMarker.getElement().style.zIndex = '2';
+    customerMarker.getElement().setAttribute('aria-label', 'Your location');
+    markersRef.current.push({ vendorId: 'customer', marker: customerMarker });
 
     vendors.forEach((vendor) => {
       if (vendor.coordinates?.lat == null || vendor.coordinates?.lng == null) return;
-      const position = { lat: vendor.coordinates.lat, lng: vendor.coordinates.lng };
-      const marker = new maps.Marker({
-        position,
-        map,
-        title: vendor.name,
-        icon: VENDOR_ICON,
-        zIndex: 10,
-      });
-      marker.addListener('click', () => {
-        infoWindowRef.current.setContent(buildInfoContent(vendor));
-        infoWindowRef.current.open({ anchor: marker, map });
-      });
-      markersRef.current.push(marker);
+      const position = [vendor.coordinates.lng, vendor.coordinates.lat];
+      const marker = new Marker({ color: VENDOR_COLOR, scale: 0.95 })
+        .setLngLat(position)
+        .setPopup(new Popup({ offset: 28 }).setDOMContent(buildInfoContent(vendor)))
+        .addTo(map);
+      marker.getElement().setAttribute('aria-label', vendor.name);
+      markersRef.current.push({ vendorId: vendor.id, marker });
       bounds.extend(position);
     });
 
     if (vendors.length > 0) {
-      map.fitBounds(bounds, 64);
+      map.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 600 });
     } else {
-      map.setCenter(origin);
-      map.setZoom(13);
+      map.easeTo({ center: origin, zoom: 13 });
     }
-
-    return () => {
-      infoWindowRef.current?.close();
-    };
-  }, [vendors, maps, coords.lat, coords.lng, label]);
+  }, [vendors, mapsStatus, coords.lat, coords.lng, label]);
 
   const recenter = useCallback(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
-    map.panTo({ lat: coords.lat, lng: coords.lng });
-    map.setZoom(14);
+    map.flyTo({ center: [coords.lng, coords.lat], zoom: 14 });
   }, [coords.lat, coords.lng]);
 
   const focusVendor = useCallback((vendor) => {
     const map = mapInstanceRef.current;
     if (!map || vendor.coordinates?.lat == null) return;
-    map.panTo({ lat: vendor.coordinates.lat, lng: vendor.coordinates.lng });
-    map.setZoom(16);
-    const marker = markersRef.current.find(
-      (entry) => entry.getTitle?.() === vendor.name,
-    );
-    if (marker && infoWindowRef.current) {
-      infoWindowRef.current.setContent(buildInfoContent(vendor));
-      infoWindowRef.current.open({ anchor: marker, map });
-    }
+    map.flyTo({ center: [vendor.coordinates.lng, vendor.coordinates.lat], zoom: 16 });
+    markersRef.current.forEach(({ marker }) => marker.getPopup()?.remove());
+    const entry = markersRef.current.find((item) => item.vendorId === vendor.id);
+    if (entry && !entry.marker.getPopup().isOpen()) entry.marker.togglePopup();
   }, []);
 
+  // The container stays mounted in every state because MapLibre is bound to it.
   const renderMap = () => {
-    if (mapsStatus === 'missing-key') {
-      return (
-        <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center gap-3 p-8 bg-[#faf6f2]">
-          <div className="w-12 h-12 rounded-2xl bg-white border border-[#ebd7c5] flex items-center justify-center text-[#542813] shadow-sm">
-            <KeyRound className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="font-extrabold text-gray-900 text-sm">Google Maps key required</h3>
-            <p className="text-xs text-stone-500 mt-1 max-w-sm">
-              Add <code className="bg-white px-1.5 py-0.5 rounded border border-stone-200">VITE_GOOGLE_MAPS_API_KEY</code>{' '}
-              to your frontend <code className="bg-white px-1.5 py-0.5 rounded border border-stone-200">.env</code> file and restart the dev server to see kitchens on the map.
-            </p>
-          </div>
-        </div>
-      );
-    }
-    if (mapsStatus === 'error') {
-      return (
-        <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center gap-2 p-8 bg-[#faf6f2]">
-          <p className="font-extrabold text-gray-900 text-sm">Could not load Google Maps</p>
-          <p className="text-xs text-stone-500">Check the API key restrictions and your internet connection.</p>
-        </div>
-      );
-    }
     return (
       <>
         <div ref={mapContainerRef} className="w-full h-full min-h-[360px]" />
+        {mapsStatus === 'error' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-2 p-8 bg-[#faf6f2]">
+            <p className="font-extrabold text-gray-900 text-sm">Could not load the map</p>
+            <p className="text-xs text-stone-500">
+              Check your internet connection{CARTO_API_KEY ? ' and your CARTO API key' : ''}.
+            </p>
+          </div>
+        )}
         {mapsStatus === 'loading' && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm">
             <Loader2 className="w-6 h-6 animate-spin text-[#542813]" />
@@ -355,7 +348,7 @@ export default function VendorsMapPage() {
         </div>
       )}
 
-      {query.isError && vendors.length === 0 ? (
+      {!showMap ? (
         <ErrorState
           title="Nearby kitchens failed to load"
           message={query.error?.message || 'We could not reach the nearby vendors endpoint.'}
@@ -372,7 +365,7 @@ export default function VendorsMapPage() {
                 <button
                   type="button"
                   onClick={recenter}
-                  className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur border border-stone-200 text-xs font-bold text-stone-700 shadow-md hover:text-[#542813] transition active:scale-95"
+                  className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur border border-stone-200 text-xs font-bold text-stone-700 shadow-md hover:text-[#542813] transition active:scale-95"
                 >
                   <Navigation className="w-3.5 h-3.5" />
                   Recenter
@@ -444,12 +437,6 @@ export default function VendorsMapPage() {
                 )}
               </div>
             </div>
-
-            {!GOOGLE_MAPS_API_KEY && (
-              <p className="text-[11px] text-stone-400 mt-3 px-1">
-                Tip: set <code className="bg-stone-100 px-1 rounded">VITE_GOOGLE_MAPS_API_KEY</code> to plot these kitchens on the map.
-              </p>
-            )}
           </div>
         </div>
       )}
