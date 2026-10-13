@@ -201,8 +201,6 @@ export const adminApi = {
 
   // Invitation link (no sign-in)
   getInvitation: (token) => adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}`),
-  sendInvitationCode: (token, phone) =>
-    adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/send-code`, { method: 'POST', body: { phone } }),
   acceptInvitation: (token, body) =>
     adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/accept`, { method: 'POST', body }),
 };

@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck, Store, ArrowRight, Smartphone, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Store, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 
 /**
- * Opens the emailed invitation link (`/admin-invite?token=…`). The member sets
- * their name, verifies their phone with an SMS code, and chooses their own
- * password. They then sign in normally at `/admin-login`.
+ * Opens the emailed invitation link (`/admin-invite?token=…`). The member
+ * chooses their own password, then signs in normally at `/admin-login`.
  */
 export default function AdminInvitePage() {
   const [searchParams] = useSearchParams();
@@ -73,13 +72,8 @@ function Problem({ message }) {
 }
 
 function AcceptForm({ token, invitation }) {
-  const [name, setName] = useState(invitation.name || '');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [code, setCode] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-  const [devCode, setDevCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -90,7 +84,7 @@ function AcceptForm({ token, invitation }) {
         <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
         <h2 className="text-lg font-black text-gray-900">You're all set</h2>
         <p className="text-sm text-stone-600">
-          Your password is saved. Sign in at the admin page with <strong className="text-gray-900">{invitation.email}</strong>. A code will be sent to your phone each time.
+          Your password is saved. Sign in at the admin page with <strong className="text-gray-900">{invitation.email}</strong>.
         </p>
         <Link
           to="/admin-login"
@@ -102,30 +96,8 @@ function AcceptForm({ token, invitation }) {
     );
   }
 
-  const sendCode = async () => {
-    if (!phone.trim()) {
-      setError('Enter your phone number first.');
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      const result = await adminApi.sendInvitationCode(token, phone.trim());
-      setCodeSent(true);
-      setDevCode(result.dev_otp || '');
-    } catch (err) {
-      setError(err?.message || 'Could not send the code.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const submit = async (event) => {
     event.preventDefault();
-    if (name.trim().length < 2) {
-      setError('Enter your full name.');
-      return;
-    }
     if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
       setError('Use at least 8 characters with letters and numbers.');
       return;
@@ -134,14 +106,10 @@ function AcceptForm({ token, invitation }) {
       setError('Passwords do not match.');
       return;
     }
-    if (!codeSent) {
-      setError('Request a code to your phone first.');
-      return;
-    }
     setBusy(true);
     setError('');
     try {
-      await adminApi.acceptInvitation(token, { name: name.trim(), phone: phone.trim(), password, code });
+      await adminApi.acceptInvitation(token, { password });
       setDone(true);
     } catch (err) {
       setError(err?.message || 'Could not finish setting up your account.');
@@ -160,54 +128,7 @@ function AcceptForm({ token, invitation }) {
       </div>
 
       <label className="block">
-        <span className="text-xs font-bold text-stone-500 block mb-1.5">Full name</span>
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="e.g. Aline Uwase"
-          className="w-full px-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#1f2937] focus:ring-2 focus:ring-[#1f2937]/10 outline-none"
-        />
-      </label>
-
-      <label className="block">
-        <span className="text-xs font-bold text-stone-500 block mb-1.5">Phone number (for sign-in codes)</span>
-        <div className="flex gap-2">
-          <input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            placeholder="0788123456"
-            className="flex-1 px-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#1f2937] focus:ring-2 focus:ring-[#1f2937]/10 outline-none"
-          />
-          <button
-            type="button"
-            onClick={sendCode}
-            disabled={busy}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 text-xs font-bold text-stone-700 hover:bg-stone-50 disabled:opacity-60 whitespace-nowrap"
-          >
-            <Smartphone className="w-4 h-4" />
-            {codeSent ? 'Resend' : 'Send code'}
-          </button>
-        </div>
-      </label>
-
-      {codeSent && (
-        <label className="block">
-          <span className="text-xs font-bold text-stone-500 block mb-1.5">Code sent to your phone</span>
-          <input
-            inputMode="numeric"
-            maxLength={6}
-            value={code}
-            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-            placeholder="123456"
-            className="w-full px-3 py-3 text-center text-lg tracking-[0.4em] font-bold rounded-xl border border-stone-200 focus:border-[#1f2937] focus:ring-2 focus:ring-[#1f2937]/10 outline-none"
-          />
-          {devCode && <span className="text-[11px] text-stone-400">Development code: {devCode}</span>}
-        </label>
-      )}
-
-      <label className="block">
-        <span className="text-xs font-bold text-stone-500 block mb-1.5">Create a password</span>
+        <span className="text-xs font-bold text-stone-500 block mb-1.5">Create new password</span>
         <input
           type="password"
           value={password}
