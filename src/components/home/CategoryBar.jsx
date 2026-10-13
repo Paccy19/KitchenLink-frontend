@@ -36,7 +36,13 @@ const CATEGORY_ICON_MAP = {
   desserts: Cake,
 };
 
-function CategoryIcon({ iconKey, categoryId, active }) {
+// Category names map to icons: "Local Food" -> local, "Fast Food" -> fast-food.
+const iconKeyFromName = (name = '') => {
+  const slug = name.toLowerCase().trim().replace(/\s+food$/, '').replace(/\s+/g, '-');
+  return slug === 'fast' ? 'fast-food' : slug;
+};
+
+function CategoryIcon({ iconKey, categoryId, name, active }) {
   if (isImageUrl(iconKey)) {
     return (
       <img
@@ -50,7 +56,11 @@ function CategoryIcon({ iconKey, categoryId, active }) {
   }
 
   const lookupKey = (iconKey || categoryId || '').toLowerCase().replace(/_/g, '-');
-  const IconComponent = CATEGORY_ICON_MAP[lookupKey] || CATEGORY_ICON_MAP[categoryId] || UtensilsCrossed;
+  const IconComponent =
+    CATEGORY_ICON_MAP[lookupKey] ||
+    CATEGORY_ICON_MAP[categoryId] ||
+    CATEGORY_ICON_MAP[iconKeyFromName(name)] ||
+    UtensilsCrossed;
 
   return (
     <IconComponent
@@ -168,6 +178,7 @@ export default function CategoryBar({ categories = [], activeId = null, onSelect
                 <CategoryIcon
                   iconKey={category.iconUrl || category.icon}
                   categoryId={category.id}
+                  name={category.name}
                   active={active}
                 />
               </span>
