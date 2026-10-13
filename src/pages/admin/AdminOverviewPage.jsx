@@ -84,7 +84,7 @@ export default function AdminOverviewPage() {
           </Link>
         </Card>
 
-        <Card title="Drivers">
+        <Card title="Delivery Workers">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <Metric label="Total" value={drivers.total} />
             <Metric label="Online" value={drivers.online} tone="text-emerald-600" />
@@ -95,7 +95,7 @@ export default function AdminOverviewPage() {
             to="/admin-dashboard/drivers"
             className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#1f2937] hover:underline"
           >
-            <Bike className="w-3.5 h-3.5" /> Manage drivers
+            <Bike className="w-3.5 h-3.5" /> Manage delivery workers
           </Link>
         </Card>
 

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, ClipboardList, Inbox } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
@@ -8,12 +9,12 @@ import OrderDetailModal from '../../components/vendor-dashboard/OrderDetailModal
 import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
 
-const NEXT_STATUS = { New: 'Accepted', Accepted: 'Preparing', Preparing: 'Ready', Ready: 'Completed' };
+// Vendors never complete orders: the delivery worker's code confirmation does.
+const NEXT_STATUS = { New: 'Accepted', Accepted: 'Preparing', Preparing: 'Ready' };
 const ACTION_PAST = {
   Accepted: 'accepted',
   Preparing: 'preparing',
-  Ready: 'ready',
-  Completed: 'completed',
+  Ready: 'ready and waiting for a delivery worker',
 };
 
 export default function VendorOrdersPage() {
@@ -24,6 +25,20 @@ export default function VendorOrdersPage() {
   const [query, setQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [confirm, setConfirm] = useState(null);
+
+  // Opened from a notification (?order=<id>): show that order's details.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusId = searchParams.get('order');
+  useEffect(() => {
+    if (!focusId) return;
+    const target = orders.find((order) => order.backendId === focusId || order.id === focusId);
+    if (!target) return;
+    setActiveTab(target.status);
+    setSelectedOrder(target);
+    const next = new URLSearchParams(searchParams);
+    next.delete('order');
+    setSearchParams(next, { replace: true });
+  }, [focusId, orders, searchParams, setSearchParams]);
 
   const counts = useMemo(() => {
     const map = { All: orders.length };
@@ -52,24 +67,6 @@ export default function VendorOrdersPage() {
   const handleAdvance = (order) => {
     const next = NEXT_STATUS[order.status];
     if (!next) return;
-    if (next === 'Completed') {
-      setConfirm({
-        title: 'Mark order as completed?',
-        message: `${order.id} will be closed and the payout released to your wallet.`,
-        confirmLabel: 'Mark Completed',
-        tone: 'default',
-        onConfirm: async () => {
-          try {
-            await updateOrderStatus(order.id, next);
-            success(`Order ${order.id} marked completed.`);
-          } catch (err) {
-            error(err?.message || 'Could not update the order.');
-          }
-          setConfirm(null);
-        },
-      });
-      return;
-    }
     return updateOrderStatus(order.id, next)
       .then(() => success(`Order ${order.id} is now ${ACTION_PAST[next]}.`))
       .catch((err) => error(err?.message || 'Could not update the order.'));

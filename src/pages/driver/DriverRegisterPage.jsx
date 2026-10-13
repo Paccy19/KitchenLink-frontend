@@ -49,7 +49,7 @@ export default function DriverRegisterPage() {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1c2b12] via-[#3b5327] to-[#12200b] mx-auto flex items-center justify-center shadow-md">
             <Bike className="w-7 h-7 text-[#eef5e5]" />
           </div>
-          <h1 className="mt-4 text-2xl font-black text-gray-900 tracking-tight">Become a Driver</h1>
+          <h1 className="mt-4 text-2xl font-black text-gray-900 tracking-tight">Become a Delivery Worker</h1>
           <p className="mt-1 text-sm text-stone-500">
             Deliver orders and earn on every trip. Sign in with a code when you’re done.
           </p>
@@ -143,7 +143,7 @@ export default function DriverRegisterPage() {
             disabled={busy || authBusy}
             className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#1c2b12] via-[#3b5327] to-[#12200b] hover:from-[#2a3f1b] text-white font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-60"
           >
-            {busy ? 'Creating account…' : 'Create driver account'}
+            {busy ? 'Creating account…' : 'Create delivery worker account'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

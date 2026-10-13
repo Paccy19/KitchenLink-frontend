@@ -44,7 +44,7 @@ export default function AdminDeliveriesPage() {
               columns={[
                 { key: 'order', label: 'Order' },
                 { key: 'vendor', label: 'Vendor' },
-                { key: 'driver', label: 'Driver' },
+                { key: 'driver', label: 'Delivery worker' },
                 { key: 'customer', label: 'Customer' },
                 { key: 'status', label: 'Status' },
                 { key: 'updated', label: 'Updated' },

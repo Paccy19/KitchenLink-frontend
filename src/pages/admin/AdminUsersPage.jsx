@@ -56,7 +56,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Users" description="Every customer, vendor and driver in one place." />
+      <PageHeader title="Users" description="Every customer, vendor and delivery worker in one place." />
 
       {toast && (
         <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
             <option value="">All roles</option>
             <option value="customer">Customers</option>
             <option value="vendor">Vendors</option>
-            <option value="driver">Drivers</option>
+            <option value="driver">Delivery workers</option>
           </Select>
           <Select value={filters.status} onChange={(event) => applyFilter({ status: event.target.value })}>
             <option value="">All statuses</option>

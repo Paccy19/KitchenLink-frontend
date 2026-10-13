@@ -107,7 +107,7 @@ export default function AdminComplaintsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Complaints"
-        description="Track and resolve customer, vendor and driver issues."
+        description="Track and resolve customer, vendor and delivery worker issues."
         action={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4" /> Log complaint

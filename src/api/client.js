@@ -8,6 +8,8 @@
  * @module api/client
  */
 
+import { notifyDataChanged } from './liveUpdates';
+
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 const BASE_URL = String(RAW_BASE).replace(/\/+$/, '');
 const TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT ?? 8000);
@@ -94,11 +96,14 @@ async function http(path, params = {}, { method = 'GET', body, headers = {} } = 
     throw new ApiError('The API returned an unexpected response.', { path });
   }
 
+  let data;
   try {
-    return await response.json();
+    data = await response.json();
   } catch (error) {
     throw new ApiError('The API returned malformed JSON.', { path, cause: error });
   }
+  notifyDataChanged(method, path);
+  return data;
 }
 
 /**

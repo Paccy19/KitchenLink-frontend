@@ -138,7 +138,7 @@ export default function DriverDashboardPage() {
           icon={Star}
           label="Rating"
           value={stats.rating?.toFixed(1)}
-          hint={sharingLocation ? 'Sharing location…' : 'Your driver score'}
+          hint={sharingLocation ? 'Sharing location…' : 'Your delivery worker score'}
           tone="sky"
         />
       </div>

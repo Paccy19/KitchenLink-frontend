@@ -92,7 +92,7 @@ export default function AdminAnalyticsPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="New Customers" value={overview.signups.customers} icon={Users} />
             <StatCard label="New Vendors" value={overview.signups.vendors} />
-            <StatCard label="New Drivers" value={overview.signups.drivers} />
+            <StatCard label="New Delivery Workers" value={overview.signups.drivers} />
             <StatCard label="Orders Created" value={overview.orders_created} />
           </div>
 

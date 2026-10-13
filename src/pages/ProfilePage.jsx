@@ -254,7 +254,7 @@ export default function ProfilePage() {
                 type="text"
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Notes for driver (gate color, doorbell, etc.)"
+                placeholder="Notes for the delivery worker (gate color, doorbell, etc.)"
                 className="w-full p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
               />
               <div className="flex gap-2">

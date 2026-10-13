@@ -1,7 +1,12 @@
 import React from 'react';
 import { X, Phone, MapPin, Check, X as XIcon, Clock, CreditCard, FileText } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
-import { ORDER_ACTION_LABEL, ORDER_NEXT_STATUS } from '../../data/vendorOptions';
+import {
+  ORDER_ACTION_LABEL,
+  ORDER_CANCELLABLE_STATUSES,
+  ORDER_NEXT_STATUS,
+  READY_ORDER_NOTE,
+} from '../../data/vendorOptions';
 import { formatScheduledFor } from '../../utils/schedule';
 
 const FLOW = ['New', 'Accepted', 'Preparing', 'Ready', 'Completed'];
@@ -11,7 +16,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
 
   const nextStatus = ORDER_NEXT_STATUS[order.status];
   const nextLabel = ORDER_ACTION_LABEL[order.status];
-  const canAct = Boolean(nextStatus);
+  const canAdvance = Boolean(nextStatus);
+  const canCancel = ORDER_CANCELLABLE_STATUSES.includes(order.status);
   const currentIndex = FLOW.indexOf(order.status);
   const commissionPercent = order.commissionPercent || 15;
   const commission = order.commission || Math.round(order.subtotal * (commissionPercent / 100));
@@ -161,12 +167,18 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
               <span className="font-black">{payout.toLocaleString()} RWF</span>
             </div>
             <p className="text-[10px] text-stone-400 font-medium pt-1">
-              The {order.deliveryFee.toLocaleString()} RWF delivery fee goes to the rider.
+              The {order.deliveryFee.toLocaleString()} RWF delivery fee goes to the delivery worker.
             </p>
           </div>
         </div>
 
-        {canAct && (
+        {order.status === 'Ready' && (
+          <p className="mx-5 sm:mx-6 mb-4 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
+            {READY_ORDER_NOTE}
+          </p>
+        )}
+
+        {canCancel && (
           <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-stone-100 px-5 sm:px-6 py-4 flex items-center gap-2">
             <button
               type="button"
@@ -176,14 +188,14 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
               <XIcon className="w-4 h-4" />
               {order.status === 'New' ? 'Reject Order' : 'Cancel Order'}
             </button>
-            <button
+            {canAdvance && <button
               type="button"
               onClick={() => onAdvance(order)}
               className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95"
             >
               <Check className="w-4 h-4" />
               {nextLabel}
-            </button>
+            </button>}
           </div>
         )}
       </div>

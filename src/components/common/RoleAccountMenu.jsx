@@ -49,13 +49,13 @@ export default function RoleAccountMenu({ role }) {
     ? vendor?.name || 'Your Kitchen'
     : isAdmin
       ? admin?.name || 'Administrator'
-      : driver?.name || 'Driver';
+      : driver?.name || 'Delivery worker';
   const avatar = isVendor ? vendor?.avatar : isAdmin ? null : driver?.avatar;
   const subtitle = isVendor
     ? vendor?.ownerName || vendor?.type || 'Vendor account'
     : isAdmin
       ? admin?.email || 'Admin account'
-      : driver?.phone || 'Driver account';
+      : driver?.phone || 'Delivery worker account';
   const initials = String(name || 'U')
     .split(' ')
     .map((part) => part[0])

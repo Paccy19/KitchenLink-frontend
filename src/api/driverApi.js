@@ -10,6 +10,7 @@
  */
 
 import { ApiError, buildUrl } from './client';
+import { notifyDataChanged } from './liveUpdates';
 
 export const DRIVER_TOKEN_KEY = 'ofk_driver_token';
 
@@ -55,6 +56,7 @@ async function driverRequest(path, { method = 'GET', body, form, params } = {}) 
       { status: response.status, path },
     );
   }
+  notifyDataChanged(method, path);
   return data;
 }
 

@@ -105,7 +105,7 @@ function BooksCard({ books, onChanged }) {
         <StatCard label="Cash in account" value={formatRwf(books.cash_balance_rwf)} hint="Should be in the real account" />
         <StatCard label="Held" value={formatRwf(books.held_balance_rwf)} hint="Orders in progress" />
         <StatCard label="Owed to vendors" value={formatRwf(books.vendor_payable_rwf)} />
-        <StatCard label="Owed to riders" value={formatRwf(books.driver_payable_rwf)} />
+        <StatCard label="Owed to delivery workers" value={formatRwf(books.driver_payable_rwf)} />
         <StatCard label="Your balance" value={formatRwf(books.owner_balance_rwf)} hint={`Commission earned ${formatRwf(books.total_commission_rwf)}`} tone="violet" />
       </div>
       {!books.balanced && (

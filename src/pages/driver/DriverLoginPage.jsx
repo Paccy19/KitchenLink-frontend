@@ -56,9 +56,9 @@ export default function DriverLoginPage() {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1c2b12] via-[#3b5327] to-[#12200b] mx-auto flex items-center justify-center shadow-md">
             <Bike className="w-7 h-7 text-[#eef5e5]" />
           </div>
-          <h1 className="mt-4 text-2xl font-black text-gray-900 tracking-tight">Driver Login</h1>
+          <h1 className="mt-4 text-2xl font-black text-gray-900 tracking-tight">Delivery Worker Login</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Sign in securely using a one-time code sent to your driver phone.
+            Sign in securely using a one-time code sent to your phone.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export default function DriverLoginPage() {
         >
           {step === 'phone' ? (
             <div>
-              <label className="text-xs font-bold text-stone-500 block mb-1.5">Driver phone number</label>
+              <label className="text-xs font-bold text-stone-500 block mb-1.5">Phone number</label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
                 <input

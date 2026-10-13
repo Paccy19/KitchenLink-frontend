@@ -10,6 +10,7 @@
  */
 
 import { ApiError, buildUrl } from './client';
+import { notifyDataChanged } from './liveUpdates';
 
 export const VENDOR_TOKEN_KEY = 'ofk_vendor_token';
 export const VENDOR_PROFILE_KEY = 'ofk_vendor_profile_v2';
@@ -56,6 +57,7 @@ async function vendorRequest(path, { method = 'GET', body, form } = {}) {
       { status: response.status, path },
     );
   }
+  notifyDataChanged(method, path);
   return data;
 }
 
@@ -287,6 +289,11 @@ export const vendorApi = {
   me: () => vendorRequest('/vendor/auth/me'),
 
   dashboard: () => vendorRequest('/vendor/dashboard'),
+  notifications: ({ limit = 50, unread = false } = {}) =>
+    vendorRequest(`/vendor/notifications?limit=${limit}${unread ? '&unread=true' : ''}`),
+  markNotificationRead: (id) =>
+    vendorRequest(`/vendor/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }),
+  markAllNotificationsRead: () => vendorRequest('/vendor/notifications/read-all', { method: 'POST' }),
   updateProfile: (payload) =>
     vendorRequest('/vendor/profile', { method: 'PATCH', body: payload }),
   // Open (with live GPS position) / close the store, or refresh the position.

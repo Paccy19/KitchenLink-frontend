@@ -8,6 +8,7 @@
  */
 
 import { ApiError, buildUrl } from './client';
+import { notifyDataChanged } from './liveUpdates';
 
 export const ADMIN_TOKEN_KEY = 'ofk_admin_token';
 
@@ -51,6 +52,7 @@ async function adminRequest(path, { method = 'GET', body } = {}) {
       { status: response.status, path, code: data?.error?.code || '' },
     );
   }
+  notifyDataChanged(method, path);
   return data;
 }
 

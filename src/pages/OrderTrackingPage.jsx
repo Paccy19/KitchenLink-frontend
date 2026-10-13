@@ -86,9 +86,9 @@ export default function OrderTrackingPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-500 font-medium">Order ID:</span>
+          <span className="text-xs text-stone-500 font-medium">Order:</span>
           <span className="font-extrabold text-xs text-stone-900 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
-            {order.id}
+            {order.orderNumber || order.id}
           </span>
         </div>
       </div>
@@ -220,7 +220,7 @@ export default function OrderTrackingPage() {
                 {order.deliveryCode}
               </div>
               <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-[220px] leading-relaxed">
-                Give this to the rider when your food arrives to confirm the delivery.
+                Give this to the delivery worker when your food arrives to confirm the delivery.
               </p>
             </div>
             <span className="text-[11px] font-bold text-stone-400 self-start sm:self-center">
@@ -247,7 +247,7 @@ export default function OrderTrackingPage() {
           {order.driver && ['assigned', 'picked_up', 'out_for_delivery', 'delivered'].includes(order.status) && (
             <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                Assigned Delivery Partner
+                Assigned Delivery Worker
               </span>
 
               <div className="flex items-center justify-between mt-3">
@@ -260,7 +260,7 @@ export default function OrderTrackingPage() {
                       {order.driver.name}
                     </h3>
                     <p className="text-xs text-stone-500 font-medium">
-                      {order.driver.vehicle || 'Delivery partner'}
+                      {order.driver.vehicle || 'Delivery worker'}
                     </p>
                     {order.driver.rating && <div className="flex items-center gap-1 text-[11px] text-amber-600 font-bold mt-0.5">
                       <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -274,7 +274,7 @@ export default function OrderTrackingPage() {
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
                 >
                   <Phone className="w-3.5 h-3.5 text-[#6d391d]" />
-                  <span>Call Rider</span>
+                  <span>Call Delivery Worker</span>
                 </a>
               </div>
             </div>

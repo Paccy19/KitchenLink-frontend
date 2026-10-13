@@ -59,8 +59,8 @@ export default function AdminDriversPage() {
       setTarget(null);
       setToast(
         result.released_deliveries > 0
-          ? `Driver updated. ${result.released_deliveries} delivery(ies) released.`
-          : 'Driver status updated.',
+          ? `Delivery worker updated. ${result.released_deliveries} delivery(ies) released.`
+          : 'Delivery worker status updated.',
       );
     },
   });
@@ -75,7 +75,7 @@ export default function AdminDriversPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Drivers" description="Verify, monitor and suspend delivery riders." />
+      <PageHeader title="Delivery Workers" description="Verify, monitor and suspend delivery workers." />
 
       {toast && (
         <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
@@ -105,7 +105,7 @@ export default function AdminDriversPage() {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search drivers by name or phone…"
+              placeholder="Search delivery workers by name or phone…"
               className="pl-9"
             />
           </form>
@@ -130,12 +130,12 @@ export default function AdminDriversPage() {
         ) : listQuery.error ? (
           <ErrorNote error={listQuery.error} />
         ) : data.items.length === 0 ? (
-          <EmptyState icon={Bike} title="No drivers found" description="Adjust the filters above." />
+          <EmptyState icon={Bike} title="No delivery workers found" description="Adjust the filters above." />
         ) : (
           <>
             <Table
               columns={[
-                { key: 'name', label: 'Driver' },
+                { key: 'name', label: 'Delivery worker' },
                 { key: 'contact', label: 'Contact' },
                 { key: 'status', label: 'Status' },
                 { key: 'online', label: 'Availability' },

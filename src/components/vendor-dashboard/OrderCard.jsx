@@ -1,7 +1,12 @@
 import React from 'react';
 import { Phone, MapPin, Clock, Eye, Check, X, CalendarClock } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
-import { ORDER_ACTION_LABEL, ORDER_NEXT_STATUS } from '../../data/vendorOptions';
+import {
+  ORDER_ACTION_LABEL,
+  ORDER_CANCELLABLE_STATUSES,
+  ORDER_NEXT_STATUS,
+  READY_ORDER_NOTE,
+} from '../../data/vendorOptions';
 import { formatScheduledFor } from '../../utils/schedule';
 
 const timeAgo = (iso) => {
@@ -18,7 +23,8 @@ const timeAgo = (iso) => {
 export default function OrderCard({ order, onAdvance, onCancel, onView }) {
   const nextStatus = ORDER_NEXT_STATUS[order.status];
   const nextLabel = ORDER_ACTION_LABEL[order.status];
-  const canAct = Boolean(nextStatus);
+  const canAdvance = Boolean(nextStatus);
+  const canCancel = ORDER_CANCELLABLE_STATUSES.includes(order.status);
   const visibleItems = order.items.slice(0, 3);
   const remaining = order.items.length - visibleItems.length;
 
@@ -90,6 +96,12 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
         </span>
       </div>
 
+      {order.status === 'Ready' && (
+        <p className="text-[11px] font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
+          {READY_ORDER_NOTE}
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <button
           type="button"
@@ -100,7 +112,7 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
           Details
         </button>
 
-        {canAct && (
+        {canAdvance && (
           <button
             type="button"
             onClick={() => onAdvance(order)}
@@ -111,7 +123,7 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
           </button>
         )}
 
-        {canAct && (
+        {canCancel && (
           <button
             type="button"
             onClick={() => onCancel(order)}

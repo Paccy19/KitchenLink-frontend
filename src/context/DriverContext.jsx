@@ -20,6 +20,7 @@ import {
   setDriverToken,
 } from '../api/driverApi';
 import { clearAllSessions } from '../api/session';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 import { useToast } from '../components/common/Toast';
 
 const DriverContext = createContext(null);
@@ -274,13 +275,15 @@ export function DriverProvider({ children }) {
   }, [refreshStats, refreshActive, refreshAvailable, refreshNotifications, markSynced]);
 
   useEffect(() => {
-    if (authToken) {
-      refreshAll();
-      const interval = setInterval(poll, 12000);
-      return () => clearInterval(interval);
-    }
-    return undefined;
-  }, [authToken, refreshAll, poll]);
+    if (authToken) refreshAll();
+  }, [authToken, refreshAll]);
+
+  // Stay current after any action and every 10s (new offers, payouts...).
+  const refreshLive = useCallback(async () => {
+    await poll();
+    await refreshWallet().catch(() => null);
+  }, [poll, refreshWallet]);
+  useAutoRefresh(refreshLive, { enabled: Boolean(authToken), intervalMs: 10000 });
 
   useEffect(() => {
     const reset = () => {
@@ -298,7 +301,7 @@ export function DriverProvider({ children }) {
     };
     const onUnauthorized = () => {
       reset();
-      setError('Your driver session has expired. Please log in again.');
+      setError('Your delivery worker session has expired. Please log in again.');
     };
     window.addEventListener('ofk:driver-unauthorized', onUnauthorized);
     window.addEventListener('ofk:sessions-cleared', reset);
@@ -376,7 +379,7 @@ export function DriverProvider({ children }) {
         ...(data.email ? { email: data.email } : {}),
       });
       if (mounted.current) setError('');
-      toast.success('Driver account created — log in with a verification code');
+      toast.success('Delivery worker account created — log in with a verification code');
       return result.driver;
     },
     [toast],

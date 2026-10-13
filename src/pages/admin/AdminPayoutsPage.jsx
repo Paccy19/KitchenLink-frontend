@@ -25,14 +25,14 @@ import {
 
 const WITHDRAWAL_STATUSES = ['processing', 'completed', 'failed'];
 const PAYEE_TYPES = [
-  { value: '', label: 'Vendors & riders' },
+  { value: '', label: 'Vendors & delivery workers' },
   { value: 'vendor', label: 'Vendors' },
-  { value: 'driver', label: 'Riders' },
+  { value: 'driver', label: 'Delivery workers' },
 ];
 const EMPTY = { items: [], total: 0, page: 1, limit: 20 };
 
 const PayeeBadge = ({ type }) =>
-  type === 'driver' ? <Badge tone="green">Rider</Badge> : <Badge tone="violet">Vendor</Badge>;
+  type === 'driver' ? <Badge tone="green">Delivery worker</Badge> : <Badge tone="violet">Vendor</Badge>;
 
 export default function AdminPayoutsPage() {
   const queryClient = useQueryClient();
@@ -122,7 +122,7 @@ export default function AdminPayoutsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Payouts"
-        description="Pay vendor and rider withdrawal requests, and review their balances."
+        description="Pay vendor and delivery worker withdrawal requests, and review their balances."
       />
 
       {summary && (
@@ -143,7 +143,7 @@ export default function AdminPayoutsPage() {
         {[
           ['withdrawals', 'Withdrawals'],
           ['vendor-balances', 'Vendor Balances'],
-          ['driver-balances', 'Rider Balances'],
+          ['driver-balances', 'Delivery Worker Balances'],
         ].map(([key, label]) => (
           <Button
             key={key}
@@ -252,7 +252,7 @@ export default function AdminPayoutsPage() {
         </Card>
       ) : (
         <Card
-          title={balanceType === 'driver' ? 'Rider Balances' : 'Vendor Balances'}
+          title={balanceType === 'driver' ? 'Delivery Worker Balances' : 'Vendor Balances'}
           description={
             balanceType === 'driver'
               ? 'Delivery fees earned and not yet withdrawn, ranked by available balance.'
@@ -265,13 +265,13 @@ export default function AdminPayoutsPage() {
           ) : balancesQuery.error ? (
             <ErrorNote error={balancesQuery.error} />
           ) : balances.items.length === 0 ? (
-            <EmptyState icon={Wallet} title={balanceType === 'driver' ? 'No rider balances' : 'No vendor balances'} />
+            <EmptyState icon={Wallet} title={balanceType === 'driver' ? 'No delivery worker balances' : 'No vendor balances'} />
           ) : (
             <>
               {balanceType === 'driver' ? (
                 <Table
                   columns={[
-                    { key: 'rider', label: 'Rider' },
+                    { key: 'rider', label: 'Delivery worker' },
                     { key: 'balance', label: 'Available' },
                     { key: 'earned', label: 'Total Earned' },
                     { key: 'deliveries', label: 'Deliveries' },

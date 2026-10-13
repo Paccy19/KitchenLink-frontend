@@ -13,16 +13,19 @@ import {
   LogOut,
   Loader2,
   MapPin,
+  Bell,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import useVendorRealtime from '../../hooks/useVendorRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
+import VendorNotificationBell from './VendorNotificationBell';
 
 const NAV = [
   { to: '/vendor-dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/vendor-dashboard/orders', label: 'Orders', icon: ClipboardList, badgeKey: 'pendingOrders' },
   { to: '/vendor-dashboard/menu', label: 'Menu', icon: UtensilsCrossed, badgeKey: 'menuCount' },
   { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet },
+  { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications' },
 ];
 
 export default function VendorLayout() {
@@ -30,6 +33,7 @@ export default function VendorLayout() {
     vendor,
     stats,
     menuItems,
+    unreadNotifications,
     toggleStoreOpen,
     storeStatus,
     storeError,
@@ -58,6 +62,7 @@ export default function VendorLayout() {
   const badgeValue = (item) => {
     if (item.badgeKey === 'pendingOrders') return stats.pendingOrders;
     if (item.badgeKey === 'menuCount') return menuItems.length;
+    if (item.badgeKey === 'notifications') return unreadNotifications;
     return 0;
   };
 
@@ -190,6 +195,7 @@ export default function VendorLayout() {
                   <Radio className={`w-3.5 h-3.5 ${connected ? 'animate-pulse' : ''}`} />
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
+                <VendorNotificationBell />
                 <RoleAccountMenu role="vendor" />
               </div>
             </div>

@@ -403,7 +403,7 @@ export default function CheckoutPage() {
                   type="text"
                   value={newInstructions}
                   onChange={(e) => setNewInstructions(e.target.value)}
-                  placeholder="Delivery instructions for rider (e.g. Gate color, floor number)"
+                  placeholder="Delivery instructions for the delivery worker (e.g. Gate color, floor number)"
                   className="w-full p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
                 />
                 <div className="flex gap-2">
@@ -450,7 +450,7 @@ export default function CheckoutPage() {
             </div>
             {apiEnabled && orderType !== 'immediate' && (
               <p className="text-xs font-semibold text-stone-500">
-                Please keep this delivery time free — your driver is dispatched close to the scheduled time.
+                Please keep this delivery time free — your delivery worker is dispatched close to the scheduled time.
               </p>
             )}
           </div>
@@ -579,7 +579,7 @@ export default function CheckoutPage() {
             <textarea
               value={orderNotes}
               onChange={(e) => setOrderNotes(e.target.value)}
-              placeholder="Any special notes for the kitchen or delivery driver..."
+              placeholder="Any special notes for the kitchen or delivery worker..."
               rows={2}
               className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition resize-none"
             />
@@ -635,7 +635,7 @@ export default function CheckoutPage() {
                 <span className="font-bold">{deliveryFeeValue(deliveryFee, deliveryQuote)}</span>
               </div>
               <p className="text-[10px] leading-relaxed text-stone-400 font-medium">
-                The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your rider.
+                The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.
               </p>
               <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
                 <span>Total Due</span>

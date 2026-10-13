@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { cancelRemoteOrder, createOrder as createRemoteOrder, fetchOrder, fetchOrders } from '../api/endpoints';
 import { normalizeOrder } from '../api/normalize';
 import { useAuth } from './AuthContext';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const OrderContext = createContext(null);
 
@@ -10,8 +11,8 @@ export const ORDER_STATUSES = [
   { id: 'confirmed', label: 'Confirmed by kitchen', icon: 'check-circle', description: 'The kitchen accepted your order.' },
   { id: 'preparing', label: 'Preparing your food', icon: 'chef-hat', description: 'Fresh ingredients are being cooked.' },
   { id: 'ready', label: 'Ready for pickup', icon: 'shopping-bag', description: 'Food packed and waiting for delivery.' },
-  { id: 'assigned', label: 'Assigned to driver', icon: 'bike', description: 'A rider is heading to the vendor to collect your order.' },
-  { id: 'picked_up', label: 'Picked up', icon: 'package', description: 'Your order is with the rider — on the way to you.' },
+  { id: 'assigned', label: 'Assigned to a delivery worker', icon: 'bike', description: 'A delivery worker is heading to the vendor to collect your order.' },
+  { id: 'picked_up', label: 'Picked up', icon: 'package', description: 'Your order is with the delivery worker — on the way to you.' },
   { id: 'out_for_delivery', label: 'Out for delivery', icon: 'bike', description: 'Your order is on the way.' },
   { id: 'delivered', label: 'Delivered', icon: 'package', description: 'Enjoy your meal!' },
   { id: 'cancelled', label: 'Cancelled', icon: '×', description: 'This order has been cancelled.' },
@@ -53,9 +54,11 @@ export const OrderProvider = ({ children }) => {
       return undefined;
     }
     refreshOrders();
-    const timer = setInterval(refreshOrders, 15000);
-    return () => clearInterval(timer);
+    return undefined;
   }, [accessToken]);
+
+  // Order status follows the kitchen and delivery worker live.
+  useAutoRefresh(refreshOrders, { enabled: apiEnabled, intervalMs: 10000 });
 
   const placeOrder = async ({
     deliveryLocation,

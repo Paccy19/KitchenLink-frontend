@@ -23,6 +23,7 @@ import {
   titleToStatus,
 } from '../api/vendorApi';
 import { clearAllSessions } from '../api/session';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const VendorContext = createContext(null);
 
@@ -80,6 +81,8 @@ export function VendorProvider({ children }) {
   const [special, setSpecial] = useState(null);
   const [wallet, setWallet] = useState({ withdrawn: 0, baseSales: 0, withdrawalHistory: [] });
   const [dashboard, setDashboard] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [categories, setCategories] = useState([]);
   const [isRegistered, setIsRegistered] = useState(() => readFlag(STORAGE.registered));
   const [lastSyncedAt, setLastSyncedAt] = useState(() => new Date().toISOString());
@@ -158,20 +161,58 @@ export function VendorProvider({ children }) {
     return mapped;
   }, []);
 
+  /* ---------------------------- notifications --------------------------- */
+
+  const refreshNotifications = useCallback(async () => {
+    const data = await vendorApi.notifications({ limit: 50 });
+    if (!mounted.current) return;
+    setNotifications(data.notifications || []);
+    setUnreadNotifications(data.unread_count ?? 0);
+  }, []);
+
+  const markNotificationRead = useCallback(async (id) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    setUnreadNotifications((count) => Math.max(0, count - 1));
+    await vendorApi.markNotificationRead(id).catch(() => null);
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadNotifications(0);
+    await vendorApi.markAllNotificationsRead().catch(() => null);
+  }, []);
+
   const refreshAll = useCallback(async () => {
     if (!getVendorToken()) return;
     setLoading(true);
     setError('');
     try {
       await refreshProfile();
-      await Promise.all([refreshDashboard(), refreshMenu(), refreshOrders(), refreshWallet(), refreshSpecial()]);
+      await Promise.all([refreshDashboard(), refreshMenu(), refreshOrders(), refreshWallet(), refreshSpecial(), refreshNotifications().catch(() => null)]);
       markSynced();
     } catch (err) {
       if (mounted.current) setError(err.message || 'Failed to load your dashboard.');
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [refreshProfile, refreshDashboard, refreshMenu, refreshOrders, refreshWallet, refreshSpecial, markSynced]);
+  }, [refreshProfile, refreshDashboard, refreshMenu, refreshOrders, refreshWallet, refreshSpecial, refreshNotifications, markSynced]);
+
+  // Quiet refresh (no loading spinner) for automatic updates: orders a
+  // delivery worker completed, new orders, wallet changes, notifications...
+  const refreshQuietly = useCallback(async () => {
+    if (!getVendorToken()) return;
+    await Promise.all([
+      refreshProfile(),
+      refreshDashboard(),
+      refreshOrders(),
+      refreshWallet(),
+      refreshMenu(),
+      refreshSpecial(),
+      refreshNotifications(),
+    ]);
+    markSynced();
+  }, [refreshProfile, refreshDashboard, refreshOrders, refreshWallet, refreshMenu, refreshSpecial, refreshNotifications, markSynced]);
+  useAutoRefresh(refreshQuietly, { enabled: Boolean(authToken), intervalMs: 10000 });
 
   const loadCategories = useCallback(async () => {
     try {
@@ -495,7 +536,6 @@ export function VendorProvider({ children }) {
 
   const acceptOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Accepted'), [updateOrderStatus]);
   const rejectOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Cancelled'), [updateOrderStatus]);
-  const completeOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Completed'), [updateOrderStatus]);
 
   /* ------------------------------- wallet ------------------------------ */
 
@@ -562,8 +602,12 @@ export function VendorProvider({ children }) {
       updateOrderStatus,
       acceptOrder,
       rejectOrder,
-      completeOrder,
       requestWithdrawal,
+      notifications,
+      unreadNotifications,
+      refreshNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
       setStoreOpen,
       storeStatus,
       storeError,
@@ -607,8 +651,12 @@ export function VendorProvider({ children }) {
       updateOrderStatus,
       acceptOrder,
       rejectOrder,
-      completeOrder,
       requestWithdrawal,
+      notifications,
+      unreadNotifications,
+      refreshNotifications,
+      markNotificationRead,
+      markAllNotificationsRead,
       setStoreOpen,
       storeStatus,
       storeError,

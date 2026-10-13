@@ -33,6 +33,7 @@ import { useVendor } from '../../context/VendorContext';
 import { useDriver } from '../../context/DriverContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { notificationLink } from '../../utils/notificationLink';
 import RoleSelectModal from '../auth/RoleSelectModal';
 import {
   Bell,
@@ -118,7 +119,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
           : null;
   const accountName =
     accountRole === 'vendor' ? vendor?.name || 'Your Kitchen'
-      : accountRole === 'driver' ? driver?.name || 'Driver'
+      : accountRole === 'driver' ? driver?.name || 'Delivery worker'
         : accountRole === 'admin' ? admin?.name || 'Administrator'
           : accountRole === 'customer' ? user?.name || 'Account'
             : '';
@@ -129,7 +130,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
           : '';
   const accountSubtitle =
     accountRole === 'vendor' ? vendor?.ownerName || vendor?.type || 'Vendor account'
-      : accountRole === 'driver' ? driver?.phone || 'Driver account'
+      : accountRole === 'driver' ? driver?.phone || 'Delivery worker account'
         : accountRole === 'admin' ? admin?.email || 'Admin account'
           : accountRole === 'customer' ? user?.phone
             : '';
@@ -250,7 +251,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                 className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#12301c] bg-[#f2f8ee] hover:bg-[#e6f2de] border border-[#d9e5d0] transition hover:-translate-y-0.5 hover:shadow-sm"
               >
                 <Bike className="w-3.5 h-3.5 text-[#3b5327]" />
-                <span>Back to Driver Dashboard</span>
+                <span>Back to Delivery Worker Dashboard</span>
               </Link>
             )}
 
@@ -347,7 +348,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                         notifications.map((notification) => (
                           <Link
                             key={notification.id}
-                            to={notification.order_id ? `/track/${notification.order_id}` : '/track'}
+                            to={notificationLink(notification, 'customer')}
                             onClick={() => {
                               if (!notification.read) markRead(notification.id);
                               setIsNotificationsOpen(false);
@@ -483,7 +484,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                             className={accountLinkClass}
                           >
                             <Bike className="w-4 h-4 text-stone-400" />
-                            <span>Back to Driver Dashboard</span>
+                            <span>Back to Delivery Worker Dashboard</span>
                           </Link>
                         )}
                         <Link to="/driver-dashboard" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
@@ -629,7 +630,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                 className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#3b5327] hover:bg-[#f2f8ee] rounded-lg"
               >
                 <Bike className="w-4 h-4" />
-                Back to Driver Dashboard
+                Back to Delivery Worker Dashboard
               </Link>
             )}
           </div>

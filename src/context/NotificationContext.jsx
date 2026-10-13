@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { fetchNotifications, markNotificationRead as markReadRequest, markAllNotificationsRead as markAllReadRequest } from '../api/endpoints';
 import { useAuth } from './AuthContext';
+import useAutoRefresh from '../hooks/useAutoRefresh';
 
 const NotificationContext = createContext(null);
 
@@ -30,9 +31,10 @@ export const NotificationProvider = ({ children }) => {
       return undefined;
     }
     refresh();
-    const timer = setInterval(refresh, 15000);
-    return () => clearInterval(timer);
+    return undefined;
   }, [apiEnabled, refresh]);
+
+  useAutoRefresh(refresh, { enabled: apiEnabled, intervalMs: 10000 });
 
   const markRead = async (notificationId) => {
     setNotifications((current) =>

@@ -38,7 +38,7 @@ export default function RoleSelectModal({ open, onClose }) {
     },
     {
       key: 'driver',
-      title: 'Delivery Guy',
+      title: 'Delivery Worker',
       description: 'Pick up & deliver orders, track your deliveries & earnings',
       icon: Bike,
       onClick: () => chooseRole('/driver-login'),

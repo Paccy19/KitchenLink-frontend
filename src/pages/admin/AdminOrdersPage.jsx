@@ -130,7 +130,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Orders" description="Search, override statuses and reassign drivers." />
+      <PageHeader title="Orders" description="Search, override statuses and reassign delivery workers." />
 
       <Card title="Filters" bodyClassName="p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -242,7 +242,7 @@ export default function AdminOrdersPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <Info label="Vendor" value={order.vendor?.name || '—'} />
               <Info label="Customer" value={order.customer?.name || '—'} />
-              <Info label="Driver" value={order.driver?.name || 'Unassigned'} />
+              <Info label="Delivery worker" value={order.driver?.name || 'Unassigned'} />
               <Info label="Subtotal" value={formatRwf(order.subtotal_rwf)} />
               <Info label="Delivery fee" value={formatRwf(order.delivery_fee_rwf)} />
               <Info label="Total" value={formatRwf(order.total_amount_rwf)} />
@@ -301,7 +301,7 @@ export default function AdminOrdersPage() {
                 onClick={() => openModal(setReassignOpen)}
                 disabled={CLOSED.includes(order.status)}
               >
-                Reassign driver
+                Reassign delivery worker
               </Button>
               <Button
                 variant="danger"
@@ -376,7 +376,7 @@ export default function AdminOrdersPage() {
 
       <Modal
         open={reassignOpen}
-        title="Reassign driver"
+        title="Reassign delivery worker"
         onClose={() => setReassignOpen(false)}
         footer={
           <>
@@ -386,7 +386,7 @@ export default function AdminOrdersPage() {
             <Button
               onClick={() => {
                 if (!driverId) {
-                  setError('Select a driver.');
+                  setError('Select a delivery worker.');
                   return;
                 }
                 setError('');
@@ -400,9 +400,9 @@ export default function AdminOrdersPage() {
         }
       >
         <div className="space-y-4">
-          <Field label="Driver">
+          <Field label="Delivery worker">
             <Select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
-              <option value="">Select an approved driver…</option>
+              <option value="">Select an approved delivery worker…</option>
               {(driversQuery.data?.items || []).map((driver) => (
                 <option key={driver.id} value={driver.id}>
                   {driver.name} · {driver.phone || toTitle(driver.vehicle_type)}

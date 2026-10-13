@@ -16,15 +16,23 @@ import { AdminProvider } from './context/AdminContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ToastProvider } from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import { onDataChanged } from './api/liveUpdates';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       staleTime: 30_000,
+      // Admin screens follow other people's changes while they are open.
+      refetchInterval: (query) => (query.queryKey[0] === 'admin' ? 10_000 : false),
     },
   },
+});
+
+// After any action anywhere in the app, reload every query on screen.
+onDataChanged(() => {
+  queryClient.invalidateQueries({ refetchType: 'active' });
 });
 
 ReactDOM.createRoot(document.getElementById('root')).render(

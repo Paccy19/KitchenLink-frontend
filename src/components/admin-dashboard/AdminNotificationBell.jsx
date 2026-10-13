@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   CreditCard,
   Inbox,
+  Landmark,
 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
@@ -23,6 +24,8 @@ const TYPE_META = {
   payout_requested: { icon: Wallet, tone: 'bg-violet-50 text-violet-600' },
   order_placed: { icon: ShoppingBag, tone: 'bg-emerald-50 text-emerald-600' },
   payment_failed: { icon: CreditCard, tone: 'bg-red-50 text-red-600' },
+  owner_finance: { icon: Landmark, tone: 'bg-violet-50 text-violet-600' },
+  payout_update: { icon: Wallet, tone: 'bg-violet-50 text-violet-600' },
   general: { icon: Bell, tone: 'bg-stone-100 text-stone-600' },
 };
 
@@ -33,6 +36,7 @@ const FALLBACK_LINK = {
   payout_requested: '/admin-dashboard/payouts',
   order_placed: '/admin-dashboard/orders',
   payment_failed: '/admin-dashboard/payments',
+  owner_finance: '/admin-dashboard/platform',
 };
 
 export default function AdminNotificationBell() {

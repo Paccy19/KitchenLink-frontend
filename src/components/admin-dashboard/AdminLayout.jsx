@@ -30,7 +30,7 @@ const NAV = [
   { to: '/admin-dashboard/orders', label: 'Orders', icon: ClipboardList },
   { to: '/admin-dashboard/deliveries', label: 'Deliveries', icon: Bike },
   { to: '/admin-dashboard/vendors', label: 'Vendors', icon: Store },
-  { to: '/admin-dashboard/drivers', label: 'Drivers', icon: Bike },
+  { to: '/admin-dashboard/drivers', label: 'Delivery Workers', icon: Bike },
   { to: '/admin-dashboard/users', label: 'Users', icon: Users },
   { to: '/admin-dashboard/payments', label: 'Payments', icon: CreditCard },
   { to: '/admin-dashboard/payouts', label: 'Payouts', icon: Wallet },

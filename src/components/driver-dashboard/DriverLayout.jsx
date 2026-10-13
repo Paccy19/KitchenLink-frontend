@@ -19,6 +19,7 @@ import {
 import { useDriver } from '../../context/DriverContext';
 import useDriverRealtime from '../../hooks/useDriverRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
+import { notificationLink } from '../../utils/notificationLink';
 
 const NAV = [
   { to: '/driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -85,11 +86,9 @@ export default function DriverLayout() {
   const openNotification = (notification) => {
     if (!notification.read) markNotificationRead(notification.id);
     setNotifOpen(false);
-    if (notification.type === 'delivery_offer' && notification.orderId) {
-      navigate('/driver-dashboard', { state: { focusOffer: notification.orderId } });
-    } else {
-      navigate('/driver-dashboard');
-    }
+    navigate(notificationLink(notification, 'driver'), {
+      state: notification.type === 'delivery_offer' ? { focusOffer: notification.orderId } : undefined,
+    });
   };
 
   if (!hasToken) {
@@ -101,7 +100,7 @@ export default function DriverLayout() {
       <div className="min-h-screen flex items-center justify-center bg-[#faf7f4]">
         <div className="flex flex-col items-center gap-3 text-stone-500">
           <div className="w-10 h-10 rounded-full border-2 border-[#d9e5d0] border-t-[#3b5327] animate-spin" />
-          <p className="text-sm font-bold">Loading your driver app…</p>
+          <p className="text-sm font-bold">Loading your delivery worker app…</p>
         </div>
       </div>
     );
@@ -123,7 +122,7 @@ export default function DriverLayout() {
         <div className="min-w-0">
           <p className="font-extrabold text-sm text-gray-900 truncate">{driver.name}</p>
           <p className="text-[11px] text-[#4a6a34] font-bold">
-            {VEHICLE_LABEL[driver.vehicleType] || 'Driver'}
+            {VEHICLE_LABEL[driver.vehicleType] || 'Delivery worker'}
             {driver.plateNumber ? ` · ${driver.plateNumber}` : ''}
           </p>
         </div>
@@ -234,7 +233,7 @@ export default function DriverLayout() {
                   <MenuIcon className="w-5 h-5" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="font-black text-base sm:text-lg text-gray-900 truncate">Driver App</h1>
+                  <h1 className="font-black text-base sm:text-lg text-gray-900 truncate">Delivery Worker App</h1>
                   <p className="text-[11px] text-stone-400 font-medium hidden sm:block">
                     Accept, pick up and deliver orders
                   </p>
