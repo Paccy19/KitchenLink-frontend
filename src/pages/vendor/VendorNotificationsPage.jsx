@@ -12,6 +12,7 @@ const FILTERS = [
   { id: 'order_update', label: 'Order updates' },
   { id: 'payout_update', label: 'Payouts' },
   { id: 'account_update', label: 'Account' },
+  { id: 'support_message', label: 'Support' },
 ];
 
 /** Every vendor notification; tapping one opens the page it is about. */

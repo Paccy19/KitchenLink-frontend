@@ -13,6 +13,12 @@ export function notificationLink(notification, role) {
   const orderId = notification?.order_id || notification?.orderId || null;
   const type = notification?.type;
 
+  if (type === 'support_message') {
+    if (role === 'vendor') return '/vendor-dashboard/support';
+    if (role === 'driver') return '/driver-dashboard/support';
+    return '/support';
+  }
+
   if (role === 'vendor') {
     if (type === 'payout_update') return '/vendor-dashboard/wallet';
     if (orderId) return `/vendor-dashboard/orders?order=${orderId}`;

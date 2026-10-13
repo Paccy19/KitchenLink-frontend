@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Tags, Trash2 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import Can from '../../components/admin-dashboard/Can';
 import {
   Badge,
   Button,
@@ -122,9 +123,11 @@ export default function AdminCategoriesPage() {
         title="Categories"
         description="Organise how dishes and vendors are grouped across the marketplace."
         action={
-          <Button onClick={openCreate}>
-            <Plus className="w-4 h-4" /> New category
-          </Button>
+          <Can permission="categories:write">
+            <Button onClick={openCreate}>
+              <Plus className="w-4 h-4" /> New category
+            </Button>
+          </Can>
         }
       />
 
@@ -144,7 +147,7 @@ export default function AdminCategoriesPage() {
             icon={Tags}
             title="No categories yet"
             description="Create your first category to organise the marketplace."
-            action={<Button onClick={openCreate}>New category</Button>}
+            action={<Can permission="categories:write"><Button onClick={openCreate}>New category</Button></Can>}
           />
         ) : (
           <Table
@@ -176,6 +179,7 @@ export default function AdminCategoriesPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
+                    <Can permission="categories:write">
                     <Button variant="ghost" size="sm" onClick={() => move(index, -1)} disabled={index === 0}>
                       <ArrowUp className="w-3.5 h-3.5" />
                     </Button>
@@ -190,6 +194,7 @@ export default function AdminCategoriesPage() {
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
                     </Button>
+                    </Can>
                   </div>
                 </td>
                 <td className="px-4 py-3">
@@ -198,6 +203,7 @@ export default function AdminCategoriesPage() {
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
+                  <Can permission="categories:write">
                   <div className="flex items-center justify-end gap-1.5">
                     <Button variant="ghost" size="sm" onClick={() => openEdit(category)}>
                       Edit
@@ -206,6 +212,7 @@ export default function AdminCategoriesPage() {
                       <Trash2 className="w-3.5 h-3.5 text-red-500" />
                     </Button>
                   </div>
+                  </Can>
                 </td>
               </tr>
             ))}

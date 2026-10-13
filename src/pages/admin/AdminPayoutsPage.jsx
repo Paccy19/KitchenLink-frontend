@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Wallet } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
   Badge,
@@ -235,6 +236,7 @@ export default function AdminPayoutsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-stone-500">{formatDate(withdrawal.created_at)}</td>
                     <td className="px-4 py-3 text-right">
+                      <Can permission="payouts:write">
                       <Button
                         variant={withdrawal.status === 'processing' ? 'primary' : 'secondary'}
                         size="sm"
@@ -242,6 +244,7 @@ export default function AdminPayoutsPage() {
                       >
                         {withdrawal.status === 'processing' ? 'Pay out' : 'View'}
                       </Button>
+                      </Can>
                     </td>
                   </tr>
                 ))}

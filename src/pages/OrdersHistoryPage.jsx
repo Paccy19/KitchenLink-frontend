@@ -139,6 +139,23 @@ export default function OrdersHistoryPage() {
                       ● {ORDER_STATUSES.find((status) => status.id === order.status)?.label ?? order.status}
                     </span>
 
+                    {order.refund && (
+                      <button
+                        type="button"
+                        onClick={() => handleTrackClick(order.id)}
+                        title="See refund details"
+                        className={`text-xs font-black px-3 py-1 rounded-full border ${
+                          order.refund.status === 'completed'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : order.refund.status === 'failed'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-sky-50 text-sky-700 border-sky-200'
+                        }`}
+                      >
+                        {order.refund.status_label}
+                      </button>
+                    )}
+
                     {isLive && (
                       <button
                         onClick={() => handleTrackClick(order.id)}

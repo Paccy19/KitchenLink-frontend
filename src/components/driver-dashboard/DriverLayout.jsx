@@ -15,8 +15,11 @@ import {
   Bell,
   BellRing,
   LogOut,
+  LifeBuoy,
 } from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
+import { driverApi } from '../../api/driverApi';
+import useSupportUnread from '../../hooks/useSupportUnread';
 import useDriverRealtime from '../../hooks/useDriverRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
 import { notificationLink } from '../../utils/notificationLink';
@@ -27,6 +30,7 @@ const NAV = [
   { to: '/driver-dashboard/history', label: 'Delivery History', icon: History },
   { to: '/driver-dashboard/earnings', label: 'Earnings & Wallet', icon: Wallet },
   { to: '/driver-dashboard/profile', label: 'Profile & Settings', icon: Settings },
+  { to: '/driver-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support' },
 ];
 
 const VEHICLE_LABEL = {
@@ -67,6 +71,7 @@ export default function DriverLayout() {
     logout,
   } = useDriver();
   const { connected } = useDriverRealtime({ enabled: true });
+  const supportUnread = useSupportUnread(driverApi.support, { enabled: Boolean(hasToken && isAuthenticated) });
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -147,7 +152,8 @@ export default function DriverLayout() {
       <nav className="space-y-1.5 flex-1">
         {NAV.map((item) => {
           const Icon = item.icon;
-          const count = item.badgeKey === 'activeDeliveries' ? stats.activeDeliveries : 0;
+          const count =
+            item.badgeKey === 'activeDeliveries' ? stats.activeDeliveries : item.badgeKey === 'support' ? supportUnread : 0;
           return (
             <NavLink
               key={item.to}

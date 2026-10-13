@@ -46,6 +46,11 @@ async function adminRequest(path, { method = 'GET', body } = {}) {
   }
 
   const data = await response.json().catch(() => null);
+  // A deactivated or removed team member is signed out straight away.
+  if (response.status === 403 && ['ADMIN_DISABLED', 'INVITATION_PENDING'].includes(data?.error?.code)) {
+    clearAdminToken();
+    window.dispatchEvent(new CustomEvent('ofk:admin-unauthorized', { detail: data.error.message }));
+  }
   if (!response.ok) {
     throw new ApiError(
       data?.error?.message || data?.message || `Request failed (${response.status}).`,
@@ -97,6 +102,10 @@ export const adminApi = {
     adminRequest('/admin/platform/owner/payout-settings', { method: 'PUT', body }),
 
   dashboard: () => adminRequest('/admin/dashboard/overview'),
+
+  // The platform's money books (finance role).
+  platformWallet: (params) => adminRequest(`/admin/platform/wallet${qs(params)}`),
+  platformTransactions: (params) => adminRequest(`/admin/platform/transactions${qs(params)}`),
 
   listNotifications: (params) => adminRequest(`/admin/notifications${qs(params)}`),
   markNotificationRead: (id) =>
@@ -150,6 +159,10 @@ export const adminApi = {
   updatePayout: (id, body) =>
     adminRequest(`/admin/payouts/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
 
+  listRefunds: (params) => adminRequest(`/admin/refunds${qs(params)}`),
+  updateRefund: (id, body) =>
+    adminRequest(`/admin/refunds/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+
   listCategories: () => adminRequest('/admin/categories'),
   createCategory: (body) => adminRequest('/admin/categories', { method: 'POST', body }),
   updateCategory: (id, body) =>
@@ -172,4 +185,24 @@ export const adminApi = {
   analyticsPayouts: (params) => adminRequest(`/admin/analytics/payouts${qs(params)}`),
 
   listActions: (params) => adminRequest(`/admin/actions${qs(params)}`),
+
+  // Team (owner only)
+  listTeam: () => adminRequest('/admin/team'),
+  inviteMember: (body) => adminRequest('/admin/team/invitations', { method: 'POST', body }),
+  resendInvitation: (id) =>
+    adminRequest(`/admin/team/${encodeURIComponent(id)}/resend-invitation`, { method: 'POST' }),
+  changeMemberRole: (id, body) =>
+    adminRequest(`/admin/team/${encodeURIComponent(id)}/role`, { method: 'PATCH', body }),
+  deactivateMember: (id) =>
+    adminRequest(`/admin/team/${encodeURIComponent(id)}/deactivate`, { method: 'POST' }),
+  reactivateMember: (id, body) =>
+    adminRequest(`/admin/team/${encodeURIComponent(id)}/reactivate`, { method: 'POST', body }),
+  removeMember: (id) => adminRequest(`/admin/team/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Invitation link (no sign-in)
+  getInvitation: (token) => adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}`),
+  sendInvitationCode: (token, phone) =>
+    adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/send-code`, { method: 'POST', body: { phone } }),
+  acceptInvitation: (token, body) =>
+    adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/accept`, { method: 'POST', body }),
 };

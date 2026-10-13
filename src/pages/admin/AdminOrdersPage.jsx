@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, Search } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
   Badge,
@@ -294,6 +295,7 @@ export default function AdminOrdersPage() {
               </div>
             </div>
 
+            <Can permission="orders:write">
             <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100">
               <Button onClick={() => openModal(setStatusOpen)}>Set status</Button>
               <Button
@@ -311,6 +313,7 @@ export default function AdminOrdersPage() {
                 Cancel order
               </Button>
             </div>
+            </Can>
 
             {statusMutation.isError && <ErrorNote error={statusMutation.error} />}
             {cancelMutation.isError && <ErrorNote error={cancelMutation.error} />}

@@ -14,8 +14,11 @@ import {
   Loader2,
   MapPin,
   Bell,
+  LifeBuoy,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
+import { vendorApi } from '../../api/vendorApi';
+import useSupportUnread from '../../hooks/useSupportUnread';
 import useVendorRealtime from '../../hooks/useVendorRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
 import VendorNotificationBell from './VendorNotificationBell';
@@ -26,6 +29,7 @@ const NAV = [
   { to: '/vendor-dashboard/menu', label: 'Menu', icon: UtensilsCrossed, badgeKey: 'menuCount' },
   { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet },
   { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications' },
+  { to: '/vendor-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support' },
 ];
 
 export default function VendorLayout() {
@@ -42,6 +46,7 @@ export default function VendorLayout() {
     logout,
   } = useVendor();
   const { connected } = useVendorRealtime({ enabled: true });
+  const supportUnread = useSupportUnread(vendorApi.support, { enabled: Boolean(hasToken && isAuthenticated) });
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (!hasToken) {
@@ -63,6 +68,7 @@ export default function VendorLayout() {
     if (item.badgeKey === 'pendingOrders') return stats.pendingOrders;
     if (item.badgeKey === 'menuCount') return menuItems.length;
     if (item.badgeKey === 'notifications') return unreadNotifications;
+    if (item.badgeKey === 'support') return supportUnread;
     return 0;
   };
 

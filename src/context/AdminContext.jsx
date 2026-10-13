@@ -24,6 +24,7 @@ const AdminContext = createContext(null);
  */
 export function AdminProvider({ children }) {
   const [admin, setAdmin] = useState(null);
+  const [limits, setLimits] = useState({ large_money_action_rwf: 50000 });
   const [authToken, setAuthToken] = useState(() => getAdminToken());
   const [loading, setLoading] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
@@ -38,8 +39,11 @@ export function AdminProvider({ children }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    const { admin: raw } = await adminApi.me();
-    if (mounted.current) setAdmin(raw);
+    const { admin: raw, limits: rawLimits } = await adminApi.me();
+    if (mounted.current) {
+      setAdmin(raw);
+      if (rawLimits) setLimits(rawLimits);
+    }
     return raw;
   }, []);
 
@@ -60,11 +64,11 @@ export function AdminProvider({ children }) {
   }, [authToken, refreshProfile]);
 
   useEffect(() => {
-    const onUnauthorized = () => {
+    const onUnauthorized = (event) => {
       clearAdminToken();
       setAuthToken('');
       setAdmin(null);
-      setError('Your admin session has expired. Please log in again.');
+      setError(event?.detail || 'Your admin session has expired. Please log in again.');
     };
     const onSessionsCleared = () => {
       clearAdminToken();
@@ -133,6 +137,11 @@ export function AdminProvider({ children }) {
   }, []);
 
   const isAuthenticated = Boolean(authToken && admin);
+  // What the signed-in admin may do (decided by their role on the server).
+  const can = useCallback(
+    (permission) => admin?.role === 'super_admin' || (admin?.permissions || []).includes(permission),
+    [admin],
+  );
   const hasToken = Boolean(authToken);
 
   const value = useMemo(
@@ -150,8 +159,10 @@ export function AdminProvider({ children }) {
       logout,
       refreshProfile,
       isOwner: admin?.role === 'super_admin',
+      can,
+      limits,
     }),
-    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, verifyTwoFactor, logout, refreshProfile],
+    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, verifyTwoFactor, logout, refreshProfile, can, limits],
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

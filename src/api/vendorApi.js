@@ -294,6 +294,14 @@ export const vendorApi = {
   markNotificationRead: (id) =>
     vendorRequest(`/vendor/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' }),
   markAllNotificationsRead: () => vendorRequest('/vendor/notifications/read-all', { method: 'POST' }),
+  support: {
+    list: () => vendorRequest('/vendor/support'),
+    unreadCount: () => vendorRequest('/vendor/support/unread-count'),
+    create: (payload) => vendorRequest('/vendor/support', { method: 'POST', body: payload }),
+    get: (id) => vendorRequest(`/vendor/support/${encodeURIComponent(id)}`),
+    reply: (id, message) =>
+      vendorRequest(`/vendor/support/${encodeURIComponent(id)}/messages`, { method: 'POST', body: { message } }),
+  },
   updateProfile: (payload) =>
     vendorRequest('/vendor/profile', { method: 'PATCH', body: payload }),
   // Open (with live GPS position) / close the store, or refresh the position.

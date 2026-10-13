@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageSquareWarning, Plus, Search } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import Can from '../../components/admin-dashboard/Can';
+import { useAdmin } from '../../context/AdminContext';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
   Badge,
@@ -26,13 +28,18 @@ import {
 
 const STATUSES = ['open', 'in_review', 'resolved', 'rejected'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
-const CATEGORIES = ['order', 'delivery', 'payment', 'vendor', 'driver', 'account', 'other'];
+const CATEGORIES = ['order', 'delivery', 'payment', 'refund', 'vendor', 'driver', 'account', 'app', 'other'];
+const ROLE_LABEL = { customer: 'Customer', vendor: 'Vendor', driver: 'Delivery worker', admin: 'Admin', guest: 'Guest' };
+const ROLE_TONE = { customer: 'blue', vendor: 'violet', driver: 'green' };
+const canReply = (complaint) =>
+  Boolean(complaint?.raised_by?.user_id) && ['customer', 'vendor', 'driver'].includes(complaint.raised_by.role);
 const EMPTY = { items: [], total: 0, page: 1, limit: 20, counts: {} };
 
 const PRIORITY_TONE = { low: 'slate', medium: 'blue', high: 'amber', urgent: 'red' };
 
 export default function AdminComplaintsPage() {
   const queryClient = useQueryClient();
+  const { can } = useAdmin();
   const [filters, setFilters] = useState({ status: '', category: '', priority: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -46,7 +53,7 @@ export default function AdminComplaintsPage() {
     name: '',
     phone: '',
   });
-  const [update, setUpdate] = useState({ status: '', priority: '', note: '' });
+  const [update, setUpdate] = useState({ status: '', priority: '', note: '', reply: '' });
   const focusId = useFocusParam('complaint');
 
   useEffect(() => {
@@ -86,12 +93,13 @@ export default function AdminComplaintsPage() {
       if (update.status) payload.status = update.status;
       if (update.priority) payload.priority = update.priority;
       if (update.note.trim()) payload.note = update.note.trim();
+      if (update.reply.trim()) payload.reply = update.reply.trim();
       return adminApi.updateComplaint(detailId, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'complaints'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'complaint', detailId] });
-      setUpdate({ status: '', priority: '', note: '' });
+      setUpdate({ status: '', priority: '', note: '', reply: '' });
     },
   });
 
@@ -106,16 +114,19 @@ export default function AdminComplaintsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Complaints"
-        description="Track and resolve customer, vendor and delivery worker issues."
+        title="Support & Complaints"
+        description="Conversations with customers, vendors and delivery workers who need help. Unread ones are on top."
         action={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="w-4 h-4" /> Log complaint
-          </Button>
+          <Can permission="complaints:write">
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="w-4 h-4" /> Log complaint
+            </Button>
+          </Can>
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <StatCard label="New messages" value={data.counts?.unread ?? 0} tone="red" />
         {STATUSES.map((status) => (
           <StatCard key={status} label={toTitle(status)} value={data.counts?.[status] ?? 0} />
         ))}
@@ -177,18 +188,29 @@ export default function AdminComplaintsPage() {
             <Table
               columns={[
                 { key: 'subject', label: 'Subject' },
+                { key: 'from', label: 'From' },
                 { key: 'category', label: 'Category' },
                 { key: 'priority', label: 'Priority' },
                 { key: 'status', label: 'Status' },
-                { key: 'created', label: 'Created' },
+                { key: 'created', label: 'Last activity' },
                 { key: 'actions', label: '', className: 'text-right' },
               ]}
             >
               {data.items.map((row) => (
                 <tr key={row.id} className="hover:bg-stone-50/60">
                   <td className="px-4 py-3">
-                    <p className="font-bold text-gray-900">{row.subject}</p>
-                    <p className="text-[11px] text-stone-400">{row.reference}</p>
+                    <p className="font-bold text-gray-900 flex items-center gap-1.5">
+                      {row.unread && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" aria-label="new message" />}
+                      {row.subject}
+                    </p>
+                    <p className="text-[11px] text-stone-400">
+                      {row.reference}
+                      {row.messages?.length ? ` · ${row.messages.length} message${row.messages.length > 1 ? 's' : ''}` : ''}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge tone={ROLE_TONE[row.raised_by.role] || 'slate'}>{ROLE_LABEL[row.raised_by.role] || 'Guest'}</Badge>
+                    <p className="text-[11px] text-stone-500 mt-0.5">{row.raised_by.name || row.raised_by.phone || ''}</p>
                   </td>
                   <td className="px-4 py-3 text-stone-600">{toTitle(row.category)}</td>
                   <td className="px-4 py-3">
@@ -197,10 +219,10 @@ export default function AdminComplaintsPage() {
                   <td className="px-4 py-3">
                     <StatusBadge status={row.status} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-stone-500">{formatDate(row.created_at)}</td>
+                  <td className="px-4 py-3 text-xs text-stone-500">{formatDate(row.last_message_at || row.created_at)}</td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="secondary" size="sm" onClick={() => setDetailId(row.id)}>
-                      Open
+                    <Button variant={row.unread ? 'primary' : 'secondary'} size="sm" onClick={() => setDetailId(row.id)}>
+                      {row.unread ? 'Reply' : 'Open'}
                     </Button>
                   </td>
                 </tr>
@@ -309,15 +331,50 @@ export default function AdminComplaintsPage() {
                 <Badge tone="violet">{toTitle(complaint.category)}</Badge>
               </div>
               <h3 className="mt-2 text-base font-black text-gray-900">{complaint.subject}</h3>
-              <p className="text-sm text-stone-600 mt-1 whitespace-pre-line">{complaint.description || '—'}</p>
+              {complaint.messages.length === 0 && (
+                <p className="text-sm text-stone-600 mt-1 whitespace-pre-line">{complaint.description || '—'}</p>
+              )}
               <p className="text-[11px] text-stone-400 mt-2">
-                Raised by {complaint.raised_by.name || toTitle(complaint.raised_by.role)} ·{' '}
-                {formatDate(complaint.created_at)}
+                Raised by {ROLE_LABEL[complaint.raised_by.role] || 'Guest'}{' '}
+                {complaint.raised_by.name ? <strong className="text-stone-600">{complaint.raised_by.name}</strong> : null}
+                {complaint.raised_by.phone ? ` · ${complaint.raised_by.phone}` : ''} · {formatDate(complaint.created_at)}
               </p>
             </div>
 
+            {complaint.messages.length > 0 && (
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-2">Conversation</p>
+                <div className="space-y-2 max-h-72 overflow-y-auto rounded-xl bg-[#fcfaf8] border border-stone-100 p-3">
+                  {complaint.messages.map((message) => {
+                    const fromSupport = message.author_role === 'admin';
+                    return (
+                      <div key={message.id} className={`flex ${fromSupport ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] rounded-2xl px-3 py-2 ${fromSupport ? 'bg-[#542813] text-white' : 'bg-white border border-stone-200'}`}>
+                          <p className={`text-[10px] font-black ${fromSupport ? 'text-white/70' : 'text-[#542813]'}`}>
+                            {fromSupport ? `Support · ${message.author_name}` : message.author_name || ROLE_LABEL[message.author_role]}
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+                          <p className={`text-[10px] mt-0.5 ${fromSupport ? 'text-white/60' : 'text-stone-400'}`}>{formatDate(message.at)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {canReply(complaint) && can('complaints:write') && (
+              <Field label={`Reply to ${complaint.raised_by.name || 'the user'} (they see this and get notified)`}>
+                <Textarea
+                  value={update.reply}
+                  onChange={(event) => setUpdate((prev) => ({ ...prev, reply: event.target.value }))}
+                  placeholder="Write your answer…"
+                />
+              </Field>
+            )}
+
             <div>
-              <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-2">Notes</p>
+              <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-2">Internal notes (only the support team sees these)</p>
               <div className="space-y-2">
                 {complaint.notes.length === 0 && (
                   <p className="text-sm text-stone-400">No notes yet.</p>
@@ -333,6 +390,7 @@ export default function AdminComplaintsPage() {
               </div>
             </div>
 
+            {can('complaints:write') && (
             <div className="pt-2 border-t border-stone-100 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Status">
@@ -356,7 +414,7 @@ export default function AdminComplaintsPage() {
                   </Select>
                 </Field>
               </div>
-              <Field label="Add a note">
+              <Field label="Add an internal note">
                 <Textarea
                   value={update.note}
                   onChange={(event) => setUpdate((prev) => ({ ...prev, note: event.target.value }))}
@@ -365,11 +423,12 @@ export default function AdminComplaintsPage() {
               </Field>
               <div className="flex justify-end">
                 <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? 'Saving…' : 'Save changes'}
+                  {updateMutation.isPending ? 'Saving…' : update.reply.trim() ? 'Send reply' : 'Save changes'}
                 </Button>
               </div>
               {updateMutation.isError && <ErrorNote error={updateMutation.error} />}
             </div>
+            )}
           </div>
         ) : null}
       </Modal>

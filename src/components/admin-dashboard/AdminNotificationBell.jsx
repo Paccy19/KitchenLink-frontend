@@ -12,6 +12,7 @@ import {
   CreditCard,
   Inbox,
   Landmark,
+  RotateCcw,
 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
@@ -26,6 +27,7 @@ const TYPE_META = {
   payment_failed: { icon: CreditCard, tone: 'bg-red-50 text-red-600' },
   owner_finance: { icon: Landmark, tone: 'bg-violet-50 text-violet-600' },
   payout_update: { icon: Wallet, tone: 'bg-violet-50 text-violet-600' },
+  refund_update: { icon: RotateCcw, tone: 'bg-sky-50 text-sky-600' },
   general: { icon: Bell, tone: 'bg-stone-100 text-stone-600' },
 };
 
@@ -37,6 +39,7 @@ const FALLBACK_LINK = {
   order_placed: '/admin-dashboard/orders',
   payment_failed: '/admin-dashboard/payments',
   owner_finance: '/admin-dashboard/platform',
+  refund_update: '/admin-dashboard/refunds',
 };
 
 export default function AdminNotificationBell() {

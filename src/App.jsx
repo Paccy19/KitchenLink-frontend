@@ -18,6 +18,7 @@ const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrdersHistoryPage = lazy(() => import('./pages/OrdersHistoryPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
 
 // Vendor dashboard (separate shell without the customer chrome).
 const VendorLayout = lazy(() => import('./components/vendor-dashboard/VendorLayout'));
@@ -27,6 +28,7 @@ const VendorMenuPage = lazy(() => import('./pages/vendor/VendorMenuPage'));
 const VendorWalletPage = lazy(() => import('./pages/vendor/VendorWalletPage'));
 const VendorNotificationsPage = lazy(() => import('./pages/vendor/VendorNotificationsPage'));
 const VendorProfilePage = lazy(() => import('./pages/vendor/VendorProfilePage'));
+const VendorSupportPage = lazy(() => import('./pages/vendor/VendorSupportPage'));
 const VendorRegisterPage = lazy(() => import('./pages/vendor/VendorRegisterPage'));
 const VendorLoginPage = lazy(() => import('./pages/vendor/VendorLoginPage'));
 
@@ -39,6 +41,7 @@ const DriverActiveDeliveryPage = lazy(() => import('./pages/driver/DriverActiveD
 const DriverHistoryPage = lazy(() => import('./pages/driver/DriverHistoryPage'));
 const DriverEarningsPage = lazy(() => import('./pages/driver/DriverEarningsPage'));
 const DriverProfilePage = lazy(() => import('./pages/driver/DriverProfilePage'));
+const DriverSupportPage = lazy(() => import('./pages/driver/DriverSupportPage'));
 
 // Admin panel (separate shell without the customer chrome).
 const AdminLayout = lazy(() => import('./components/admin-dashboard/AdminLayout'));
@@ -54,9 +57,13 @@ const AdminPayoutsPage = lazy(() => import('./pages/admin/AdminPayoutsPage'));
 const AdminPlatformWalletPage = lazy(() => import('./pages/admin/AdminPlatformWalletPage'));
 const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage'));
 const AdminComplaintsPage = lazy(() => import('./pages/admin/AdminComplaintsPage'));
+const AdminRefundsPage = lazy(() => import('./pages/admin/AdminRefundsPage'));
 const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'));
 const AdminAuditPage = lazy(() => import('./pages/admin/AdminAuditPage'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
+const AdminTeamPage = lazy(() => import('./pages/admin/AdminTeamPage'));
+const AdminPlatformBooksPage = lazy(() => import('./pages/admin/AdminPlatformBooksPage'));
+const AdminInvitePage = lazy(() => import('./pages/admin/AdminInvitePage'));
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,6 +75,7 @@ export default function App() {
     location.pathname.startsWith('/driver-login') ||
     location.pathname.startsWith('/driver-register') ||
     location.pathname.startsWith('/admin-login') ||
+    location.pathname.startsWith('/admin-invite') ||
     location.pathname.startsWith('/admin-dashboard');
 
   return (
@@ -94,11 +102,13 @@ export default function App() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/orders" element={<OrdersHistoryPage />} />
               <Route path="/wishlist" element={<WishlistPage />} />
+              <Route path="/support" element={<SupportPage />} />
               <Route path="/vendor-register" element={<VendorRegisterPage />} />
               <Route path="/vendor-login" element={<VendorLoginPage />} />
               <Route path="/driver-register" element={<DriverRegisterPage />} />
               <Route path="/driver-login" element={<DriverLoginPage />} />
               <Route path="/admin-login" element={<AdminLoginPage />} />
+              <Route path="/admin-invite" element={<AdminInvitePage />} />
 
               <Route path="/admin-dashboard" element={<AdminLayout />}>
                 <Route index element={<AdminOverviewPage />} />
@@ -110,9 +120,12 @@ export default function App() {
                 <Route path="payments" element={<AdminPaymentsPage />} />
                 <Route path="payouts" element={<AdminPayoutsPage />} />
                 <Route path="platform" element={<AdminPlatformWalletPage />} />
+                <Route path="books" element={<AdminPlatformBooksPage />} />
                 <Route path="categories" element={<AdminCategoriesPage />} />
                 <Route path="complaints" element={<AdminComplaintsPage />} />
+                <Route path="refunds" element={<AdminRefundsPage />} />
                 <Route path="analytics" element={<AdminAnalyticsPage />} />
+                <Route path="team" element={<AdminTeamPage />} />
                 <Route path="audit" element={<AdminAuditPage />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
               </Route>
@@ -123,6 +136,7 @@ export default function App() {
                 <Route path="history" element={<DriverHistoryPage />} />
                 <Route path="earnings" element={<DriverEarningsPage />} />
                 <Route path="profile" element={<DriverProfilePage />} />
+                <Route path="support" element={<DriverSupportPage />} />
               </Route>
 
               <Route path="/vendor-dashboard" element={<VendorLayout />}>
@@ -132,6 +146,7 @@ export default function App() {
                 <Route path="wallet" element={<VendorWalletPage />} />
                 <Route path="notifications" element={<VendorNotificationsPage />} />
                 <Route path="profile" element={<VendorProfilePage />} />
+                <Route path="support" element={<VendorSupportPage />} />
               </Route>
 
               <Route path="*" element={<HomePage />} />

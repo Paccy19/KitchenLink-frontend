@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Store } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
   Button,
@@ -162,9 +163,11 @@ export default function AdminVendorsPage() {
                       <Button variant="ghost" size="sm" onClick={() => setDetailId(vendor.id)}>
                         View
                       </Button>
-                      <Button variant="secondary" size="sm" onClick={() => setTarget(vendor)}>
-                        Status
-                      </Button>
+                      <Can permission="vendors:write">
+                        <Button variant="secondary" size="sm" onClick={() => setTarget(vendor)}>
+                          Status
+                        </Button>
+                      </Can>
                     </div>
                   </td>
                 </tr>

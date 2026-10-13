@@ -306,6 +306,14 @@ export const driverApi = {
     }),
   markAllNotificationsRead: () =>
     driverRequest('/driver/notifications/read-all', { method: 'POST' }),
+  support: {
+    list: () => driverRequest('/driver/support'),
+    unreadCount: () => driverRequest('/driver/support/unread-count'),
+    create: (payload) => driverRequest('/driver/support', { method: 'POST', body: payload }),
+    get: (id) => driverRequest(`/driver/support/${encodeURIComponent(id)}`),
+    reply: (id, message) =>
+      driverRequest(`/driver/support/${encodeURIComponent(id)}/messages`, { method: 'POST', body: { message } }),
+  },
 
   // Wallet: balance from completed deliveries, withdrawals to mobile money.
   wallet: () => driverRequest('/driver/wallet'),

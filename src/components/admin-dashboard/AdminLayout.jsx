@@ -1,20 +1,8 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, Navigate, Link } from 'react-router-dom';
+import { NavLink, Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  ClipboardList,
-  Bike,
-  Store,
-  Users,
-  CreditCard,
-  Wallet,
-  Tags,
-  MessageSquareWarning,
-  BarChart3,
-  ScrollText,
-  Settings,
   ShieldCheck,
-  Landmark,
+  Lock,
   AlertTriangle,
   Menu as MenuIcon,
   X,
@@ -24,27 +12,13 @@ import {
 import { useAdmin } from '../../context/AdminContext';
 import RoleAccountMenu from '../common/RoleAccountMenu';
 import AdminNotificationBell from './AdminNotificationBell';
+import { allowed, itemForPath, visibleSections } from './adminNav';
 
-const NAV = [
-  { to: '/admin-dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: '/admin-dashboard/orders', label: 'Orders', icon: ClipboardList },
-  { to: '/admin-dashboard/deliveries', label: 'Deliveries', icon: Bike },
-  { to: '/admin-dashboard/vendors', label: 'Vendors', icon: Store },
-  { to: '/admin-dashboard/drivers', label: 'Delivery Workers', icon: Bike },
-  { to: '/admin-dashboard/users', label: 'Users', icon: Users },
-  { to: '/admin-dashboard/payments', label: 'Payments', icon: CreditCard },
-  { to: '/admin-dashboard/payouts', label: 'Payouts', icon: Wallet },
-  { to: '/admin-dashboard/platform', label: 'Platform Wallet', icon: Landmark, ownerOnly: true },
-  { to: '/admin-dashboard/categories', label: 'Categories', icon: Tags },
-  { to: '/admin-dashboard/complaints', label: 'Complaints', icon: MessageSquareWarning },
-  { to: '/admin-dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/admin-dashboard/audit', label: 'Audit Log', icon: ScrollText },
-  { to: '/admin-dashboard/settings', label: 'Settings', icon: Settings },
-];
 
 export default function AdminLayout() {
-  const { admin, hasToken, isAuthenticated, logout } = useAdmin();
+  const { admin, hasToken, isAuthenticated, logout, can, isOwner } = useAdmin();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { pathname } = useLocation();
 
   if (!hasToken) {
     return <Navigate to="/admin-login" replace />;
@@ -60,6 +34,12 @@ export default function AdminLayout() {
       </div>
     );
   }
+
+  const access = { can, isOwner };
+  const sections = visibleSections(access);
+  const firstPage = sections[0]?.items[0]?.to || '/admin-dashboard/settings';
+  const current = itemForPath(pathname);
+  const blocked = current && !allowed(current, access);
 
   const navLinkClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
@@ -86,27 +66,34 @@ export default function AdminLayout() {
         <p className="text-[11px] text-stone-500 truncate">{admin?.email}</p>
         {admin?.role && (
           <span className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded-full bg-[#1f2937] text-white text-[10px] font-black uppercase tracking-wider">
-            {String(admin.role).replace(/_/g, ' ')}
+            {admin.role_label || String(admin.role).replace(/_/g, ' ')}
           </span>
         )}
       </div>
 
-      <nav className="space-y-1 flex-1 overflow-y-auto">
-        {NAV.filter((item) => !item.ownerOnly || admin?.role === 'super_admin').map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={navLinkClass}
-              onClick={() => setDrawerOpen(false)}
-            >
-              <Icon className="w-[18px] h-[18px]" />
-              <span className="flex-1">{item.label}</span>
-            </NavLink>
-          );
-        })}
+      <nav className="space-y-4 flex-1 overflow-y-auto">
+        {sections.map((section) => (
+          <div key={section.id}>
+            <p className="px-4 mb-1 text-[10px] font-black uppercase tracking-wider text-stone-400">{section.label}</p>
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className={navLinkClass}
+                    onClick={() => setDrawerOpen(false)}
+                  >
+                    <Icon className="w-[18px] h-[18px]" />
+                    <span className="flex-1">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="pt-4 mt-4 border-t border-stone-100 space-y-1">
@@ -192,7 +179,22 @@ export default function AdminLayout() {
                 You are using the default admin password. Change it now in Settings.
               </Link>
             )}
-            <Outlet />
+            {blocked && current.end ? (
+              <Navigate to={firstPage} replace />
+            ) : blocked ? (
+              <div className="max-w-lg mx-auto mt-16 bg-white rounded-3xl border border-stone-200 p-8 text-center">
+                <Lock className="w-9 h-9 text-stone-400 mx-auto" />
+                <h2 className="mt-3 text-lg font-black text-gray-900">Not part of your role</h2>
+                <p className="mt-1 text-sm text-stone-500">
+                  Your role ({admin?.role_label || admin?.role}) does not include {current.label}. Ask the owner if you need it.
+                </p>
+                <Link to={firstPage} className="mt-4 inline-block text-sm font-bold text-[#1f2937] underline">
+                  Go to my pages
+                </Link>
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </main>
         </div>
       </div>

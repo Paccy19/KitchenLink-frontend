@@ -258,6 +258,8 @@ export function normalizeOrder(raw = {}) {
         : raw.eta_minutes != null ? `${raw.eta_minutes} minutes` : 'Pending',
     rated: false,
     cancelReason: toText(raw.cancel_reason),
+    // Money going back for a cancelled paid order (raw API shape).
+    refund: raw.refund || null,
     deliveryCode: toText(delivery.proof_of_delivery_code) || '',
     otpCodeRequired: Boolean(delivery.otp_required),
     deliveryConfirmed: Boolean(delivery.otp_verified),

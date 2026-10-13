@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Percent, Plus, Trash2 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import { useAdmin } from '../../context/AdminContext';
 import {
   Badge,
   Button,
@@ -53,6 +54,9 @@ const emptyCommission = {
 
 export default function AdminPaymentsPage() {
   const queryClient = useQueryClient();
+  const { can } = useAdmin();
+  const canSeeCommissions = can('commissions:read');
+  const canEditCommissions = can('commissions:write');
   const [filters, setFilters] = useState({ status: '', method: '' });
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(null);
@@ -70,15 +74,17 @@ export default function AdminPaymentsPage() {
   const commissionsQuery = useQuery({
     queryKey: ['admin', 'commissions'],
     queryFn: () => adminApi.listCommissions({ limit: 100 }),
+    enabled: canSeeCommissions,
   });
   const categoriesQuery = useQuery({
     queryKey: ['admin', 'categories'],
     queryFn: () => adminApi.listCategories(),
+    enabled: canEditCommissions,
   });
   const vendorsQuery = useQuery({
     queryKey: ['admin', 'vendors', 'for-commission'],
     queryFn: () => adminApi.listVendors({ limit: 100 }),
-    enabled: form.scope === 'vendor',
+    enabled: canEditCommissions && form.scope === 'vendor',
   });
 
   const invalidate = () => {
@@ -250,13 +256,20 @@ export default function AdminPaymentsPage() {
         )}
       </Card>
 
+      {canSeeCommissions && (
       <Card
         title="Commission Rules"
-        description="Most specific active scope wins: vendor › category › vendor type › global."
+        description={
+          canEditCommissions
+            ? 'Most specific active scope wins: vendor › category › vendor type › global.'
+            : 'Only the owner can change the commission rate.'
+        }
         action={
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="w-3.5 h-3.5" /> New rule
-          </Button>
+          canEditCommissions ? (
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="w-3.5 h-3.5" /> New rule
+            </Button>
+          ) : null
         }
         bodyClassName="p-4 sm:p-5"
       >
@@ -298,7 +311,7 @@ export default function AdminPaymentsPage() {
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className={`flex items-center justify-end gap-1.5 ${canEditCommissions ? '' : 'hidden'}`}>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(commission)}>
                       Edit
                     </Button>
@@ -320,6 +333,7 @@ export default function AdminPaymentsPage() {
           </Table>
         )}
       </Card>
+      )}
 
       <Modal
         open={Boolean(editing)}

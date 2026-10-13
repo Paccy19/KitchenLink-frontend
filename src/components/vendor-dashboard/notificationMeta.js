@@ -1,4 +1,4 @@
-import { Bell, ShoppingBag, Wallet, BadgeCheck, ClipboardList } from 'lucide-react';
+import { Bell, ShoppingBag, Wallet, BadgeCheck, ClipboardList, LifeBuoy } from 'lucide-react';
 
 /** Icon + colour for a vendor notification type. */
 const META = {
@@ -6,6 +6,7 @@ const META = {
   order_update: { icon: ClipboardList, tone: 'bg-sky-50 text-sky-600', label: 'Order update' },
   payout_update: { icon: Wallet, tone: 'bg-violet-50 text-violet-600', label: 'Payout' },
   account_update: { icon: BadgeCheck, tone: 'bg-amber-50 text-amber-600', label: 'Account' },
+  support_message: { icon: LifeBuoy, tone: 'bg-rose-50 text-rose-600', label: 'Support' },
   general: { icon: Bell, tone: 'bg-stone-100 text-stone-600', label: 'General' },
 };
 

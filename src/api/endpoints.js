@@ -136,6 +136,19 @@ export const cancelRemoteOrder = (orderId, reason = '') =>
 export const payRemoteOrder = (orderId, payload = {}) =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/pay`, payload);
 export const fetchPaymentMethods = () => apiJson('GET', '/orders/payment-methods');
+export const fetchRefunds = () => apiJson('GET', '/orders/refunds');
+export const changeRefundDestination = (orderId, phone) =>
+  apiJson('PUT', `/orders/${encodeURIComponent(orderId)}/refund-destination`, { phone });
+
+// Support conversations with the admin support team.
+export const supportApi = {
+  list: () => apiJson('GET', '/support'),
+  unreadCount: () => apiJson('GET', '/support/unread-count'),
+  create: (payload) => apiJson('POST', '/support', payload),
+  get: (ticketId) => apiJson('GET', `/support/${encodeURIComponent(ticketId)}`),
+  reply: (ticketId, message) =>
+    apiJson('POST', `/support/${encodeURIComponent(ticketId)}/messages`, { message }),
+};
 
 export const fetchNotifications = (params = {}) =>
   apiRequest('/notifications', params);

@@ -23,7 +23,8 @@ import {
   Navigation,
   History,
   Settings,
-  ShieldCheck
+  ShieldCheck,
+  LifeBuoy
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -426,6 +427,10 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                           <Clock className="w-4 h-4 text-stone-400" />
                           <span>Track Active Order</span>
                         </Link>
+                        <Link to="/support" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <LifeBuoy className="w-4 h-4 text-stone-400" />
+                          <span>Help &amp; Support</span>
+                        </Link>
                       </>
                     )}
 
@@ -619,6 +624,14 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
             >
               My Profile
+            </Link>
+            <Link
+              to="/support"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
+            >
+              <LifeBuoy className="w-4 h-4 text-[#8a5332]" />
+              Help &amp; Support
             </Link>
             {showBackToDriver && (
               <Link

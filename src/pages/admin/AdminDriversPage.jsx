@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bike, Search } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
   Badge,
@@ -169,9 +170,11 @@ export default function AdminDriversPage() {
                     </p>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="secondary" size="sm" onClick={() => setTarget(driver)}>
-                      Change status
-                    </Button>
+                    <Can permission="drivers:write">
+                      <Button variant="secondary" size="sm" onClick={() => setTarget(driver)}>
+                        Change status
+                      </Button>
+                    </Can>
                   </td>
                 </tr>
               ))}

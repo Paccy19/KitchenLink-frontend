@@ -15,9 +15,11 @@ import {
   PackageCheck,
   ShoppingBag,
   ShieldCheck,
-  CalendarClock
+  CalendarClock,
+  LifeBuoy
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES } from '../context/OrderContext';
+import RefundCard from '../components/orders/RefundCard';
 import { formatScheduledFor } from '../utils/schedule';
 
 function StepIcon({ iconKey, className = "w-4 h-4" }) {
@@ -86,6 +88,12 @@ export default function OrderTrackingPage() {
         </Link>
 
         <div className="flex items-center gap-2">
+          <Link
+            to={`/support?order=${order.id}`}
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#542813] hover:underline mr-2"
+          >
+            <LifeBuoy className="w-3.5 h-3.5" /> Get help
+          </Link>
           <span className="text-xs text-stone-500 font-medium">Order:</span>
           <span className="font-extrabold text-xs text-stone-900 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
             {order.orderNumber || order.id}
@@ -147,9 +155,12 @@ export default function OrderTrackingPage() {
 
         {/* Step-by-Step Progress Tracker */}
         {isCancelled ? (
-          <div className="mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
-            This order was cancelled. {order.cancelReason || ''}
-          </div>
+          <>
+            <div className="mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+              This order was cancelled. {order.cancelReason || ''}
+            </div>
+            <RefundCard orderId={order.id} refund={order.refund} onChanged={() => refreshOrder(order.id)} />
+          </>
         ) : (
         <div className="pt-8 pb-4">
           <div className="relative">
@@ -350,9 +361,13 @@ export default function OrderTrackingPage() {
                 <> · <span className="font-bold text-gray-700">•••• {order.payment.details.card_last4}</span></>
               ) : null}
               {' '}· Status:{' '}
-              <span className={`font-bold ${order.payment.status === 'paid' ? 'text-emerald-600' : order.payment.status === 'refunded' ? 'text-blue-600' : 'text-amber-600'}`}>
-                {order.payment.status}
-              </span>
+              {order.refund && order.refund.status !== 'completed' ? (
+                <span className="font-bold text-sky-600">{order.refund.status_label.toLowerCase()}</span>
+              ) : (
+                <span className={`font-bold ${order.payment.status === 'paid' ? 'text-emerald-600' : order.payment.status === 'refunded' ? 'text-blue-600' : 'text-amber-600'}`}>
+                  {order.payment.status}
+                </span>
+              )}
             </div>
 
           </div>

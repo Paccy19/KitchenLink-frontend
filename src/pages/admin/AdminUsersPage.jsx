@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Users } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import Can from '../../components/admin-dashboard/Can';
 import {
   Button,
   Card,
@@ -167,9 +168,11 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-xs text-stone-500">{formatDate(user.created_at, { withTime: false })}</td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="secondary" size="sm" onClick={() => setTarget(user)}>
-                      Change status
-                    </Button>
+                    <Can permission="users:write">
+                      <Button variant="secondary" size="sm" onClick={() => setTarget(user)}>
+                        Change status
+                      </Button>
+                    </Can>
                   </td>
                 </tr>
               ))}
