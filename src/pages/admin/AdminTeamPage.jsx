@@ -259,7 +259,7 @@ function InviteModal({ open, roles, onClose, onDone }) {
     >
       <div className="space-y-4">
         <p className="text-sm text-stone-600">
-          We email them a link to set their own password and phone. They then sign in at the admin sign-in page with that email and password.
+          We email them a link to set their own password. They then sign in at the admin sign-in page with that email and password.
         </p>
         <Field label="Email address">
           <Input type="email" value={form.email} onChange={set('email')} placeholder="name@example.com" />

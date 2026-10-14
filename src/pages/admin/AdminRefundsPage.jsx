@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
+import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
+import { useAdmin } from '../../context/AdminContext';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
   Badge,
@@ -40,6 +42,8 @@ export default function AdminRefundsPage() {
   const [target, setTarget] = useState(null);
   const [outcome, setOutcome] = useState('completed');
   const [reference, setReference] = useState('');
+  const [actionCode, setActionCode] = useState('');
+  const { can, limits } = useAdmin();
   const [reason, setReason] = useState('');
   const focusId = useFocusParam('refund');
 
@@ -66,6 +70,7 @@ export default function AdminRefundsPage() {
     setTarget(refund);
     setOutcome(refund.status === 'failed' ? 'pending' : 'completed');
     setReference('');
+    setActionCode('');
     setReason('');
   };
 
@@ -81,11 +86,14 @@ export default function AdminRefundsPage() {
   const service = data.payout_service;
 
   const save = () => {
-    if (outcome === 'completed') mutation.mutate({ status: 'completed', reference });
+    if (outcome === 'completed') mutation.mutate({ status: 'completed', reference, action_code: actionCode || undefined });
     else if (outcome === 'failed') mutation.mutate({ status: 'failed', reason });
     else mutation.mutate({ status: 'pending' });
   };
+  // Large refunds need an SMS code (server enforces it too).
+  const needsCode = outcome === 'completed' && target && target.amount_rwf >= (limits?.large_money_action_rwf ?? 50000);
   const saveDisabled =
+    (needsCode && actionCode.length !== 6) ||
     mutation.isPending ||
     (outcome === 'completed' && !reference.trim()) ||
     (outcome === 'failed' && !reason.trim());
@@ -247,6 +255,14 @@ export default function AdminRefundsPage() {
               <Field label="Transaction reference (required)">
                 <Input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="e.g. MoMo transaction ID" />
               </Field>
+            )}
+            {needsCode && (
+              <ActionCodeField
+                purpose="large_payment"
+                value={actionCode}
+                onChange={setActionCode}
+                label={`Large refund: code sent to your phone (${formatRwf(limits?.large_money_action_rwf ?? 50000)} or more)`}
+              />
             )}
             {outcome === 'failed' && (
               <Field label="Reason (shown to the customer)">

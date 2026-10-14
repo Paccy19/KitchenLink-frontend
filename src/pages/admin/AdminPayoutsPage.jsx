@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Wallet } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
+import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
+import { useAdmin } from '../../context/AdminContext';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
   Badge,
@@ -45,6 +47,8 @@ export default function AdminPayoutsPage() {
   const [status, setStatus] = useState('completed');
   const [reference, setReference] = useState('');
   const [reason, setReason] = useState('');
+  const [actionCode, setActionCode] = useState('');
+  const { limits } = useAdmin();
   const focusId = useFocusParam('payout');
 
   const focusQuery = useQuery({
@@ -79,6 +83,7 @@ export default function AdminPayoutsPage() {
       adminApi.updatePayout(target.id, {
         status,
         reference,
+        ...(actionCode ? { action_code: actionCode } : {}),
         ...(status === 'failed' ? { reason } : {}),
       }),
     onSuccess: () => {
@@ -102,6 +107,7 @@ export default function AdminPayoutsPage() {
     setStatus(withdrawal.status === 'processing' ? 'completed' : withdrawal.status);
     setReference(withdrawal.reference && withdrawal.status !== 'processing' ? withdrawal.reference : '');
     setReason('');
+    setActionCode('');
   };
 
   useEffect(() => {
@@ -116,7 +122,11 @@ export default function AdminPayoutsPage() {
     setPage(1);
   };
 
+  // Large payouts need an SMS code (server enforces it too).
+  const needsCode =
+    isProcessing && status === 'completed' && target.amount_rwf >= (limits?.large_money_action_rwf ?? 50000);
   const saveDisabled =
+    (needsCode && actionCode.length !== 6) ||
     mutation.isPending || (isProcessing && status === 'completed' && !reference.trim());
 
   return (
@@ -394,6 +404,14 @@ export default function AdminPayoutsPage() {
                   placeholder="e.g. MoMo / Airtel transaction ID"
                 />
               </Field>
+            )}
+            {needsCode && (
+              <ActionCodeField
+                purpose="large_payment"
+                value={actionCode}
+                onChange={setActionCode}
+                label={`Large payout: code sent to your phone (${formatRwf(limits?.large_money_action_rwf ?? 50000)} or more)`}
+              />
             )}
             {isProcessing && status === 'failed' && (
               <Field label="Reason (shown to the payee)">

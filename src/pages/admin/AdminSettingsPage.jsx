@@ -173,7 +173,10 @@ function TwoFactorCard({ admin, onChanged }) {
             {enabled ? (
               <>Codes go to <strong className="text-gray-900">{admin.phone}</strong>. You need one to sign in and to confirm every money action.</>
             ) : (
-              <>Get a code on your phone when you sign in and before every money action. <strong>Required</strong> to withdraw platform commission.</>
+              <>
+                Get a code on your phone when you sign in and before money actions. <strong>Required</strong>{' '}
+                {admin?.is_owner ? 'to withdraw platform commission and manage your team' : 'to send refunds or payouts of 50,000 RWF or more'}.
+              </>
             )}
           </p>
           <Badge tone={enabled ? 'green' : 'amber'}>{enabled ? 'On' : 'Off'}</Badge>
