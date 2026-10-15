@@ -21,6 +21,7 @@ import { vendorApi } from '../../api/vendorApi';
 import useSupportUnread from '../../hooks/useSupportUnread';
 import useVendorRealtime from '../../hooks/useVendorRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
+import ThemeToggle from '../common/ThemeToggle';
 import VendorNotificationBell from './VendorNotificationBell';
 
 const NAV = [
@@ -201,6 +202,7 @@ export default function VendorLayout() {
                   <Radio className={`w-3.5 h-3.5 ${connected ? 'animate-pulse' : ''}`} />
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
+                <ThemeToggle />
                 <VendorNotificationBell />
                 <RoleAccountMenu role="vendor" />
               </div>

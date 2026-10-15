@@ -22,6 +22,7 @@ import { driverApi } from '../../api/driverApi';
 import useSupportUnread from '../../hooks/useSupportUnread';
 import useDriverRealtime from '../../hooks/useDriverRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
+import ThemeToggle from '../common/ThemeToggle';
 import { notificationLink } from '../../utils/notificationLink';
 
 const NAV = [
@@ -333,6 +334,7 @@ export default function DriverLayout() {
                   <Radio className={`w-3.5 h-3.5 ${connected ? 'animate-pulse' : ''}`} />
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
+                <ThemeToggle />
                 <RoleAccountMenu role="driver" />
               </div>
             </div>

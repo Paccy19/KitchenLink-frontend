@@ -36,6 +36,7 @@ import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { notificationLink } from '../../utils/notificationLink';
 import RoleSelectModal from '../auth/RoleSelectModal';
+import ThemeToggle from './ThemeToggle';
 import {
   Bell,
   CheckCheck,
@@ -259,7 +260,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Quick Link: Pre-Orders */}
             <Link
               to="/?filter=preorder"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              className="theme-primary-pill hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Tomorrow's Specials</span>
@@ -268,7 +269,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Quick Link: Nearby Map */}
             <Link
               to="/vendors/map"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              className="theme-primary-pill hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <Map className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Nearby Map</span>
@@ -277,7 +278,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Cart Trigger Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative flex items-center gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] font-bold text-sm border border-[#ebd7c5] transition group active:scale-95"
+              className="theme-primary-pill relative flex items-center gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] font-bold text-sm border border-[#ebd7c5] transition group active:scale-95"
               aria-label="View Cart"
             >
               <ShoppingBag className="w-4 h-4 group-hover:scale-110 text-[#6d391d] transition-transform" />
@@ -288,6 +289,8 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                 </span>
               )}
             </button>
+
+            <ThemeToggle className="hidden sm:inline-flex" />
 
             <Link
               to="/wishlist"
@@ -587,6 +590,10 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             <div className="flex items-center justify-between p-2 bg-stone-50 rounded-lg">
               <span className="text-xs text-stone-500 font-medium">Location:</span>
               <span className="text-xs font-bold text-stone-800">{currentLocation}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 bg-stone-50 rounded-lg">
+              <span className="text-xs text-stone-500 font-medium">Appearance</span>
+              <ThemeToggle />
             </div>
             <Link
               to="/orders"

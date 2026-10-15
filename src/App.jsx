@@ -5,6 +5,7 @@ import Footer from './components/common/Footer';
 import CartDrawer from './components/cart/CartDrawer';
 import AuthModal from './components/auth/AuthModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ThemeToggle from './components/common/ThemeToggle';
 import { HomeFeedSkeleton } from './components/common/Skeleton';
 
 import HomePage from './pages/HomePage';
@@ -68,18 +69,19 @@ const AdminInvitePage = lazy(() => import('./pages/admin/AdminInvitePage'));
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
+  const isDriverArea = location.pathname.startsWith('/driver-');
+  const isAdminArea = location.pathname.startsWith('/admin-');
   const isVendorArea =
     location.pathname.startsWith('/vendor-dashboard') ||
     location.pathname.startsWith('/vendor-login') ||
-    location.pathname.startsWith('/driver-dashboard') ||
-    location.pathname.startsWith('/driver-login') ||
-    location.pathname.startsWith('/driver-register') ||
-    location.pathname.startsWith('/admin-login') ||
-    location.pathname.startsWith('/admin-invite') ||
-    location.pathname.startsWith('/admin-dashboard');
+    isDriverArea ||
+    isAdminArea;
+
+  // Every area now offers dark mode, each with its own palette scope.
+  const themeScope = isDriverArea ? 'app-theme-driver' : isAdminArea ? 'app-theme-admin' : 'app-theme';
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50/50">
+    <div className={`min-h-screen flex flex-col bg-gray-50/50 ${themeScope}`}>
       {!isVendorArea && <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} />}
 
       <main className="flex-1">
@@ -154,6 +156,14 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </main>
+
+      {(location.pathname.startsWith('/vendor-login') ||
+        location.pathname.startsWith('/driver-login') ||
+        location.pathname.startsWith('/driver-register') ||
+        location.pathname.startsWith('/admin-login') ||
+        location.pathname.startsWith('/admin-invite')) && (
+        <ThemeToggle className="fixed top-4 right-4 z-50 shadow-md" />
+      )}
 
       {!isVendorArea && <CartDrawer />}
       {!isVendorArea && <AuthModal />}

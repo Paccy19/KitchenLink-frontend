@@ -92,3 +92,455 @@
 .btn-gradient-brown:active {
   transform: translateY(0) scale(0.98);
 }
+
+/* =============================================================================
+   Dark mode — Chocolate + White (customers & vendors)
+
+   The `.dark` class lives on <html>. Actual re-colouring is scoped to a
+   wrapper class (`.app-theme`), so the admin panel keeps its own palette.
+   Shared neutral overrides below are written against
+   `:is(.app-theme, .app-theme-driver)`; each theme supplies its own
+   brand-colour overrides further down.
+============================================================================= */
+.dark .app-theme {
+  --bg-main: #1e1210; /* deepest chocolate — page background */
+  --bg-card: #35201a; /* lifted chocolate — cards */
+  --bg-header: #2b1a12; /* header / footer surfaces */
+  --bg-subtle: #4a2f26; /* chips, secondary buttons, icon tiles */
+
+  --text-primary: #fffbf5; /* off-white — main text */
+  --text-secondary: #d7c4b5; /* light beige — secondary text */
+  --text-muted: #9c8a7e; /* muted text */
+  --text-accent: #d9bda6; /* warm caramel accents on dark */
+
+  --btn-primary: #ffffff;
+  --btn-primary-text: #2b1a12;
+  --border: #4a352f; /* subtle border */
+
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+
+/* =============================================================================
+   Dark mode — Moss green (delivery worker app)
+
+   Same structure as the chocolate theme, but built on the driver palette:
+   moss accent #3b5327, light sage surfaces, cream text.
+============================================================================= */
+.dark .app-theme-driver {
+  --bg-main: #10140e; /* deepest moss — page background */
+  --bg-card: #1c2616; /* lifted green — cards */
+  --bg-header: #171f12; /* header / sidebar */
+  --bg-subtle: #2b3a22; /* chips, secondary buttons, icon tiles */
+
+  --text-primary: #f3f8ec; /* warm cream — main text */
+  --text-secondary: #c6d8b6; /* light sage — secondary text */
+  --text-muted: #8b9b7e; /* muted text */
+  --text-accent: #a6c48a; /* soft moss accent on dark */
+
+  --btn-primary: #ffffff;
+  --btn-primary-text: #1b2413;
+  --border: #3a4a32; /* subtle border */
+
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+
+/* =============================================================================
+   Dark mode — Graphite (admin panel)
+
+   Same structure again, built on the admin palette: slate accent #1f2937,
+   cool grey surfaces, near-white text.
+============================================================================= */
+.dark .app-theme-admin {
+  --bg-main: #0f1218; /* deepest graphite — page background */
+  --bg-card: #1a1f29; /* lifted slate — cards */
+  --bg-header: #151a22; /* header / sidebar */
+  --bg-subtle: #2a313d; /* chips, secondary buttons, icon tiles */
+
+  --text-primary: #f5f7fa; /* near-white — main text */
+  --text-secondary: #c3cad6; /* cool grey — secondary text */
+  --text-muted: #8a93a3; /* muted text */
+  --text-accent: #b4c1d6; /* light slate accent on dark */
+
+  --btn-primary: #ffffff;
+  --btn-primary-text: #111827;
+  --border: #333b49; /* subtle border */
+
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+
+/* ── Scrollbars (both themes) ─────────────────────────────────────── */
+.dark .app-theme ::-webkit-scrollbar-track {
+  background: #241512;
+}
+.dark .app-theme ::-webkit-scrollbar-thumb {
+  background: #4a352f;
+}
+.dark .app-theme ::-webkit-scrollbar-thumb:hover {
+  background: #6d391d;
+}
+.dark .app-theme-driver ::-webkit-scrollbar-track {
+  background: #161b12;
+}
+.dark .app-theme-driver ::-webkit-scrollbar-thumb {
+  background: #3a4a32;
+}
+.dark .app-theme-driver ::-webkit-scrollbar-thumb:hover {
+  background: #4a6a34;
+}
+.dark .app-theme-admin ::-webkit-scrollbar-track {
+  background: #141821;
+}
+.dark .app-theme-admin ::-webkit-scrollbar-thumb {
+  background: #333b49;
+}
+.dark .app-theme-admin ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}
+
+/* =============================================================================
+   Shared neutral overrides (both dark themes)
+============================================================================= */
+/* ── Neutral surfaces ──────────────────────────────────────────────── */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-white {
+  background-color: var(--bg-card);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-white\/70 {
+  background-color: color-mix(in srgb, var(--bg-card) 70%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-white\/80 {
+  background-color: color-mix(in srgb, var(--bg-card) 80%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-white\/85 {
+  background-color: color-mix(in srgb, var(--bg-header) 85%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-white\/90 {
+  background-color: color-mix(in srgb, var(--bg-header) 90%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-white\/95 {
+  background-color: color-mix(in srgb, var(--bg-header) 95%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-gray-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-gray-50\/50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-stone-50 {
+  background-color: var(--bg-main);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-gray-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-stone-100 {
+  background-color: var(--bg-header);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-gray-200,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-stone-200 {
+  background-color: var(--bg-subtle);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-stone-800,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-stone-900 {
+  background-color: var(--bg-subtle);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-\[\#faf7f4\],
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-\[\#f5f6f8\] {
+  background-color: var(--bg-main);
+}
+
+/* ── Borders & dividers ────────────────────────────────────────────── */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-stone-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-stone-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-stone-200,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-stone-200\/80,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-stone-200\/70,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-stone-300,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-gray-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-gray-200 {
+  border-color: var(--border);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .divide-stone-50 > :not([hidden]) ~ :not([hidden]),
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .divide-stone-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border);
+}
+
+/* ── Text ──────────────────────────────────────────────────────────── */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-black,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-gray-800,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-gray-900,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-stone-800,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-stone-900 {
+  color: var(--text-primary);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-gray-600,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-gray-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-stone-600,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-stone-700 {
+  color: var(--text-secondary);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-gray-400,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-gray-500,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-stone-300,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-stone-400,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-stone-500 {
+  color: var(--text-muted);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) input::placeholder,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* ── Soft tinted chips (badges, alerts) ────────────────────────────── */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-red-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-rose-50 {
+  background-color: color-mix(in srgb, #ef4444 16%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-red-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-rose-100 {
+  background-color: color-mix(in srgb, #ef4444 24%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-emerald-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-emerald-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-forest-100 {
+  background-color: color-mix(in srgb, #10b981 16%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-amber-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-amber-100 {
+  background-color: color-mix(in srgb, #f59e0b 18%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-sky-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-sky-100 {
+  background-color: color-mix(in srgb, #0ea5e9 16%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-violet-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-violet-100 {
+  background-color: color-mix(in srgb, #8b5cf6 16%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-orange-50,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-orange-100 {
+  background-color: color-mix(in srgb, #f97316 16%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-red-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-red-200,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-rose-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-rose-200 {
+  border-color: color-mix(in srgb, #ef4444 35%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-emerald-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-emerald-200,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-forest-200 {
+  border-color: color-mix(in srgb, #10b981 35%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-amber-100,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-amber-200 {
+  border-color: color-mix(in srgb, #f59e0b 35%, transparent);
+}
+
+/* ── Legible status colours on tinted chips ────────────────────────── */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-emerald-600,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-emerald-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-emerald-800,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-emerald-900,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-forest-600,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-forest-700 {
+  color: #6ee7b7;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-amber-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-amber-800,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-amber-900 {
+  color: #fcd34d;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-red-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-red-800 {
+  color: #fca5a5;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-rose-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-rose-800,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-rose-900 {
+  color: #fda4af;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-sky-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-sky-800,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-sky-900 {
+  color: #7dd3fc;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-violet-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-violet-800 {
+  color: #c4b5fd;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-orange-700,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-orange-800 {
+  color: #fdba74;
+}
+
+/* =============================================================================
+   Chocolate (customer + vendor) brand overrides
+============================================================================= */
+.dark .app-theme .bg-\[\#faf5f0\],
+.dark .app-theme .bg-\[\#fcfaf8\] {
+  background-color: var(--bg-main);
+}
+.dark .app-theme .bg-\[\#faf6f2\],
+.dark .app-theme .bg-\[\#f5ebe1\],
+.dark .app-theme .bg-\[\#fffbf5\],
+.dark .app-theme .bg-\[\#faf6f2\]\/90,
+.dark .app-theme .bg-\[\#f2f8ee\],
+.dark .app-theme .bg-\[\#e6f2de\],
+.dark .app-theme .bg-\[\#f5f6e9\],
+.dark .app-theme .bg-\[\#f1f5e4\] {
+  background-color: var(--bg-subtle);
+}
+.dark .app-theme .border-\[\#ebd7c5\],
+.dark .app-theme .border-\[\#d9bda6\],
+.dark .app-theme .border-\[\#d9dcc0\],
+.dark .app-theme .border-\[\#d9e5d0\] {
+  border-color: var(--border);
+}
+.dark .app-theme .border-\[\#542813\] {
+  border-color: var(--text-accent);
+}
+.dark .app-theme .text-\[\#2b1206\],
+.dark .app-theme .text-\[\#3d1b0c\],
+.dark .app-theme .text-\[\#4e2410\],
+.dark .app-theme .text-\[\#542813\],
+.dark .app-theme .text-\[\#6d391d\],
+.dark .app-theme .text-\[\#8a5332\] {
+  color: var(--text-accent);
+}
+.dark .app-theme .bg-brand-50 {
+  background-color: var(--bg-subtle);
+}
+.dark .app-theme .border-brand-300,
+.dark .app-theme .border-brand-400 {
+  border-color: var(--border);
+}
+
+/* ── Primary actions: white button, chocolate text ─────────────────── */
+.dark .app-theme .to-\[\#200d05\] {
+  background-image: none;
+  background-color: var(--btn-primary);
+  color: var(--btn-primary-text);
+}
+.dark .app-theme .to-\[\#200d05\] svg,
+.dark .app-theme .to-\[\#200d05\] .text-white {
+  color: var(--btn-primary-text);
+}
+.dark .app-theme .btn-gradient-brown {
+  background: var(--btn-primary);
+  color: var(--btn-primary-text);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.dark .app-theme .btn-gradient-brown:hover {
+  background: var(--btn-primary);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+/* Header/quick-action pills that should read as light primary buttons. */
+.dark .app-theme .theme-primary-pill {
+  background-color: var(--btn-primary);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary);
+}
+.dark .app-theme .theme-primary-pill svg,
+.dark .app-theme .theme-primary-pill .text-white {
+  color: var(--btn-primary-text);
+}
+.dark .app-theme .theme-primary-pill:hover {
+  background-color: #f0e9e2;
+  border-color: #f0e9e2;
+}
+
+/* ── Light gradient panels (summary cards, empty states) ───────────── */
+.dark .app-theme .from-\[\#fff7ee\],
+.dark .app-theme .from-\[\#faf6f2\],
+.dark .app-theme .from-\[\#f5f6e9\],
+.dark .app-theme .from-stone-50 {
+  background-image: none;
+  background-color: var(--bg-subtle);
+}
+
+/* =============================================================================
+   Delivery worker (moss) brand overrides
+============================================================================= */
+.dark .app-theme-driver .bg-\[\#f5f8f2\],
+.dark .app-theme-driver .bg-\[\#f2f7ef\],
+.dark .app-theme-driver .bg-\[\#f0f6ea\],
+.dark .app-theme-driver .bg-\[\#eef5e5\] {
+  background-color: var(--bg-subtle);
+}
+.dark .app-theme-driver .border-\[\#d9e5d0\] {
+  border-color: var(--border);
+}
+.dark .app-theme-driver .border-\[\#3b5327\],
+.dark .app-theme-driver .ring-\[\#3b5327\],
+.dark .app-theme-driver .ring-\[\#3b5327\]\/30 {
+  border-color: var(--text-accent);
+  --tw-ring-color: var(--text-accent);
+}
+.dark .app-theme-driver .text-\[\#3b5327\],
+.dark .app-theme-driver .text-\[\#4a6a34\],
+.dark .app-theme-driver .text-\[\#1c2b12\] {
+  color: var(--text-accent);
+}
+
+/* ── Primary actions: white button, deep moss text ─────────────────── */
+.dark .app-theme-driver .to-\[\#12200b\] {
+  background-image: none;
+  background-color: var(--btn-primary);
+  color: var(--btn-primary-text);
+}
+.dark .app-theme-driver .to-\[\#12200b\] svg,
+.dark .app-theme-driver .to-\[\#12200b\] .text-white {
+  color: var(--btn-primary-text);
+}
+
+/* The driver's "Update location" pill sits on a light card — keep it a light
+   primary button in dark so it still reads as the main action. */
+.dark .app-theme-driver .bg-white.border-\[\#d9e5d0\].text-\[\#3b5327\] {
+  background-color: var(--btn-primary);
+  border-color: var(--btn-primary);
+  color: var(--btn-primary-text);
+}
+.dark .app-theme-driver .bg-white.border-\[\#d9e5d0\].text-\[\#3b5327\] svg {
+  color: var(--btn-primary-text);
+}
+.dark .app-theme-driver .bg-white.border-\[\#d9e5d0\].text-\[\#3b5327\]:hover {
+  background-color: #eef3e6;
+  border-color: #eef3e6;
+}
+
+/* =============================================================================
+   Admin (graphite) brand overrides
+============================================================================= */
+.dark .app-theme-admin .bg-\[\#faf6f2\],
+.dark .app-theme-admin .bg-\[\#fcfaf8\] {
+  background-color: var(--bg-subtle);
+}
+.dark .app-theme-admin .border-\[\#1f2937\],
+.dark .app-theme-admin .ring-\[\#1f2937\] {
+  border-color: var(--text-accent);
+  --tw-ring-color: var(--text-accent);
+}
+.dark .app-theme-admin .text-\[\#111827\],
+.dark .app-theme-admin .text-\[\#1f2937\],
+.dark .app-theme-admin .text-\[\#374151\],
+.dark .app-theme-admin .text-\[\#3d1b0c\],
+.dark .app-theme-admin .text-\[\#542813\] {
+  color: var(--text-accent);
+}
+.dark .app-theme-admin .bg-\[\#1f2937\] {
+  background-color: var(--bg-subtle);
+}
+.dark .app-theme-admin .border-\[\#542813\] {
+  border-color: var(--text-accent);
+}
+
+/* ── Primary actions: white button, graphite text ──────────────────── */
+.dark .app-theme-admin .to-\[\#0b1220\],
+.dark .app-theme-admin .to-\[\#200d05\] {
+  background-image: none;
+  background-color: var(--btn-primary);
+  color: var(--btn-primary-text);
+}
+.dark .app-theme-admin .to-\[\#0b1220\] svg,
+.dark .app-theme-admin .to-\[\#0b1220\] .text-white,
+.dark .app-theme-admin .to-\[\#200d05\] svg,
+.dark .app-theme-admin .to-\[\#200d05\] .text-white {
+  color: var(--btn-primary-text);
+}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import RoleAccountMenu from '../common/RoleAccountMenu';
+import ThemeToggle from '../common/ThemeToggle';
 import AdminNotificationBell from './AdminNotificationBell';
 import { allowed, itemForPath, visibleSections } from './adminNav';
 
@@ -163,6 +164,7 @@ export default function AdminLayout() {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
+                <ThemeToggle />
                 <AdminNotificationBell />
                 <RoleAccountMenu role="admin" />
               </div>
