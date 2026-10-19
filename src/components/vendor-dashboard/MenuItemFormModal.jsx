@@ -16,6 +16,10 @@ const EMPTY = {
   options: [],
 };
 
+// Keep in sync with backend/src/middleware/upload.js (imageUpload fileFilter).
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_MB = 5;
+
 const Toggle = ({ checked, onChange, label, hint }) => (
   <button
     type="button"
@@ -47,6 +51,11 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
+  const categoryNamesRef = useRef(categoryNames);
+
+  useEffect(() => {
+    categoryNamesRef.current = categoryNames;
+  }, [categoryNames]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -62,9 +71,11 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
         })),
       });
     } else {
-      setForm({ ...EMPTY, category: categoryNames[0] || '' });
+      setForm({ ...EMPTY, category: categoryNamesRef.current[0] || '' });
     }
-  }, [isOpen, item, categoryNames]);
+    // Seed only when the modal opens or a different dish is edited — never on
+    // background refreshes (categoryNames is read via ref for that reason).
+  }, [isOpen, item?.id]);
 
   if (!isOpen) return null;
 
@@ -72,19 +83,30 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
 
   const handleImageFile = (event) => {
     const file = event.target.files?.[0];
+    // Reset so picking the same file again re-triggers onChange.
+    event.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setErrors((prev) => ({ ...prev, image: 'Please choose an image file.' }));
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setErrors((prev) => ({
+        ...prev,
+        image: 'Please choose a JPG, PNG, WEBP or GIF image.',
+      }));
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      setErrors((prev) => ({ ...prev, image: 'Image must be smaller than 3 MB.' }));
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      setErrors((prev) => ({
+        ...prev,
+        image: `Image must be smaller than ${MAX_IMAGE_MB} MB.`,
+      }));
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
       update({ image: String(reader.result) });
       setErrors((prev) => ({ ...prev, image: '' }));
+    };
+    reader.onerror = () => {
+      setErrors((prev) => ({ ...prev, image: 'Could not read this file. Try another image.' }));
     };
     reader.readAsDataURL(file);
   };
@@ -118,6 +140,7 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
       prepTime: form.prepTime.trim(),
       description: form.description.trim(),
       image: form.image.trim(),
+      clearImage: Boolean(item?.image) && !form.image.trim(),
       isAvailable: form.isAvailable,
       isPreorder: form.isPreorder,
       preorderCutoff: form.isPreorder ? form.preorderCutoff.trim() : '',

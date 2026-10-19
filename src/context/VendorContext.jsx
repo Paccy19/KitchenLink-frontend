@@ -558,6 +558,13 @@ export function VendorProvider({ children }) {
     [dashboard],
   );
 
+  // Stable reference so consumers that depend on the array in effects
+  // (e.g. the menu form) are not reset on every background refresh.
+  const categoryNames = useMemo(
+    () => categories.map((category) => category.name),
+    [categories],
+  );
+
   const isAuthenticated = Boolean(authToken && vendor);
   const hasToken = Boolean(authToken);
 
@@ -570,7 +577,7 @@ export function VendorProvider({ children }) {
       special,
       wallet,
       categories,
-      categoryNames: categories.map((category) => category.name),
+      categoryNames,
       stats,
       isRegistered,
       isAuthenticated,
@@ -620,6 +627,7 @@ export function VendorProvider({ children }) {
       special,
       wallet,
       categories,
+      categoryNames,
       stats,
       isRegistered,
       isAuthenticated,

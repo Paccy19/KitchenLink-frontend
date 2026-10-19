@@ -319,11 +319,11 @@ export const vendorApi = {
   listMenu: (params = {}) =>
     vendorRequest(`/vendor/menu?limit=${params.limit ?? 100}`),
   createMenuItem: (payload) =>
-    vendorRequest('/vendor/menu', { method: 'POST', body: payload }),
+    vendorRequest('/vendor/menu', { method: 'POST', form: toMenuItemForm(payload) }),
   updateMenuItem: (id, payload) =>
     vendorRequest(`/vendor/menu/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      body: payload,
+      form: toMenuItemForm(payload),
     }),
   deleteMenuItem: (id, hard = true) =>
     vendorRequest(`/vendor/menu/${encodeURIComponent(id)}?hard=${hard}`, {
@@ -350,6 +350,58 @@ export const vendorApi = {
 
 /* --------------------------- menu payload helpers ------------------------- */
 
+/** Convert a `data:image/...;base64,...` string into a File for multipart upload. */
+function dataUriToBlob(dataUri) {
+  const [header, base64] = dataUri.split(',');
+  const mime = header.match(/data:(.*?);/)?.[1] || 'application/octet-stream';
+  const extension = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+  }[mime] || 'png';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], `dish-image.${extension}`, { type: mime });
+}
+
+/**
+ * Send menu create/update as multipart/form-data so the image travels as a
+ * real file part (Multer, 5 MB limit) instead of base64 inside a JSON body
+ * (which is capped at 1 MB and broke any image larger than ~750 KB).
+ */
+export function toMenuItemForm(payload = {}) {
+  const form = new FormData();
+  const {
+    image_base64: imageBase64,
+    image_url: imageUrl,
+    image_clear: imageClear,
+    options,
+    category_id: categoryId,
+    ...fields
+  } = payload;
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue;
+    form.append(key, String(value));
+  }
+
+  if (categoryId !== undefined && categoryId !== null) {
+    form.append('category_id', String(categoryId));
+  }
+  form.append('options', JSON.stringify(options || []));
+
+  if (imageBase64) {
+    form.append('image', dataUriToBlob(imageBase64));
+  } else if (imageUrl) {
+    form.append('image_url', imageUrl);
+  }
+  if (imageClear) form.append('image_clear', 'true');
+
+  return form;
+}
+
 /** Convert the dashboard form model into the backend menu payload. */
 export function buildMenuItemPayload(data = {}, categoriesByName = {}) {
   const payload = {
@@ -370,6 +422,9 @@ export function buildMenuItemPayload(data = {}, categoriesByName = {}) {
     payload.image_base64 = data.image;
   } else if (data.image) {
     payload.image_url = data.image;
+  } else if (data.clearImage) {
+    // Editing an item that had an image and the vendor removed it.
+    payload.image_clear = true;
   }
 
   payload.options = (data.options || []).flatMap((group) => {
