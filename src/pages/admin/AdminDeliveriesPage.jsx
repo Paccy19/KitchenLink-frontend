@@ -52,7 +52,7 @@ export default function AdminDeliveriesPage() {
             >
               {data.items.map((delivery) => (
                 <tr key={delivery.id} className="hover:bg-stone-50/60">
-                  <td className="px-4 py-3 font-bold text-gray-900">{delivery.order_number}</td>
+                  <td className="px-4 py-3 font-bold text-gray-900 whitespace-nowrap">{delivery.order_number}</td>
                   <td className="px-4 py-3 text-stone-600">{delivery.vendor?.name || '—'}</td>
                   <td className="px-4 py-3 text-stone-600">{delivery.driver_id ? 'Assigned' : 'Unassigned'}</td>
                   <td className="px-4 py-3 text-stone-600">{delivery.customer?.name || '—'}</td>

@@ -78,24 +78,24 @@ export default function OrderTrackingPage() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
       
       {/* Top Navigation */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-6">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-stone-600 hover:text-[#542813] transition"
+          className="inline-flex items-center gap-2 text-xs font-bold text-stone-600 hover:text-[#542813] transition whitespace-nowrap"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Home</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             to={`/support?order=${order.id}`}
-            className="inline-flex items-center gap-1 text-xs font-bold text-[#542813] hover:underline mr-2"
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#542813] hover:underline mr-2 whitespace-nowrap"
           >
             <LifeBuoy className="w-3.5 h-3.5" /> Get help
           </Link>
           <span className="text-xs text-stone-500 font-medium">Order:</span>
-          <span className="font-extrabold text-xs text-stone-900 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">
+          <span className="font-extrabold text-xs text-stone-900 bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200 whitespace-nowrap">
             {order.orderNumber || order.id}
           </span>
         </div>
@@ -148,7 +148,8 @@ export default function OrderTrackingPage() {
               <span>{order.estimatedDeliveryTime || 'Not available'}</span>
             </div>
             <span className="text-xs text-stone-500 font-medium">
-              {order.vendorName} ({order.vendorLocation})
+              {order.vendorName}
+              {order.vendorLocation ? ` (${order.vendorLocation})` : ''}
             </span>
           </div>
         </div>

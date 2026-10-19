@@ -153,14 +153,20 @@ export default function VendorPage() {
   return (
     <div className="min-h-screen bg-[#faf7f4] pb-28 animate-fade-in">
       {/* ── Header banner ─────────────────────────────────────── */}
-      <div className="relative h-56 sm:h-80 w-full bg-stone-900 overflow-hidden">
-        <img
-          src={vendor.bannerUrl}
-          alt={`${vendor.name} storefront`}
-          className="w-full h-full object-cover opacity-90 scale-100 hover:scale-105 transition-transform duration-700 ease-out"
-          loading="eager"
-          decoding="async"
-        />
+      <div className="relative h-64 sm:h-80 w-full bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] overflow-hidden">
+        {/* No banner (or a broken link): keep the chocolate background instead of a broken-image icon. */}
+        {vendor.bannerUrl && (
+          <img
+            src={vendor.bannerUrl}
+            alt={`${vendor.name} storefront`}
+            className="w-full h-full object-cover opacity-90 scale-100 hover:scale-105 transition-transform duration-700 ease-out"
+            loading="eager"
+            decoding="async"
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+            }}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/25" />
 
         <div className="absolute top-5 left-4 sm:left-8 z-10">
@@ -174,7 +180,7 @@ export default function VendorPage() {
           </Link>
         </div>
 
-        <div className="absolute bottom-5 left-4 right-4 sm:left-8 sm:right-8 text-white">
+        <div className="absolute bottom-12 sm:bottom-14 left-4 right-4 sm:left-8 sm:right-8 text-white">
           <div className="flex items-center gap-2 flex-wrap mb-2">
             <span className="px-3 py-1 rounded-full text-xs font-black bg-[#2b1206] text-white border border-[#522712] shadow-md">
               {vendor.type}
@@ -195,7 +201,7 @@ export default function VendorPage() {
               </span>
             )}
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight drop-shadow-sm">
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight drop-shadow-sm line-clamp-2 break-words">
             {vendor.name}
           </h1>
         </div>

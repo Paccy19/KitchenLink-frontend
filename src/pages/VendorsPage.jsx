@@ -20,7 +20,7 @@ function Chip({ active, onClick, children, label }) {
       onClick={onClick}
       aria-pressed={active}
       aria-label={label}
-      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 ${
+      className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex-shrink-0 transition-all border active:scale-95 ${
         active
           ? 'bg-gradient-to-r from-[#2b1206] to-[#4e2410] text-white border-[#2b1206] shadow-md shadow-[#2b1206]/20'
           : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300 hover:text-stone-900 hover:bg-stone-50'

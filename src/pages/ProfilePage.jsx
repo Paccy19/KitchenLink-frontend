@@ -110,7 +110,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <h1 className="text-2xl font-black text-gray-900">{user.name}</h1>
-            <p className="text-xs text-stone-500 font-medium mt-0.5">{user.phone} · {user.email}</p>
+            <p className="text-xs text-stone-500 font-medium mt-0.5 break-all">{[user.phone, user.email].filter(Boolean).join(' · ')}</p>
             <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
               Verified Customer Account
             </span>

@@ -171,7 +171,7 @@ export default function AdminRefundsPage() {
               {data.items.map((refund) => (
                 <tr key={refund.id} className="hover:bg-stone-50/60">
                   <td className="px-4 py-3">
-                    <p className="font-bold text-gray-900">{refund.order_number}</p>
+                    <p className="font-bold text-gray-900 whitespace-nowrap">{refund.order_number}</p>
                     <p className="text-[11px] text-stone-400">
                       by {CANCELLED_BY[refund.cancelled_by] || refund.cancelled_by}
                       {refund.reason ? ` · ${refund.reason}` : ''}

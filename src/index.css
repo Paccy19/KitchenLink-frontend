@@ -544,3 +544,53 @@
 .dark .app-theme-admin .to-\[\#200d05\] .text-white {
   color: var(--btn-primary-text);
 }
+
+/* =============================================================================
+   Dark mode fixes found on phones
+============================================================================= */
+/* Translucent page background behind sticky bars (e.g. the kitchen menu tabs). */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-\[\#faf7f4\]\/90 {
+  background-color: color-mix(in srgb, var(--bg-main) 90%, transparent);
+}
+
+/* The cart count badge inside a light "primary pill" stays chocolate with white text. */
+.dark .app-theme .theme-primary-pill .from-\[\#2b1206\].text-white {
+  background-image: none;
+  background-color: var(--btn-primary-text);
+  color: var(--text-primary);
+}
+
+/* Stat cards (vendor + delivery worker dashboards): tinted dark surfaces with
+   readable text instead of their light gradients. */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card {
+  background-image: none;
+  background-color: var(--bg-card);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card-brown {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card-brown svg {
+  color: var(--text-primary);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card-amber {
+  background-color: color-mix(in srgb, #f59e0b 16%, var(--bg-card));
+  color: #fcd9a0;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card-emerald {
+  background-color: color-mix(in srgb, #10b981 16%, var(--bg-card));
+  color: #a7f0cf;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card-rose {
+  background-color: color-mix(in srgb, #f43f5e 16%, var(--bg-card));
+  color: #fecdd6;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card-sky {
+  background-color: color-mix(in srgb, #0ea5e9 16%, var(--bg-card));
+  color: #bae6fd;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card span[class*='bg-white'] {
+  background-color: color-mix(in srgb, var(--text-primary) 10%, transparent);
+}

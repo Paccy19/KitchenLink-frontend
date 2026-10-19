@@ -320,7 +320,7 @@ export default function CheckoutPage() {
               {!showNewAddressForm && (
                 <button
                   onClick={() => setShowNewAddressForm(true)}
-                  className="text-xs font-bold text-[#542813] hover:underline flex items-center gap-1"
+                  className="text-xs font-bold text-[#542813] hover:underline flex items-center gap-1 whitespace-nowrap flex-shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Location</span>

@@ -121,7 +121,7 @@ export default function OrdersHistoryPage() {
                         {order.vendorName}
                       </h3>
                       <p className="text-xs text-stone-400 font-medium">
-                        {order.id} · {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {order.orderNumber || order.id} · {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>

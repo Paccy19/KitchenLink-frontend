@@ -174,17 +174,17 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+        <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 sm:gap-3 flex-shrink-0 group">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] flex items-center justify-center text-white shadow-md shadow-[#2b1206]/25 group-hover:scale-105 group-hover:shadow-lg transition-all duration-300">
               <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2] text-[#f5ebe1]" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 hidden min-[420px]:block">
               <div className="font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 group-hover:text-[#542813] transition-colors flex items-center gap-1.5">
                 Food<span className="text-[#8a5332]">Kitchen</span>
-                <span className="hidden sm:inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5]">Market</span>
+                <span className="hidden lg:inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5]">Market</span>
               </div>
               <p className="hidden sm:block text-[11px] text-stone-500 font-medium">Any Cook · Any Food · Anywhere</p>
             </div>
@@ -197,7 +197,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 text-sm font-semibold text-stone-700 hover:border-[#d9bda6] hover:text-[#3d1b0c] transition active:scale-95"
             >
               <MapPin className="w-4 h-4 text-[#8a5332] flex-shrink-0" />
-              <span className="max-w-[140px] truncate">{currentLocation}</span>
+              <span className="max-w-[90px] lg:max-w-[140px] truncate">{currentLocation}</span>
               <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
             </button>
 
@@ -240,7 +240,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-3 flex-shrink-0">
 
             {/* Driver portal. A driver sees a return button only on
                 marketplace/shop pages after choosing to visit the marketplace.
@@ -250,7 +250,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               <Link
                 to="/driver-dashboard"
                 onClick={exitDriverMarketplace}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#12301c] bg-[#f2f8ee] hover:bg-[#e6f2de] border border-[#d9e5d0] transition hover:-translate-y-0.5 hover:shadow-sm"
+                className="hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#12301c] bg-[#f2f8ee] hover:bg-[#e6f2de] border border-[#d9e5d0] transition hover:-translate-y-0.5 hover:shadow-sm"
               >
                 <Bike className="w-3.5 h-3.5 text-[#3b5327]" />
                 <span>Back to Delivery Worker Dashboard</span>
@@ -260,7 +260,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Quick Link: Pre-Orders */}
             <Link
               to="/?filter=preorder"
-              className="theme-primary-pill hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              className="theme-primary-pill hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Tomorrow's Specials</span>
@@ -269,7 +269,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Quick Link: Nearby Map */}
             <Link
               to="/vendors/map"
-              className="theme-primary-pill hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              className="theme-primary-pill hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <Map className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Nearby Map</span>
@@ -296,7 +296,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               to="/wishlist"
               aria-label={`Saved dishes${wishlistItems.length ? `, ${wishlistItems.length} ${wishlistItems.length === 1 ? 'item' : 'items'}` : ''}`}
               title="Saved dishes"
-              className="relative hidden sm:flex p-2.5 rounded-xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
+              className="relative hidden xl:flex p-2.5 rounded-xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
             >
               <Heart className="w-4 h-4" />
               {wishlistItems.length > 0 && (
@@ -399,10 +399,10 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
                       {accountInitials}
                     </span>
                   )}
-                  <span className="hidden md:inline font-bold text-stone-800 text-xs max-w-[100px] truncate">
+                  <span className="hidden lg:inline font-bold text-stone-800 text-xs max-w-[100px] truncate">
                     {accountFirstName}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-stone-400 hidden sm:inline" />
+                  <ChevronDown className="w-3.5 h-3.5 text-stone-400 hidden lg:inline" />
                 </button>
 
                 {isUserMenuOpen && (
@@ -562,7 +562,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Mobile menu hamburger */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-stone-600 hover:text-stone-900 rounded-lg"
+              className="xl:hidden p-2 text-stone-600 hover:text-stone-900 rounded-lg"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -571,7 +571,8 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
         </div>
 
         {/* Mobile Search Input */}
-        <div className="lg:hidden pb-3">
+        {/* The home page has its own search box; avoid showing two. */}
+        <div className={pathname === '/' ? 'hidden' : 'lg:hidden pb-3'}>
           <form onSubmit={handleSearchSubmit} className="relative">
             <input
               type="text"
@@ -586,7 +587,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
 
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-3 border-t border-stone-100 space-y-2">
+          <div className="xl:hidden py-3 border-t border-stone-100 space-y-2">
             <div className="flex items-center justify-between p-2 bg-stone-50 rounded-lg">
               <span className="text-xs text-stone-500 font-medium">Location:</span>
               <span className="text-xs font-bold text-stone-800">{currentLocation}</span>
@@ -616,6 +617,14 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
             >
               Track Order
+            </Link>
+            <Link
+              to="/?filter=preorder"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
+            >
+              <CalendarDays className="w-4 h-4 text-[#8a5332]" />
+              Tomorrow's Specials
             </Link>
             <Link
               to="/vendors/map"

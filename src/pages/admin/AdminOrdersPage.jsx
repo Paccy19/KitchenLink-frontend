@@ -195,7 +195,7 @@ export default function AdminOrdersPage() {
               {data.items.map((row) => (
                 <tr key={row.id} className="hover:bg-stone-50/60">
                   <td className="px-4 py-3">
-                    <p className="font-bold text-gray-900">{row.order_number}</p>
+                    <p className="font-bold text-gray-900 whitespace-nowrap">{row.order_number}</p>
                     <p className="text-[11px] text-stone-400">
                       {toTitle(row.payment_method)} · {row.payment_status}
                     </p>

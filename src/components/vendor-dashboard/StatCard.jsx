@@ -29,7 +29,8 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'cream
   return (
     <div
       className={clsx(
-        'relative overflow-hidden rounded-3xl p-5 shadow-sm border border-transparent bg-gradient-to-br',
+        'stat-card relative overflow-hidden rounded-3xl p-4 sm:p-5 shadow-sm border border-transparent bg-gradient-to-br',
+        `stat-card-${tone}`,
         TONES[tone],
         className,
       )}
@@ -37,11 +38,12 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'cream
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wider opacity-80">{label}</p>
-          <p className="mt-2 text-2xl font-black tracking-tight truncate">{value}</p>
-          {hint && <p className="mt-1 text-[11px] font-medium opacity-75 truncate">{hint}</p>}
+          {/* Wraps rather than truncates so amounts stay readable on narrow phones. */}
+          <p className="mt-2 text-xl sm:text-2xl font-black tracking-tight break-words leading-tight">{value}</p>
+          {hint && <p className="mt-1 text-[11px] font-medium opacity-75 leading-snug">{hint}</p>}
         </div>
         {Icon && (
-          <span className={clsx('w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0', ICON_TONES[tone])}>
+          <span className={clsx('w-10 h-10 rounded-2xl hidden sm:flex items-center justify-center flex-shrink-0', ICON_TONES[tone])}>
             <Icon className="w-5 h-5" />
           </span>
         )}
