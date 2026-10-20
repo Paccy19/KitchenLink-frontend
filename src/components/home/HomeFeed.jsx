@@ -18,6 +18,8 @@ import useHomeFeed from '../../hooks/useHomeFeed';
 import useCategories from '../../hooks/useCategories';
 import useVendorSpecials from '../../hooks/useVendorSpecials';
 import useAllVendors from '../../hooks/useAllVendors';
+import useVendorOffers from '../../hooks/useVendorOffers';
+import OfferDayCard from './OfferDayCard';
 import useDebounce from '../../hooks/useDebounce';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
 import { useLocation } from '../../context/LocationContext';
@@ -66,6 +68,7 @@ export default function HomeFeed() {
   const feed = useHomeFeed();
   const categories = useCategories({ enabled: !urlQuery.trim() });
   const specials = useVendorSpecials();
+  const offers = useVendorOffers();
   const allVendors = useAllVendors({ perPage: 6, enabled: !urlQuery.trim() });
 
   // Keep the URL shareable: debounce input → `?q=` (replace, no history spam).
@@ -236,21 +239,24 @@ export default function HomeFeed() {
           </section>
 
           {/* Tomorrow's Specials — vendor pre-order announcements */}
-          {(specials.data?.length ?? 0) > 0 && (
+          {((specials.data?.length ?? 0) > 0 || (offers.data?.length ?? 0) > 0) && (
             <section aria-label="Tomorrow's specials">
               <SectionHeader
                 title="Tomorrow's Specials"
-                subtitle="Pre-order home cooks' specials before they run out"
+                subtitle="Pre-order specials and upcoming kitchen offers"
                 to="/vendors?filter=preorder"
                 linkLabel="See all"
               />
               <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
-                {specials.data.map((entry) => (
+                {(specials.data ?? []).map((entry) => (
                   <SpecialCard
                     key={entry.vendor.id}
                     vendor={entry.vendor}
                     special={entry.special}
                   />
+                ))}
+                {(offers.data ?? []).map((offer) => (
+                  <OfferDayCard key={offer.id} offer={offer} />
                 ))}
               </div>
             </section>

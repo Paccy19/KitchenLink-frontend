@@ -331,6 +331,16 @@ export const vendorApi = {
   clearSpecial: async () =>
     mapSpecial((await vendorRequest('/vendor/special', { method: 'DELETE' }))?.special),
 
+  // "Offer Days": deals announced for a chosen future day.
+  offers: async () => (await vendorRequest('/vendor/offers'))?.offers ?? [],
+  createOffer: async ({ title, details, offerDate }) =>
+    (await vendorRequest('/vendor/offers', {
+      method: 'POST',
+      body: { title, details, offer_date: offerDate },
+    }))?.offer,
+  cancelOffer: (offerId) =>
+    vendorRequest(`/vendor/offers/${encodeURIComponent(offerId)}`, { method: 'DELETE' }),
+
   // Public discovery categories (no auth) so it works during registration too.
   menuCategories: () => vendorRequest('/home/categories'),
   listMenu: (params = {}) =>

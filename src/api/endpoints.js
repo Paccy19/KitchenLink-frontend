@@ -45,6 +45,11 @@ export function fetchNearbyVendors(params = {}) {
   return apiRequest('/home/vendors/nearby', params);
 }
 
+/** GET /vendors/offers?lat&lng — upcoming "Offer Days" from every kitchen, soonest first. */
+export function fetchVendorOffers(params = {}) {
+  return apiRequest('/vendors/offers', params);
+}
+
 /**
  * GET /home/vendors?lat&lng&category_id&sort&page&limit — every kitchen in
  * the system, near or far; with lat/lng the nearby ones (`is_nearby`) come first.

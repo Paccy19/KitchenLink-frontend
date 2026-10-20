@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChefHat, Loader2, Map, MapPin, Navigation, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ChefHat, Gift, Loader2, Map, MapPin, Navigation, SlidersHorizontal } from 'lucide-react';
 import VendorCard from '../components/home/VendorCard';
 import SpecialCard from '../components/home/SpecialCard';
 import CategoryBar from '../components/home/CategoryBar';
@@ -9,6 +9,8 @@ import { VendorCardSkeleton } from '../components/common/Skeleton';
 import { SORT_OPTIONS } from '../hooks/useNearbyVendors';
 import useAllVendors from '../hooks/useAllVendors';
 import useVendorSpecials from '../hooks/useVendorSpecials';
+import useVendorOffers from '../hooks/useVendorOffers';
+import OfferDayCard from '../components/home/OfferDayCard';
 import useCategories from '../hooks/useCategories';
 import { useLocation } from '../context/LocationContext';
 
@@ -58,6 +60,7 @@ export default function VendorsPage() {
   const categories = useCategories({ enabled: !preorderMode });
   const query = useAllVendors({ categoryId, sort, perPage: 9, enabled: !preorderMode });
   const specials = useVendorSpecials({ enabled: preorderMode });
+  const offers = useVendorOffers({ enabled: preorderMode });
   const sentinelRef = useRef(null);
 
   const setParam = (key, value) => {
@@ -100,6 +103,7 @@ export default function VendorsPage() {
 
   if (preorderMode) {
     const entries = specials.data ?? [];
+    const offerEntries = offers.data ?? [];
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20 animate-fade-in">
         <Link
@@ -115,40 +119,61 @@ export default function VendorsPage() {
             Tomorrow's Specials
           </h1>
           <p className="text-xs text-stone-500 mt-1">
-            Pre-order home cooks' specials before their order-before time runs out.
+            Pre-order home cooks' specials before their order-before time runs out, and see which
+            kitchens have an offer coming up.
           </p>
         </div>
 
-        {specials.isPending ? (
+        {specials.isPending || offers.isPending ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true">
             {Array.from({ length: 6 }).map((_, index) => (
               <VendorCardSkeleton key={index} />
             ))}
           </div>
-        ) : specials.isError ? (
+        ) : specials.isError && offers.isError ? (
           <ErrorState
             title="Specials could not load"
             message={specials.error?.message || 'We could not reach the specials endpoint.'}
-            onRetry={specials.refetch}
-            isRetrying={specials.isFetching}
+            onRetry={() => {
+              specials.refetch();
+              offers.refetch();
+            }}
+            isRetrying={specials.isFetching || offers.isFetching}
           />
-        ) : entries.length === 0 ? (
+        ) : entries.length === 0 && offerEntries.length === 0 ? (
           <EmptyState
             icon={<ChefHat className="w-8 h-8 text-[#542813]" />}
             title="No specials today"
-            message="No kitchen has announced a special for tomorrow yet. Check back soon."
+            message="No kitchen has announced a special or an upcoming offer yet. Check back soon."
             actionLabel="Browse all kitchens"
             onAction={() => setParam('filter', null)}
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {entries.map((entry) => (
-              <SpecialCard
-                key={entry.vendor.id}
-                vendor={entry.vendor}
-                special={entry.special}
-              />
-            ))}
+          <div className="space-y-9">
+            {entries.length > 0 && (
+              <section aria-label="Pre-order specials">
+                <GroupHeading icon={ChefHat} title="Pre-order specials" subtitle="order before the cutoff" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {entries.map((entry) => (
+                    <SpecialCard
+                      key={entry.vendor.id}
+                      vendor={entry.vendor}
+                      special={entry.special}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+            {offerEntries.length > 0 && (
+              <section aria-label="Upcoming offer days">
+                <GroupHeading icon={Gift} title="Upcoming offer days" subtitle="kitchens with a deal on a coming day" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {offerEntries.map((offer) => (
+                    <OfferDayCard key={offer.id} offer={offer} />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
       </div>

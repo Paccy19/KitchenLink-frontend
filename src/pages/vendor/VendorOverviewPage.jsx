@@ -19,6 +19,7 @@ import usePullToRefresh from '../../hooks/usePullToRefresh';
 import StatCard from '../../components/vendor-dashboard/StatCard';
 import OrderStatusBadge from '../../components/vendor-dashboard/OrderStatusBadge';
 import SpecialComposer from '../../components/vendor-dashboard/SpecialComposer';
+import OfferDayComposer from '../../components/vendor-dashboard/OfferDayComposer';
 
 const money = (value) => `${value.toLocaleString()} RWF`;
 
@@ -226,6 +227,8 @@ export default function VendorOverviewPage() {
           </div>
 
           <SpecialComposer />
+
+          <OfferDayComposer />
 
           <div className="rounded-3xl bg-gradient-to-br from-[#faf6f2] to-[#f5ebe1] border border-[#ebd7c5] p-5">
             <h3 className="font-black text-sm text-[#3d1b0c] mb-2">Payout Summary</h3>

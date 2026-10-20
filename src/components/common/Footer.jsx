@@ -38,7 +38,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/?filter=preorder" className="hover:text-[#ebd7c5] transition">
+                <Link to="/vendors?filter=preorder" className="hover:text-[#ebd7c5] transition">
                   Tomorrow's Specials (Pre-Order)
                 </Link>
               </li>

@@ -197,8 +197,8 @@ export default function Navbar() {
 
             {/* Quick Link: Pre-Orders */}
             <Link
-              to="/?filter=preorder"
-              className="theme-primary-pill hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              to="/vendors?filter=preorder"
+              className="theme-primary-pill hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Tomorrow's Specials</span>
@@ -579,7 +579,7 @@ export default function Navbar() {
               Track Order
             </Link>
             <Link
-              to="/?filter=preorder"
+              to="/vendors?filter=preorder"
               onClick={() => setIsMobileMenuOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
             >
