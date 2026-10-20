@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Users } from 'lucide-react';
+import { MapPin, Search, Users } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import {
@@ -27,6 +27,29 @@ const ROLE_STATUSES = {
 };
 
 const EMPTY = { items: [], total: 0, page: 1, limit: 20 };
+
+/** Customer's last GPS position (recorded while they use "Use my location"). */
+function LastLocation({ location }) {
+  if (!location) return <span className="text-xs text-stone-400">—</span>;
+  const { latitude, longitude, accuracy_m: accuracy, updated_at: updatedAt } = location;
+  return (
+    <div className="text-xs">
+      <a
+        href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 font-bold text-[#542813] hover:underline"
+      >
+        <MapPin className="w-3.5 h-3.5" />
+        {Number(latitude).toFixed(5)}, {Number(longitude).toFixed(5)}
+      </a>
+      <span className="block text-[11px] text-stone-400">
+        {formatDate(updatedAt)}
+        {accuracy ? ` · ±${accuracy} m` : ''}
+      </span>
+    </div>
+  );
+}
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
@@ -133,6 +156,7 @@ export default function AdminUsersPage() {
                 { key: 'name', label: 'Name' },
                 { key: 'role', label: 'Role' },
                 { key: 'contact', label: 'Contact' },
+                { key: 'location', label: 'Last location' },
                 { key: 'status', label: 'Status' },
                 { key: 'created', label: 'Joined' },
                 { key: 'actions', label: '', className: 'text-right' },
@@ -163,6 +187,9 @@ export default function AdminUsersPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-stone-600">{user.identifier || '—'}</td>
+                  <td className="px-4 py-3">
+                    <LastLocation location={user.last_location} />
+                  </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={user.status} />
                   </td>

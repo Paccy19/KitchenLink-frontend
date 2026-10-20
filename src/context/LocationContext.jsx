@@ -1,6 +1,27 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+import { reportCustomerLocation } from '../api/endpoints';
+import { useAuth } from './AuthContext';
 
 const LocationContext = createContext(null);
+
+/** While tracking, re-send the signed-in customer's position at least this often. */
+const LOCATION_REPORT_INTERVAL_MS = 2 * 60 * 1000;
+
+/** Ignore GPS updates smaller than this so nearby lists don't refetch on jitter. */
+const MIN_MOVE_METERS = 50;
+/** Ignore tracking fixes less accurate than this (e.g. wifi/cell estimates). */
+const MAX_TRACK_ACCURACY_METERS = 500;
+
+const distanceMeters = (a, b) => {
+  const rad = (deg) => (deg * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+};
 
 /** Kigali city centre — fallback when permission is denied/unavailable. */
 export const KIGALI_DEFAULT = { lat: -1.9441, lng: 30.0619 };
@@ -49,6 +70,13 @@ export const LocationProvider = ({ children }) => {
   const [status, setStatus] = useState('idle');
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isPrimerOpen, setIsPrimerOpen] = useState(false);
+  // Live tracking after "Use my location": accuracy of the last fix and when it was taken.
+  const [isTracking, setIsTracking] = useState(false);
+  const [accuracyM, setAccuracyM] = useState(null);
+  const [lastFixAt, setLastFixAt] = useState(null);
+  const watchIdRef = useRef(null);
+  const coordsRef = useRef(coords);
+  coordsRef.current = coords;
 
   const persist = useCallback((next) => {
     try {
@@ -57,15 +85,16 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   const applyGps = useCallback(
-    (position) => {
-      const next = {
-        coords: {
-          lat: Number(position.coords.latitude.toFixed(6)),
-          lng: Number(position.coords.longitude.toFixed(6)),
-        },
-        label: 'My current location',
-        source: 'gps',
+    (position, { force = true } = {}) => {
+      const nextCoords = {
+        lat: Number(position.coords.latitude.toFixed(6)),
+        lng: Number(position.coords.longitude.toFixed(6)),
       };
+      setAccuracyM(Math.round(position.coords.accuracy ?? 0) || null);
+      setLastFixAt(new Date(position.timestamp || Date.now()).toISOString());
+      // While tracking, only move the active coordinates on a real change in position.
+      if (!force && distanceMeters(coordsRef.current, nextCoords) < MIN_MOVE_METERS) return;
+      const next = { coords: nextCoords, label: 'My current location', source: 'gps' };
       setCoords(next.coords);
       setLabel(next.label);
       setSource('gps');
@@ -74,6 +103,49 @@ export const LocationProvider = ({ children }) => {
     },
     [persist],
   );
+
+  const stopTracking = useCallback(() => {
+    if (watchIdRef.current !== null && 'geolocation' in navigator) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+    watchIdRef.current = null;
+    setIsTracking(false);
+  }, []);
+
+  const startTracking = useCallback(() => {
+    if (!('geolocation' in navigator) || watchIdRef.current !== null) return;
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        if ((position.coords.accuracy ?? 0) > MAX_TRACK_ACCURACY_METERS) return;
+        applyGps(position, { force: false });
+      },
+      (error) => {
+        // Permission revoked mid-session: stop; other errors are transient.
+        if (error?.code === 1) {
+          stopTracking();
+          setStatus('denied');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 },
+    );
+    setIsTracking(true);
+  }, [applyGps, stopTracking]);
+
+  useEffect(() => stopTracking, [stopTracking]);
+
+  // Record a signed-in customer's live position on the server: on each new
+  // position, and periodically while tracking so "last seen" stays current.
+  const { isAuthenticated } = useAuth() ?? {};
+  const accuracyRef = useRef(accuracyM);
+  accuracyRef.current = accuracyM;
+  useEffect(() => {
+    if (!isAuthenticated || source !== 'gps' || !isTracking) return undefined;
+    const report = () =>
+      reportCustomerLocation({ ...coordsRef.current, accuracyM: accuracyRef.current }).catch(() => null);
+    report();
+    const timer = setInterval(report, LOCATION_REPORT_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [isAuthenticated, source, isTracking, coords.lat, coords.lng]);
 
   const handleError = useCallback(
     (error) => {
@@ -95,20 +167,22 @@ export const LocationProvider = ({ children }) => {
     }
     setStatus('requesting');
     return new Promise((resolve) => {
+      // A fresh, precise fix taken now (no cached position), then keep tracking.
       navigator.geolocation.getCurrentPosition(
         (position) => {
           applyGps(position);
           setIsPrimerOpen(false);
+          startTracking();
           resolve(true);
         },
         (error) => {
           handleError(error);
           resolve(false);
         },
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 5 * 60_000 },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
       );
     });
-  }, [applyGps, handleError]);
+  }, [applyGps, handleError, startTracking]);
 
   const dismissPrimer = useCallback(() => {
     setIsPrimerOpen(false);
@@ -134,6 +208,8 @@ export const LocationProvider = ({ children }) => {
         label: name,
         source: 'manual',
       };
+      stopTracking();
+      setAccuracyM(null);
       setCoords(next.coords);
       setLabel(next.label);
       setSource('manual');
@@ -142,7 +218,7 @@ export const LocationProvider = ({ children }) => {
       setIsPrimerOpen(false);
       persist(next);
     },
-    [persist],
+    [persist, stopTracking],
   );
 
   // First-load permission check: explain first, then ask (or restore GPS).
@@ -200,6 +276,11 @@ export const LocationProvider = ({ children }) => {
       isGps: source === 'gps',
       isUsingFallback: source === 'default',
       requestGps,
+      // Live GPS tracking (started by requestGps, stopped by picking a neighbourhood)
+      isTracking,
+      accuracyM,
+      lastFixAt,
+      stopTracking,
 
       // Back-compat with existing components (Navbar, etc.)
       currentLocation:
@@ -217,6 +298,7 @@ export const LocationProvider = ({ children }) => {
     }),
     [
       coords, label, source, status, requestGps, selectLocation,
+      isTracking, accuracyM, lastFixAt, stopTracking,
       isLocationModalOpen, isPrimerOpen, dismissPrimer, enableFromPrimer,
     ],
   );

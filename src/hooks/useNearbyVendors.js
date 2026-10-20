@@ -6,6 +6,8 @@ import { useLocation } from '../context/LocationContext';
 const round = (value) => Number(Number(value).toFixed(4));
 
 export const DEFAULT_RADIUS_KM = 5;
+/** How often open kitchens are re-checked while the customer's GPS is tracked. */
+export const LIVE_REFRESH_MS = 30_000;
 export const SORT_OPTIONS = [
   { id: 'distance', label: 'Distance' },
   { id: 'rating', label: 'Rating' },
@@ -24,7 +26,7 @@ export default function useNearbyVendors({
   perPage = 6,
   enabled = true,
 } = {}) {
-  const { coords } = useLocation();
+  const { coords, isTracking } = useLocation();
 
   return useInfiniteQuery({
     queryKey: [
@@ -55,6 +57,8 @@ export default function useNearbyVendors({
       return page * limit < total ? page + 1 : undefined;
     },
     staleTime: 45_000,
+    // While the customer's GPS is live, keep re-checking which kitchens are open.
+    refetchInterval: isTracking ? LIVE_REFRESH_MS : false,
     refetchOnWindowFocus: false,
     placeholderData: (previous) => previous,
     select: (data) => {

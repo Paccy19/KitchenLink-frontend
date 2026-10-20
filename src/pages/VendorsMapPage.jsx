@@ -25,6 +25,7 @@ import { fetchNearbyVendors } from '../api/endpoints';
 import { normalizeVendor, pickList } from '../api/normalize';
 import { useLocation } from '../context/LocationContext';
 import useCategories from '../hooks/useCategories';
+import { LIVE_REFRESH_MS } from '../hooks/useNearbyVendors';
 import { ErrorState } from '../components/common/EmptyState';
 
 const RADIUS_OPTIONS = [3, 5, 7, 10, 15];
@@ -105,7 +106,7 @@ function buildCustomerInfo(label) {
  */
 export default function VendorsMapPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { coords, currentLocation, label } = useLocation();
+  const { coords, currentLocation, label, isTracking } = useLocation();
   const [mapsStatus, setMapsStatus] = useState('loading');
   const categories = useCategories();
 
@@ -134,6 +135,7 @@ export default function VendorsMapPage() {
         limit: MAP_LIMIT,
       }),
     staleTime: 45_000,
+    refetchInterval: isTracking ? LIVE_REFRESH_MS : false,
     refetchOnWindowFocus: false,
     select: (data) => {
       const vendors = pickList(data, 'vendors').map(normalizeVendor);

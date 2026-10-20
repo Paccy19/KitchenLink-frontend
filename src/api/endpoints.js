@@ -106,6 +106,14 @@ export const fetchCurrentCustomer = () => apiJson('GET', '/auth/me');
 export const updateCurrentCustomerProfile = (payload) =>
   apiJson('PATCH', '/auth/me/profile', payload);
 
+/** Records the signed-in customer's current GPS position on the server. */
+export const reportCustomerLocation = ({ lat, lng, accuracyM }) =>
+  apiJson('PUT', '/auth/me/location', {
+    latitude: lat,
+    longitude: lng,
+    ...(accuracyM != null ? { accuracy_m: accuracyM } : {}),
+  });
+
 export const fetchCart = () => apiJson('GET', '/cart');
 export const addCartItem = (menuItemId, quantity = 1) =>
   apiJson('POST', '/cart', { menu_item_id: menuItemId, quantity });

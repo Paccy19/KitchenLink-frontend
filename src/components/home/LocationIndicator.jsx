@@ -14,11 +14,15 @@ export default function LocationIndicator({ className = '' }) {
     selectLocation,
     requestGps,
     neighborhoods,
+    isTracking,
+    accuracyM,
   } = useLocation();
   const [open, setOpen] = useState(false);
 
   const badge =
-    source === 'gps'
+    source === 'gps' && isTracking
+      ? { text: 'Live', className: 'bg-forest-100 text-forest-700 animate-pulse' }
+      : source === 'gps'
       ? { text: 'GPS', className: 'bg-forest-100 text-forest-700' }
       : source === 'manual'
         ? { text: 'Manual', className: 'bg-[#f5ebe1] text-[#3d1b0c]' }
@@ -81,7 +85,11 @@ export default function LocationIndicator({ className = '' }) {
                   Use my current location
                 </span>
                 <span className="block text-xs text-stone-500">
-                  Finds kitchens closest to you with GPS
+                  {status === 'requesting'
+                    ? 'Measuring your position…'
+                    : source === 'gps' && isTracking
+                      ? `Tracking live${accuracyM ? ` · accurate to ~${accuracyM} m` : ''} · showing open kitchens near you`
+                      : 'Finds open kitchens closest to you with GPS'}
                 </span>
               </span>
             </button>

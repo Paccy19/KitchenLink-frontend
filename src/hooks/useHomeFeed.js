@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchHomeFeed } from '../api/endpoints';
 import { normalizeCategory, normalizeDish, normalizeVendor, pickList } from '../api/normalize';
 import { useLocation } from '../context/LocationContext';
+import { LIVE_REFRESH_MS } from './useNearbyVendors';
 
 const round = (value) => Number(Number(value).toFixed(4));
 
@@ -10,12 +11,13 @@ const round = (value) => Number(Number(value).toFixed(4));
  * Cached for 60s, keyed by coordinates so a location change refetches.
  */
 export default function useHomeFeed() {
-  const { coords, label } = useLocation();
+  const { coords, label, isTracking } = useLocation();
 
   return useQuery({
     queryKey: ['home', 'feed', round(coords.lat), round(coords.lng)],
     queryFn: () => fetchHomeFeed({ lat: coords.lat, lng: coords.lng, label }),
     staleTime: 60_000,
+    refetchInterval: isTracking ? LIVE_REFRESH_MS : false,
     refetchOnWindowFocus: false,
     placeholderData: (previous) => previous,
     select: (data) => ({
