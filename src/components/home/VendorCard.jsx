@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { Bike, Clock, MapPin, Star } from 'lucide-react';
@@ -15,6 +15,34 @@ const TYPE_STYLES = {
   Caterer: 'bg-[#6d391d] text-white',
   'Juice Bar': 'bg-emerald-800 text-white',
 };
+
+/** Vendor's uploaded profile picture / logo, falling back to their initial. */
+export function VendorAvatar({ vendor, className = 'w-9 h-9 rounded-xl text-sm' }) {
+  const [failed, setFailed] = useState(false);
+  if (vendor.avatarUrl && !failed) {
+    return (
+      <img
+        src={vendor.avatarUrl}
+        alt={`${vendor.name} logo`}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+        className={clsx('flex-shrink-0 object-cover border border-stone-200 bg-stone-100', className)}
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className={clsx(
+        'flex-shrink-0 flex items-center justify-center font-black bg-[#f5ebe1] text-[#542813] border border-[#ebd7c5]',
+        className,
+      )}
+    >
+      {(vendor.name || 'K').slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
 
 /**
  * Kitchen card used across the feed, nearby list and search results.
@@ -37,8 +65,9 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
     >
       {/* Banner — fixed aspect avoids layout shift */}
       <div className="relative overflow-hidden">
+        {/* No banner uploaded: show the vendor's profile picture here instead. */}
         <LazyImage
-          src={vendor.bannerUrl}
+          src={vendor.bannerUrl || vendor.avatarUrl}
           alt={`${vendor.name} banner`}
           aspect={isTile ? 'aspect-[16/9]' : 'aspect-[16/10]'}
           rounded="rounded-none"
@@ -73,9 +102,12 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
 
       <div className={clsx('p-4', isTile && 'p-4')}>
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-extrabold text-base sm:text-lg text-gray-900 group-hover:text-[#542813] transition-colors line-clamp-1">
-            {vendor.name}
-          </h3>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <VendorAvatar vendor={vendor} />
+            <h3 className="font-extrabold text-base sm:text-lg text-gray-900 group-hover:text-[#542813] transition-colors line-clamp-1">
+              {vendor.name}
+            </h3>
+          </div>
           {!vendor.isOpen && (
             <span className="flex-shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">
               Closed

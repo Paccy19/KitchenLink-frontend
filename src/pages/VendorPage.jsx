@@ -22,6 +22,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../components/common/Toast';
 import { useWishlist } from '../context/WishlistContext';
 import { formatRwf } from '../api/normalize';
+import { VendorAvatar } from '../components/home/VendorCard';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
 /**
@@ -155,9 +156,9 @@ export default function VendorPage() {
       {/* ── Header banner ─────────────────────────────────────── */}
       <div className="relative h-64 sm:h-80 w-full bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] overflow-hidden">
         {/* No banner (or a broken link): keep the chocolate background instead of a broken-image icon. */}
-        {vendor.bannerUrl && (
+        {(vendor.bannerUrl || vendor.avatarUrl) && (
           <img
-            src={vendor.bannerUrl}
+            src={vendor.bannerUrl || vendor.avatarUrl}
             alt={`${vendor.name} storefront`}
             className="w-full h-full object-cover opacity-90 scale-100 hover:scale-105 transition-transform duration-700 ease-out"
             loading="eager"
@@ -201,9 +202,15 @@ export default function VendorPage() {
               </span>
             )}
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight drop-shadow-sm line-clamp-2 break-words">
-            {vendor.name}
-          </h1>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <VendorAvatar
+              vendor={vendor}
+              className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl text-2xl ring-2 ring-white/40 shadow-lg"
+            />
+            <h1 className="min-w-0 text-2xl sm:text-4xl font-black tracking-tight leading-tight drop-shadow-sm line-clamp-2 break-words">
+              {vendor.name}
+            </h1>
+          </div>
         </div>
       </div>
 
