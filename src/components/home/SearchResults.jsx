@@ -45,6 +45,13 @@ export default function SearchResults({ query, onSuggest }) {
   const vendors = data?.vendors ?? [];
   const hasResults = dishes.length > 0 || vendors.length > 0;
 
+  // Searching for a kitchen by name: open the Kitchens tab first.
+  const term = String(debouncedQuery ?? query).trim().toLowerCase();
+  const kitchenNameMatch = Boolean(term) && vendors.some((vendor) => vendor.name.toLowerCase().includes(term));
+  useEffect(() => {
+    if (kitchenNameMatch) setTab('kitchens');
+  }, [kitchenNameMatch, term]);
+
   // Auto-select the tab that actually has results.
   useEffect(() => {
     if (!hasResults) return;

@@ -1,17 +1,16 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ChefHat, Loader2, Map, MapPin, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, ChefHat, Loader2, Map, MapPin, Navigation, SlidersHorizontal } from 'lucide-react';
 import VendorCard from '../components/home/VendorCard';
 import SpecialCard from '../components/home/SpecialCard';
 import CategoryBar from '../components/home/CategoryBar';
 import EmptyState, { ErrorState } from '../components/common/EmptyState';
 import { VendorCardSkeleton } from '../components/common/Skeleton';
-import useNearbyVendors, { DEFAULT_RADIUS_KM, SORT_OPTIONS } from '../hooks/useNearbyVendors';
+import { SORT_OPTIONS } from '../hooks/useNearbyVendors';
+import useAllVendors from '../hooks/useAllVendors';
 import useVendorSpecials from '../hooks/useVendorSpecials';
 import useCategories from '../hooks/useCategories';
 import { useLocation } from '../context/LocationContext';
-
-const RADIUS_OPTIONS = [3, 5, 7, 10, 15];
 
 function Chip({ active, onClick, children, label }) {
   return (
@@ -31,25 +30,33 @@ function Chip({ active, onClick, children, label }) {
   );
 }
 
+function GroupHeading({ icon: Icon, title, subtitle }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <Icon className="w-4 h-4 text-[#8a5332]" aria-hidden="true" />
+      <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">{title}</h2>
+      {subtitle && <span className="text-xs text-stone-500 font-medium">{subtitle}</span>}
+    </div>
+  );
+}
+
 /**
- * Nearby vendors list: `GET /home/vendors/nearby` with configurable radius,
- * category filter, sorting and infinite scroll.
+ * All kitchens: `GET /home/vendors` lists every kitchen in the system, near or
+ * far. With the customer's location, kitchens near them come first ("Near
+ * you"), followed by the rest. Category filter, sorting and infinite scroll.
  */
 export default function VendorsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentLocation } = useLocation();
+  const { currentLocation, requestGps, status, source } = useLocation();
 
   const categoryId = searchParams.get('category');
   const preorderMode = searchParams.get('filter') === 'preorder';
   const sort = ['distance', 'rating'].includes(searchParams.get('sort'))
     ? searchParams.get('sort')
     : 'distance';
-  const radius = RADIUS_OPTIONS.includes(Number(searchParams.get('radius')))
-    ? Number(searchParams.get('radius'))
-    : DEFAULT_RADIUS_KM;
 
   const categories = useCategories({ enabled: !preorderMode });
-  const query = useNearbyVendors({ radius, categoryId, sort, perPage: 6, enabled: !preorderMode });
+  const query = useAllVendors({ categoryId, sort, perPage: 9, enabled: !preorderMode });
   const specials = useVendorSpecials({ enabled: preorderMode });
   const sentinelRef = useRef(null);
 
@@ -82,7 +89,14 @@ export default function VendorsPage() {
 
   const vendors = query.data?.vendors ?? [];
   const total = query.data?.total ?? 0;
+  const nearRadiusKm = query.data?.nearRadiusKm ?? 5;
+  const locationUsed = query.data?.locationUsed ?? false;
   const firstLoad = query.isPending;
+
+  // Nearby kitchens lead the list (sorted by distance); split them into their own group.
+  const groupByDistance = sort === 'distance' && locationUsed;
+  const nearby = groupByDistance ? vendors.filter((vendor) => vendor.isNearby) : [];
+  const others = groupByDistance ? vendors.filter((vendor) => !vendor.isNearby) : vendors;
 
   if (preorderMode) {
     const entries = specials.data ?? [];
@@ -141,6 +155,14 @@ export default function VendorsPage() {
     );
   }
 
+  const renderGrid = (list) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {list.map((vendor) => (
+        <VendorCard key={vendor.id} vendor={vendor} />
+      ))}
+    </div>
+  );
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20 animate-fade-in">
       <Link
@@ -154,14 +176,16 @@ export default function VendorsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-            {activeCategory ? activeCategory.name : 'Kitchens Near You'}
+            {activeCategory ? activeCategory.name : 'All Kitchens'}
           </h1>
           <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
             <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
-            Within {radius} km of {currentLocation}
+            {source === 'default'
+              ? 'Every kitchen on Online Food Kitchen'
+              : `Nearest to ${currentLocation} first`}
             {!firstLoad && !query.isError && (
               <span className="bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] px-2.5 py-0.5 rounded-full font-extrabold text-[11px]">
-                {total} found
+                {total} kitchens
               </span>
             )}
           </p>
@@ -192,22 +216,18 @@ export default function VendorsPage() {
         </div>
       </div>
 
-      {/* Radius control */}
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 flex-shrink-0">
-          Radius
-        </span>
-        {RADIUS_OPTIONS.map((value) => (
-          <Chip
-            key={value}
-            active={radius === value}
-            onClick={() => setParam('radius', value)}
-            label={`Search within ${value} kilometres`}
-          >
-            {value} km
-          </Chip>
-        ))}
-      </div>
+      {/* No position yet: invite the customer to share it so nearby kitchens come first. */}
+      {source === 'default' && (
+        <button
+          type="button"
+          onClick={requestGps}
+          disabled={status === 'requesting'}
+          className="mb-6 w-full sm:w-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#faf6f2] border border-[#ebd7c5] text-xs font-bold text-[#542813] hover:bg-[#f5ebe1] transition disabled:opacity-60"
+        >
+          <Navigation className="w-4 h-4" aria-hidden="true" />
+          {status === 'requesting' ? 'Locating…' : 'Use my location to see kitchens near you first'}
+        </button>
+      )}
 
       {/* Categories */}
       <div className="mb-7">
@@ -228,22 +248,20 @@ export default function VendorsPage() {
         </div>
       ) : query.isError && vendors.length === 0 ? (
         <ErrorState
-          title="Nearby kitchens failed to load"
-          message={query.error?.message || 'We could not reach the nearby vendors endpoint.'}
+          title="Kitchens failed to load"
+          message={query.error?.message || 'We could not reach the kitchens endpoint.'}
           onRetry={query.refetch}
           isRetrying={query.isFetching}
         />
       ) : vendors.length === 0 ? (
         <EmptyState
           icon={<ChefHat className="w-8 h-8 text-[#542813]" />}
-          title="No kitchens in this radius"
+          title="No kitchens found"
           message={
             activeCategory
-              ? `No ${activeCategory.name.toLowerCase()} kitchens within ${radius} km. Try a wider radius or another category.`
-              : `Nothing found within ${radius} km right now. Try a wider radius.`
+              ? `No kitchen serves ${activeCategory.name.toLowerCase()} yet. Try another category.`
+              : 'No kitchens have joined yet. Check back soon.'
           }
-          actionLabel={radius < 15 ? 'Widen to 15 km' : undefined}
-          onAction={radius < 15 ? () => setParam('radius', 15) : undefined}
         >
           {categoryId && (
             <button
@@ -257,14 +275,36 @@ export default function VendorsPage() {
         </EmptyState>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {vendors.map((vendor) => (
-              <VendorCard key={`${vendor.id}-${vendor.distanceKm}`} vendor={vendor} />
-            ))}
-            {isFetchingNextPage &&
-              Array.from({ length: 3 }).map((_, index) => (
-                <VendorCardSkeleton key={`loading-${index}`} />
-              ))}
+          <div className="space-y-9">
+            {groupByDistance && nearby.length > 0 && (
+              <section aria-label="Kitchens near you">
+                <GroupHeading icon={Navigation} title="Near you" subtitle={`within ${nearRadiusKm} km`} />
+                {renderGrid(nearby)}
+              </section>
+            )}
+            {others.length > 0 && (
+              <section aria-label="More kitchens">
+                {groupByDistance && (
+                  <GroupHeading
+                    icon={ChefHat}
+                    title={nearby.length > 0 ? 'More kitchens' : 'All kitchens'}
+                    subtitle={
+                      nearby.length > 0
+                        ? `further than ${nearRadiusKm} km`
+                        : `none within ${nearRadiusKm} km — nearest first`
+                    }
+                  />
+                )}
+                {renderGrid(others)}
+              </section>
+            )}
+            {isFetchingNextPage && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <VendorCardSkeleton key={`loading-${index}`} />
+                ))}
+              </div>
+            )}
           </div>
 
           <div ref={sentinelRef} className="h-px" aria-hidden="true" />
@@ -282,7 +322,7 @@ export default function VendorsPage() {
               </button>
             ) : (
               <p className="text-xs text-stone-400 font-semibold">
-                You have seen all {total} kitchens within {radius} km
+                You have seen all {total} kitchens
               </p>
             )}
           </div>

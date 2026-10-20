@@ -97,6 +97,8 @@ export function normalizeVendor(raw = {}) {
     prepTimeMinutes: prepTimeMinutes(prepRaw),
     deliveryAvailable: toBool(raw.delivery_available ?? raw.delivery, true),
     isOpen: toBool(raw.is_open ?? raw.open ?? raw.is_open_now, true),
+    isNearby: toBool(raw.is_nearby, false),
+    hasDistance: raw.distance_km != null || raw.distance != null,
     bannerUrl: toText(
       raw.banner_image_url, raw.banner_url, raw.cover_image, raw.coverImage, raw.image_url, raw.banner,
     ),

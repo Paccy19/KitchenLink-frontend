@@ -46,6 +46,14 @@ export function fetchNearbyVendors(params = {}) {
 }
 
 /**
+ * GET /home/vendors?lat&lng&category_id&sort&page&limit — every kitchen in
+ * the system, near or far; with lat/lng the nearby ones (`is_nearby`) come first.
+ */
+export function fetchAllVendors(params = {}) {
+  return apiRequest('/home/vendors', params);
+}
+
+/**
  * GET /home/search?q={query}&lat={lat}&lng={lng}
  *
  * @param {{q:string, lat:number|string, lng:number|string}} params

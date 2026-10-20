@@ -17,6 +17,7 @@ import { useToast } from '../common/Toast';
 import useHomeFeed from '../../hooks/useHomeFeed';
 import useCategories from '../../hooks/useCategories';
 import useVendorSpecials from '../../hooks/useVendorSpecials';
+import useAllVendors from '../../hooks/useAllVendors';
 import useDebounce from '../../hooks/useDebounce';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
 import { useLocation } from '../../context/LocationContext';
@@ -65,6 +66,7 @@ export default function HomeFeed() {
   const feed = useHomeFeed();
   const categories = useCategories({ enabled: !urlQuery.trim() });
   const specials = useVendorSpecials();
+  const allVendors = useAllVendors({ perPage: 6, enabled: !urlQuery.trim() });
 
   // Keep the URL shareable: debounce input → `?q=` (replace, no history spam).
   useEffect(() => {
@@ -165,7 +167,7 @@ export default function HomeFeed() {
           {/* Featured / nearby kitchens */}
           <section aria-label="Featured kitchens">
             <SectionHeader
-              title="Featured & Nearby Kitchens"
+              title="Top Deals Near You"
               subtitle={
                 data?.updatedAt
                   ? `Updated ${new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
@@ -199,6 +201,37 @@ export default function HomeFeed() {
                 actionLabel="Browse nearby kitchens"
                 onAction={() => navigate('/vendors')}
               />
+            )}
+          </section>
+
+          {/* All kitchens — near or far, nearest to the customer first */}
+          <section aria-label="All kitchens">
+            <SectionHeader
+              title="All Kitchens"
+              subtitle={
+                allVendors.data?.locationUsed
+                  ? 'Every kitchen on the platform — nearest to you first'
+                  : 'Every kitchen on the platform — use your location to see nearby ones first'
+              }
+              to="/vendors"
+              linkLabel={
+                allVendors.data?.total ? `See all ${allVendors.data.total}` : 'See all'
+              }
+            />
+            {allVendors.isPending ? (
+              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0">
+                <VendorTileSkeleton />
+                <VendorTileSkeleton />
+                <VendorTileSkeleton />
+              </div>
+            ) : allVendors.isError ? (
+              <ErrorState onRetry={allVendors.refetch} isRetrying={allVendors.isFetching} />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(allVendors.data?.vendors ?? []).map((vendor) => (
+                  <VendorCard key={vendor.id} vendor={vendor} />
+                ))}
+              </div>
             )}
           </section>
 

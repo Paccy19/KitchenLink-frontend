@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-import { Bike, Clock, MapPin, Star } from 'lucide-react';
+import { Bike, Clock, MapPin, Navigation, Star } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
 import { formatRwf } from '../../api/normalize';
 
@@ -98,6 +98,13 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
             Delivery available
           </span>
         )}
+
+        {vendor.isNearby && (
+          <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-400 text-[#3d1b0c] text-[11px] font-black shadow-md">
+            <Navigation className="w-3.5 h-3.5" aria-hidden="true" />
+            Near you
+          </span>
+        )}
       </div>
 
       <div className={clsx('p-4', isTile && 'p-4')}>
@@ -127,10 +134,12 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
         )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-stone-100 text-xs font-semibold text-stone-600">
-          <span className="inline-flex items-center gap-1" title="Distance from you">
-            <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
-            {vendor.distanceKm} km
-          </span>
+          {vendor.hasDistance && (
+            <span className="inline-flex items-center gap-1" title="Distance from you">
+              <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
+              {vendor.distanceKm} km
+            </span>
+          )}
           <span className="inline-flex items-center gap-1" title="Estimated preparation time">
             <Clock className="w-3.5 h-3.5 text-stone-400" aria-hidden="true" />
             {vendor.prepTime}
