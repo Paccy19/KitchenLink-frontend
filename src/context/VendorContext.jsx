@@ -10,6 +10,7 @@ import React, {
 import { useQueryClient } from '@tanstack/react-query';
 import {
   vendorApi,
+  BLOCKED_VENDOR_CODES,
   buildMenuItemPayload,
   clearVendorToken,
   getVendorToken,
@@ -93,6 +94,8 @@ export function VendorProvider({ children }) {
   const [error, setError] = useState('');
   const [pendingLoginPhone, setPendingLoginPhone] = useState('');
   const [loginOtpPreview, setLoginOtpPreview] = useState('');
+  // Set when the API reports this vendor as suspended/rejected: { status, reason, support_phone, ... }.
+  const [accountBlock, setAccountBlock] = useState(null);
   // 'idle' | 'locating' | 'saving' while opening/closing the store.
   const [storeStatus, setStoreStatus] = useState('idle');
   const [storeError, setStoreError] = useState('');
@@ -254,10 +257,17 @@ export function VendorProvider({ children }) {
       setVendor(null);
       setMarketplaceMode(false);
     };
+    const onBlocked = (event) => {
+      onSignedOut();
+      setLoginOtpPreview('');
+      setAccountBlock(event.detail || { status: 'suspended' });
+    };
     window.addEventListener('ofk:vendor-unauthorized', onUnauthorized);
     window.addEventListener('ofk:vendor-signed-out', onSignedOut);
     window.addEventListener('ofk:sessions-cleared', onSignedOut);
+    window.addEventListener('ofk:vendor-blocked', onBlocked);
     return () => {
+      window.removeEventListener('ofk:vendor-blocked', onBlocked);
       window.removeEventListener('ofk:vendor-unauthorized', onUnauthorized);
       window.removeEventListener('ofk:vendor-signed-out', onSignedOut);
       window.removeEventListener('ofk:sessions-cleared', onSignedOut);
@@ -270,13 +280,16 @@ export function VendorProvider({ children }) {
     async (phone) => {
       setAuthBusy(true);
       setError('');
+      setAccountBlock(null);
       try {
         const result = await vendorApi.sendLoginOtp(phone);
         setPendingLoginPhone(result.phone_number);
         setLoginOtpPreview(result.dev_otp || '');
         return result;
       } catch (err) {
-        setError(err.message || 'Could not send a verification code.');
+        if (!BLOCKED_VENDOR_CODES.includes(err.code)) {
+          setError(err.message || 'Could not send a verification code.');
+        }
         throw err;
       } finally {
         if (mounted.current) setAuthBusy(false);
@@ -298,7 +311,9 @@ export function VendorProvider({ children }) {
         setLoginOtpPreview('');
         return result;
       } catch (err) {
-        setError(err.message || 'Could not verify the code.');
+        if (!BLOCKED_VENDOR_CODES.includes(err.code)) {
+          setError(err.message || 'Could not verify the code.');
+        }
         throw err;
       } finally {
         if (mounted.current) setAuthBusy(false);
@@ -314,6 +329,8 @@ export function VendorProvider({ children }) {
     setMarketplaceMode(false);
     setError('');
   }, []);
+
+  const clearAccountBlock = useCallback(() => setAccountBlock(null), []);
 
   const enterMarketplace = useCallback(() => setMarketplaceMode(true), []);
   const exitMarketplace = useCallback(() => setMarketplaceMode(false), []);
@@ -596,6 +613,8 @@ export function VendorProvider({ children }) {
       verifyLoginOtp,
       pendingLoginPhone,
       loginOtpPreview,
+      accountBlock,
+      clearAccountBlock,
       logout,
       updateVendorProfile,
       toggleStoreOpen,
@@ -646,6 +665,8 @@ export function VendorProvider({ children }) {
       verifyLoginOtp,
       pendingLoginPhone,
       loginOtpPreview,
+      accountBlock,
+      clearAccountBlock,
       logout,
       updateVendorProfile,
       toggleStoreOpen,

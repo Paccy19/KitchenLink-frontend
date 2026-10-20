@@ -21,6 +21,8 @@ export const setVendorToken = (token) => {
 };
 export const clearVendorToken = () => localStorage.removeItem(VENDOR_TOKEN_KEY);
 
+export const BLOCKED_VENDOR_CODES = ['VENDOR_SUSPENDED', 'VENDOR_REJECTED'];
+
 async function vendorRequest(path, { method = 'GET', body, form } = {}) {
   const url = buildUrl(path);
   const headers = { Accept: 'application/json' };
@@ -52,9 +54,24 @@ async function vendorRequest(path, { method = 'GET', body, form } = {}) {
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
+    const code = data?.error?.code || '';
+    const details = data?.error?.details || null;
+    // Suspended/rejected vendors are signed out and shown why on the login page.
+    if (BLOCKED_VENDOR_CODES.includes(code)) {
+      clearVendorToken();
+      window.dispatchEvent(
+        new CustomEvent('ofk:vendor-blocked', {
+          detail: { ...details, code, message: data?.error?.message || '' },
+        }),
+      );
+    }
+    // Pending vendors trying an action get the "documents under review" popup.
+    if (code === 'VENDOR_PENDING_REVIEW') {
+      window.dispatchEvent(new Event('ofk:vendor-pending-review'));
+    }
     throw new ApiError(
       data?.error?.message || data?.message || `Request failed (${response.status}).`,
-      { status: response.status, path },
+      { status: response.status, path, code, details },
     );
   }
   notifyDataChanged(method, path);

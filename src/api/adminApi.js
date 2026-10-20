@@ -121,6 +121,8 @@ export const adminApi = {
   listVendors: (params) => adminRequest(`/admin/vendors${qs(params)}`),
   vendorCounts: () => adminRequest('/admin/vendors/counts'),
   getVendor: (id) => adminRequest(`/admin/vendors/${encodeURIComponent(id)}`),
+  reviewVendorDocuments: (id) =>
+    adminRequest(`/admin/vendors/${encodeURIComponent(id)}/documents/review`, { method: 'POST' }),
   setVendorStatus: (id, body) =>
     adminRequest(`/admin/vendors/${encodeURIComponent(id)}/status`, { method: 'PATCH', body }),
 

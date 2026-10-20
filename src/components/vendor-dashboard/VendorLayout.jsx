@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,6 +15,7 @@ import {
   MapPin,
   Bell,
   LifeBuoy,
+  FileSearch,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { vendorApi } from '../../api/vendorApi';
@@ -49,6 +50,15 @@ export default function VendorLayout() {
   const { connected } = useVendorRealtime({ enabled: true });
   const supportUnread = useSupportUnread(vendorApi.support, { enabled: Boolean(hasToken && isAuthenticated) });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const isPending = vendor?.verificationStatus === 'Pending';
+  // Pending vendors see the review popup on arrival and whenever they try an action.
+  const [reviewPopupOpen, setReviewPopupOpen] = useState(true);
+
+  useEffect(() => {
+    const open = () => setReviewPopupOpen(true);
+    window.addEventListener('ofk:vendor-pending-review', open);
+    return () => window.removeEventListener('ofk:vendor-pending-review', open);
+  }, []);
 
   if (!hasToken) {
     return <Navigate to="/vendor-login" replace />;
@@ -101,7 +111,7 @@ export default function VendorLayout() {
           vendor={vendor}
           status={storeStatus}
           error={storeError}
-          onToggle={toggleStoreOpen}
+          onToggle={isPending ? () => setReviewPopupOpen(true) : toggleStoreOpen}
         />
       </div>
 
@@ -210,18 +220,53 @@ export default function VendorLayout() {
           </header>
 
           <main className="p-4 sm:p-6 pb-16">
-            {vendor.verificationStatus === 'Pending' && (
+            {isPending && (
               <div className="mb-5 flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                 <BadgeCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <p>
                   <span className="font-bold">Verification pending.</span> Your documents are under review by our team.
-                  You can set up your menu and manage orders in the meantime.
+                  You can't manage your menu, orders, wallet or store until your account is approved.
                 </p>
               </div>
             )}
             <Outlet />
           </main>
         </div>
+      </div>
+      {isPending && reviewPopupOpen && (
+        <PendingReviewPopup onClose={() => setReviewPopupOpen(false)} />
+      )}
+    </div>
+  );
+}
+
+/** Modal telling a pending vendor their documents are still being reviewed. */
+function PendingReviewPopup({ onClose }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="pending-review-title">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-white rounded-3xl border border-amber-200 shadow-2xl p-6 text-center animate-fade-in">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 mx-auto flex items-center justify-center">
+          <FileSearch className="w-7 h-7 text-amber-600" />
+        </div>
+        <h2 id="pending-review-title" className="mt-4 text-lg font-black text-gray-900 tracking-tight">
+          Documents under review
+        </h2>
+        <p className="mt-2 text-sm text-stone-600">
+          Your verification documents are still being reviewed by our team. You can't take any vendor
+          actions (menu, orders, wallet or opening your store) until your account is approved.
+        </p>
+        <p className="mt-2 text-xs text-stone-500">
+          We'll notify you as soon as a decision is made. Questions? Use Help &amp; Support.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          autoFocus
+          className="mt-5 w-full inline-flex items-center justify-center px-5 py-3 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95"
+        >
+          OK, I understand
+        </button>
       </div>
     </div>
   );

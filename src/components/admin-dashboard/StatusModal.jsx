@@ -22,6 +22,7 @@ export default function StatusModal({
   statuses,
   current,
   submitting,
+  approveBlocked = false,
   onClose,
   onSubmit,
 }) {
@@ -38,8 +39,13 @@ export default function StatusModal({
   }, [open, current, statuses]);
 
   const reasonRequired = REASON_STATUSES.includes(status);
+  const blocked = status === 'approved' && approveBlocked;
 
   const submit = () => {
+    if (blocked) {
+      setError('Review this vendor\'s verification documents before approving.');
+      return;
+    }
     if (reasonRequired && reason.trim().length < 3) {
       setError('A short reason is required for this status.');
       return;
@@ -58,7 +64,7 @@ export default function StatusModal({
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={submitting}>
+          <Button onClick={submit} disabled={submitting || blocked}>
             {submitting ? 'Saving…' : 'Save'}
           </Button>
         </>
@@ -74,6 +80,12 @@ export default function StatusModal({
             ))}
           </Select>
         </Field>
+
+        {blocked && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            Open this vendor and mark the verification documents as reviewed before approving.
+          </p>
+        )}
 
         <Field
           label={reasonRequired ? 'Reason (required)' : 'Reason (optional)'}

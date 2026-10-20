@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Store } from 'lucide-react';
+import {
+  Search,
+  Store,
+  FileText,
+  ExternalLink,
+  ShieldCheck,
+  ShieldAlert,
+  CheckCircle2,
+} from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
@@ -33,12 +41,17 @@ export default function AdminVendorsPage() {
   const [page, setPage] = useState(1);
   const [target, setTarget] = useState(null);
   const [detailId, setDetailId] = useState(null);
+  const [viewedDocs, setViewedDocs] = useState(() => new Set());
   const [toast, setToast] = useState('');
   const focusId = useFocusParam('vendor');
 
   useEffect(() => {
     if (focusId) setDetailId(focusId);
   }, [focusId]);
+
+  useEffect(() => {
+    setViewedDocs(new Set());
+  }, [detailId]);
 
   const listQuery = useQuery({
     queryKey: ['admin', 'vendors', { ...filters, page }],
@@ -58,6 +71,7 @@ export default function AdminVendorsPage() {
     mutationFn: ({ vendor, payload }) => adminApi.setVendorStatus(vendor.id, payload),
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendor'] });
       setTarget(null);
       setToast(
         result.cancelled_orders > 0
@@ -67,8 +81,31 @@ export default function AdminVendorsPage() {
     },
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: () => adminApi.reviewVendorDocuments(detailId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendor'] });
+      setToast('Verification documents marked as reviewed.');
+    },
+  });
+
+  const markViewed = (index) => {
+    setViewedDocs((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  };
+
   const data = listQuery.data || EMPTY;
   const counts = countsQuery.data;
+  const detailVendor = detailQuery.data?.vendor;
+  const documents = detailVendor?.verification_documents || [];
+  const allDocumentsViewed =
+    documents.length > 0 && documents.every((_, index) => viewedDocs.has(index));
+  const documentsReviewed = Boolean(detailVendor?.documents_reviewed_at);
 
   const applyFilter = (patch) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -184,6 +221,12 @@ export default function AdminVendorsPage() {
         statuses={['pending', 'approved', 'rejected', 'suspended']}
         current={target?.status}
         submitting={mutation.isPending}
+        approveBlocked={
+          Boolean(target) &&
+          target.status !== 'approved' &&
+          (target.verification_documents?.length || 0) > 0 &&
+          !target.documents_reviewed_at
+        }
         onClose={() => setTarget(null)}
         onSubmit={(payload) => mutation.mutate({ vendor: target, payload })}
       />
@@ -214,6 +257,110 @@ export default function AdminVendorsPage() {
                 {detailQuery.data.vendor.suspension_reason || detailQuery.data.vendor.rejection_reason}
               </p>
             )}
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-black uppercase tracking-wider text-stone-400">
+                  Verification documents
+                </p>
+                {documentsReviewed ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Reviewed
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
+                    <ShieldAlert className="w-3.5 h-3.5" /> Not reviewed
+                  </span>
+                )}
+              </div>
+
+              {documents.length === 0 ? (
+                <p className="text-sm text-stone-400">No verification documents uploaded.</p>
+              ) : (
+                <div className="space-y-2">
+                  {documents.map((doc, index) => {
+                    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(doc.url || '');
+                    const opened = viewedDocs.has(index);
+                    return (
+                      <div
+                        key={`${doc.url}-${index}`}
+                        className="flex items-center gap-3 rounded-xl border border-stone-100 bg-stone-50/60 p-2.5"
+                      >
+                        <span className="w-10 h-10 rounded-lg overflow-hidden bg-white border border-stone-100 flex items-center justify-center flex-shrink-0">
+                          {isImage ? (
+                            <img src={doc.url} alt={doc.label} className="w-full h-full object-cover" />
+                          ) : (
+                            <FileText className="w-5 h-5 text-stone-400" />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-gray-900 truncate">
+                            {doc.label || `Document ${index + 1}`}
+                          </p>
+                          <p className="text-[11px] text-stone-400">
+                            {formatDate(doc.uploaded_at, { withTime: false })}
+                          </p>
+                        </div>
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => markViewed(index)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                            opened
+                              ? 'text-emerald-700 bg-emerald-50'
+                              : 'text-[#3d1b0c] bg-white border border-stone-200 hover:bg-stone-100'
+                          }`}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          {opened ? 'Opened' : 'Open'}
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Can permission="vendors:write">
+                {!documentsReviewed && documents.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3 mt-3">
+                    <Button
+                      size="sm"
+                      disabled={!allDocumentsViewed || reviewMutation.isPending}
+                      onClick={() => reviewMutation.mutate()}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      {reviewMutation.isPending ? 'Saving…' : 'Mark documents as reviewed'}
+                    </Button>
+                    {!allDocumentsViewed && (
+                      <p className="text-[11px] text-stone-400">
+                        Open every document above first ({viewedDocs.size}/{documents.length}).
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {detailVendor?.status !== 'approved' && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5 mt-3">
+                    <p className="text-xs font-semibold text-emerald-800">
+                      {documentsReviewed
+                        ? 'Documents reviewed. You can approve this vendor.'
+                        : 'Review and confirm the documents before approving.'}
+                    </p>
+                    <Button
+                      size="sm"
+                      disabled={!documentsReviewed || mutation.isPending}
+                      onClick={() =>
+                        mutation.mutate({ vendor: detailVendor, payload: { status: 'approved' } })
+                      }
+                    >
+                      Approve vendor
+                    </Button>
+                  </div>
+                )}
+              </Can>
+              {reviewMutation.isError && <ErrorNote error={reviewMutation.error} className="mt-2" />}
+            </div>
 
             <div>
               <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-2">
