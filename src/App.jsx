@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
@@ -67,7 +67,6 @@ const AdminPlatformBooksPage = lazy(() => import('./pages/admin/AdminPlatformBoo
 const AdminInvitePage = lazy(() => import('./pages/admin/AdminInvitePage'));
 
 export default function App() {
-  const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
   const isDriverArea = location.pathname.startsWith('/driver-');
   const isAdminArea = location.pathname.startsWith('/admin-');
@@ -82,7 +81,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex flex-col bg-gray-50/50 ${themeScope}`}>
-      {!isVendorArea && <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} />}
+      {!isVendorArea && <Navbar />}
 
       <main className="flex-1">
         <ErrorBoundary>

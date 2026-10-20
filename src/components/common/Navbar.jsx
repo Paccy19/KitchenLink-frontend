@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
+import { Link, useLocation as useRouterLocation } from 'react-router-dom';
 import { 
   ShoppingBag, 
-  MapPin, 
-  Search, 
   User, 
   Clock, 
   ChevronDown, 
@@ -28,7 +26,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { useLocation } from '../../context/LocationContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useVendor } from '../../context/VendorContext';
 import { useDriver } from '../../context/DriverContext';
@@ -42,13 +39,11 @@ import {
   CheckCheck,
 } from 'lucide-react';
 
-export default function Navbar({ onSearchChange, searchTerm = '' }) {
-  const navigate = useNavigate();
+export default function Navbar() {
   const { pathname } = useRouterLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { totalItemCount, setIsCartOpen } = useCart();
   const { items: wishlistItems } = useWishlist();
-  const { currentLocation, setIsLocationModalOpen, neighborhoods, selectLocation } = useLocation();
   const {
     isAuthenticated: isVendorSignedIn,
     hasToken,
@@ -88,7 +83,6 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
   const showBackToAdmin = adminSignedIn && isMarketplacePath;
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isLocDropdownOpen, setIsLocDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isRoleSelectOpen, setIsRoleSelectOpen] = useState(false);
@@ -155,13 +149,6 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
     else logout();
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/?q=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
   return (
     <>
       <header ref={headerRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
@@ -190,55 +177,6 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             </div>
           </Link>
 
-          {/* Location Selector */}
-          <div className="relative hidden md:block">
-            <button
-              onClick={() => setIsLocDropdownOpen(!isLocDropdownOpen)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 text-sm font-semibold text-stone-700 hover:border-[#d9bda6] hover:text-[#3d1b0c] transition active:scale-95"
-            >
-              <MapPin className="w-4 h-4 text-[#8a5332] flex-shrink-0" />
-              <span className="max-w-[90px] lg:max-w-[140px] truncate">{currentLocation}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
-            </button>
-
-            {isLocDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 w-64 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-stone-400">
-                  Select Delivery Area
-                </div>
-                {neighborhoods.map((n) => (
-                  <button
-                    key={n.id}
-                    onClick={() => {
-                      selectLocation(`${n.name}, Kigali`);
-                      setIsLocDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between hover:bg-[#faf6f2] hover:text-[#542813] transition ${
-                      currentLocation.includes(n.name) ? 'bg-[#faf6f2] text-[#542813] font-bold' : 'text-stone-700'
-                    }`}
-                  >
-                    <span>{n.name}</span>
-                    <span className="text-xs text-stone-400">{n.district}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Search Bar */}
-          <div className="flex-1 max-w-lg hidden lg:block">
-            <form onSubmit={handleSearchSubmit} className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-                placeholder="What are you craving? (Chicken, Rice, Isombe, Burger, Brochettes...)"
-                className="w-full pl-11 pr-4 py-2.5 rounded-full bg-stone-100/80 hover:bg-stone-100 focus:bg-white border border-transparent focus:border-[#542813] focus:ring-4 focus:ring-[#542813]/10 text-sm transition outline-none"
-              />
-              <Search className="w-4 h-4 text-stone-400 absolute left-4 top-3.5" />
-            </form>
-          </div>
-
           {/* Right Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-3 flex-shrink-0">
 
@@ -250,7 +188,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               <Link
                 to="/driver-dashboard"
                 onClick={exitDriverMarketplace}
-                className="hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#12301c] bg-[#f2f8ee] hover:bg-[#e6f2de] border border-[#d9e5d0] transition hover:-translate-y-0.5 hover:shadow-sm"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#12301c] bg-[#f2f8ee] hover:bg-[#e6f2de] border border-[#d9e5d0] transition hover:-translate-y-0.5 hover:shadow-sm"
               >
                 <Bike className="w-3.5 h-3.5 text-[#3b5327]" />
                 <span>Back to Delivery Worker Dashboard</span>
@@ -260,7 +198,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Quick Link: Pre-Orders */}
             <Link
               to="/?filter=preorder"
-              className="theme-primary-pill hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              className="theme-primary-pill hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <CalendarDays className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Tomorrow's Specials</span>
@@ -269,7 +207,7 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
             {/* Quick Link: Nearby Map */}
             <Link
               to="/vendors/map"
-              className="theme-primary-pill hidden xl:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
+              className="theme-primary-pill hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition hover:-translate-y-0.5 hover:shadow-sm"
             >
               <Map className="w-3.5 h-3.5 text-[#6d391d]" />
               <span>Nearby Map</span>
@@ -290,13 +228,13 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
               )}
             </button>
 
-            <ThemeToggle className="hidden sm:inline-flex" />
+            <ThemeToggle />
 
             <Link
               to="/wishlist"
               aria-label={`Saved dishes${wishlistItems.length ? `, ${wishlistItems.length} ${wishlistItems.length === 1 ? 'item' : 'items'}` : ''}`}
               title="Saved dishes"
-              className="relative hidden xl:flex p-2.5 rounded-xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
+              className="relative hidden lg:flex p-2.5 rounded-xl border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
             >
               <Heart className="w-4 h-4" />
               {wishlistItems.length > 0 && (
@@ -570,28 +508,50 @@ export default function Navbar({ onSearchChange, searchTerm = '' }) {
 
         </div>
 
-        {/* Mobile Search Input */}
-        {/* The home page has its own search box; avoid showing two. */}
-        <div className={pathname === '/' ? 'hidden' : 'lg:hidden pb-3'}>
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-              placeholder="Search chicken, rice, isombe, pizza..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-stone-100 border border-transparent focus:border-[#542813] focus:bg-white text-sm outline-none"
-            />
-            <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-2.5" />
-          </form>
+        {/* Mobile quick links: the same shortcuts as the desktop bar, in their
+            own row since they don't fit beside the logo on small screens. */}
+        <div className="lg:hidden flex items-center gap-2 pb-3 overflow-x-auto">
+          {showBackToDriver && (
+            <Link
+              to="/driver-dashboard"
+              onClick={exitDriverMarketplace}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#12301c] bg-[#f2f8ee] hover:bg-[#e6f2de] border border-[#d9e5d0] transition"
+            >
+              <Bike className="w-3.5 h-3.5 text-[#3b5327]" />
+              <span>Driver Dashboard</span>
+            </Link>
+          )}
+          <Link
+            to="/?filter=preorder"
+            className="theme-primary-pill flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition"
+          >
+            <CalendarDays className="w-3.5 h-3.5 text-[#6d391d]" />
+            <span>Tomorrow's Specials</span>
+          </Link>
+          <Link
+            to="/vendors/map"
+            className="theme-primary-pill flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#3d1b0c] bg-[#faf6f2] hover:bg-[#f5ebe1] border border-[#ebd7c5] transition"
+          >
+            <Map className="w-3.5 h-3.5 text-[#6d391d]" />
+            <span>Nearby Map</span>
+          </Link>
+          <Link
+            to="/wishlist"
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-gray-200 bg-white text-rose-600 hover:bg-rose-50 transition"
+          >
+            <Heart className="w-3.5 h-3.5" />
+            <span>Saved</span>
+            {wishlistItems.length > 0 && (
+              <span className="min-w-4 h-4 px-1 rounded-full bg-rose-600 text-white text-[9px] flex items-center justify-center font-bold">
+                {wishlistItems.length}
+              </span>
+            )}
+          </Link>
         </div>
 
         {/* Mobile Dropdown Menu */}
         {isMobileMenuOpen && (
           <div className="xl:hidden py-3 border-t border-stone-100 space-y-2">
-            <div className="flex items-center justify-between p-2 bg-stone-50 rounded-lg">
-              <span className="text-xs text-stone-500 font-medium">Location:</span>
-              <span className="text-xs font-bold text-stone-800">{currentLocation}</span>
-            </div>
             <div className="flex items-center justify-between p-2 bg-stone-50 rounded-lg">
               <span className="text-xs text-stone-500 font-medium">Appearance</span>
               <ThemeToggle />
