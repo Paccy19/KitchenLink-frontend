@@ -23,6 +23,7 @@ import { useToast } from '../components/common/Toast';
 import { useWishlist } from '../context/WishlistContext';
 import { formatRwf } from '../api/normalize';
 import { VendorAvatar } from '../components/home/VendorCard';
+import DishHoverPreview from '../components/common/DishHoverPreview';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
 /**
@@ -334,10 +335,11 @@ export default function VendorPage() {
                     key={dish.id}
                     className="bg-white rounded-3xl p-4 border border-stone-200/80 shadow-sm hover:shadow-xl hover:border-[#ebd7c5] hover:-translate-y-1 transition-all duration-300 flex gap-4 items-start group/card"
                   >
+                    <DishHoverPreview dish={dish} className="flex-1 min-w-0">
                     <button
                       type="button"
                       onClick={() => setModalDish(dish)}
-                      className="flex-1 min-w-0 text-left group"
+                      className="w-full text-left group"
                       aria-label={`View ${dish.name}`}
                     >
                       <div className="flex items-center gap-2 mb-1">
@@ -379,6 +381,7 @@ export default function VendorPage() {
                         </span>
                       </div>
                     </button>
+                    </DishHoverPreview>
 
                     <div className="flex flex-col items-end gap-3 flex-shrink-0">
                       <LazyImage

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Clock, Star } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
 import { formatRwf } from '../../api/normalize';
+import DishHoverPreview from '../common/DishHoverPreview';
 
 /**
  * Dish card used in the "Popular Dishes Near You" feed section and in the
@@ -18,6 +19,7 @@ export default function DishCard({ dish, highlightedQuery = '', variant = 'tile'
 
   if (variant === 'row') {
     return (
+      <DishHoverPreview dish={dish}>
       <Link
         to={to}
         aria-label={`${dish.name}, ${formatRwf(dish.price)}, from ${dish.vendor?.name ?? 'kitchen'}`}
@@ -56,10 +58,12 @@ export default function DishCard({ dish, highlightedQuery = '', variant = 'tile'
           </div>
         </div>
       </Link>
+      </DishHoverPreview>
     );
   }
 
   return (
+    <DishHoverPreview dish={dish} className="snap-start flex-shrink-0">
     <Link
       to={to}
       aria-label={`${dish.name}, ${formatRwf(dish.price)}, from ${dish.vendor?.name ?? 'kitchen'}`}
@@ -114,6 +118,7 @@ export default function DishCard({ dish, highlightedQuery = '', variant = 'tile'
         </div>
       </div>
     </Link>
+    </DishHoverPreview>
   );
 }
 
