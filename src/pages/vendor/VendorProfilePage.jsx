@@ -13,6 +13,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
+import KitchenLocationCard from '../../components/vendor-dashboard/KitchenLocationCard';
 
 export default function VendorProfilePage() {
   const navigate = useNavigate();
@@ -211,6 +212,8 @@ export default function VendorProfilePage() {
           )}
         </div>
       </form>
+
+      <KitchenLocationCard />
 
       <button
         type="button"

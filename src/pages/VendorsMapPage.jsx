@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   ChefHat,
+  Expand,
   Loader2,
   MapPin,
   Navigation,
@@ -17,39 +18,28 @@ import {
   Marker,
   NavigationControl,
   Popup,
-  setWorkerUrl,
 } from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { fetchNearbyVendors } from '../api/endpoints';
+import { CARTO_API_KEY, CARTO_STYLE_URL } from '../lib/mapStyle';
+import { fetchMapVendors } from '../api/endpoints';
 import { normalizeVendor, pickList } from '../api/normalize';
 import { useLocation } from '../context/LocationContext';
 import useCategories from '../hooks/useCategories';
-import { LIVE_REFRESH_MS } from '../hooks/useNearbyVendors';
 import { ErrorState } from '../components/common/EmptyState';
 
-const RADIUS_OPTIONS = [3, 5, 7, 10, 15];
-const MAP_LIMIT = 50;
-
-/**
- * CARTO Voyager vector basemap rendered with MapLibre GL. The key is optional
- * (free tier works without one); set `VITE_CARTO_API_KEY` for a CARTO plan.
- */
-const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY || '';
-const CARTO_STYLE_URL = `https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json${
-  CARTO_API_KEY ? `?key=${encodeURIComponent(CARTO_API_KEY)}` : ''
-}`;
-
-// MapLibre resolves its worker relative to its own bundle, which Vite's
-// pre-bundling breaks; point it at the worker file Vite serves/emits instead.
-setWorkerUrl(maplibreWorkerUrl);
+// Stores open and close during the day; keep the map current.
+const MAP_REFRESH_MS = 60_000;
+// When the customer's position is known, the first view frames them and
+// this many of the nearest open kitchens; "Show all" frames every kitchen.
+const INITIAL_NEAREST = 5;
 
 const CUSTOMER_COLOR = '#2563eb';
 const VENDOR_COLOR = '#8a5332';
 
 const round = (value) => Number(Number(value).toFixed(4));
+const hasCoords = (vendor) => vendor.coordinates?.lat != null && vendor.coordinates?.lng != null;
+const lngLatOf = (vendor) => [vendor.coordinates.lng, vendor.coordinates.lat];
 
-function buildInfoContent(vendor) {
+function buildInfoContent(vendor, showDistance) {
   const wrapper = document.createElement('div');
   wrapper.style.minWidth = '190px';
   wrapper.style.fontFamily = 'inherit';
@@ -62,7 +52,9 @@ function buildInfoContent(vendor) {
   wrapper.appendChild(title);
 
   const meta = document.createElement('div');
-  meta.textContent = `${vendor.neighborhood} · ${vendor.distanceKm} km away`;
+  meta.textContent = showDistance
+    ? `${vendor.neighborhood} · ${vendor.distanceKm} km away`
+    : vendor.neighborhood;
   meta.style.fontSize = '11px';
   meta.style.color = '#78716c';
   meta.style.marginTop = '2px';
@@ -101,19 +93,20 @@ function buildCustomerInfo(label) {
 }
 
 /**
- * Dedicated "nearby kitchens on a map" page. Plots every active vendor that has
- * coordinates, plus the customer position, on a CARTO basemap (MapLibre GL).
+ * Customer map of every kitchen whose store is open, anywhere. Customers
+ * explore by panning and zooming; the list beside the map follows the area in
+ * view. A kitchen appears here only while its vendor has the store open.
  */
 export default function VendorsMapPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { coords, currentLocation, label, isTracking } = useLocation();
+  const { coords, label, isGps, source } = useLocation();
+  // The Kigali-centre fallback is not the customer's position.
+  const located = source !== 'default';
   const [mapsStatus, setMapsStatus] = useState('loading');
+  const [viewBounds, setViewBounds] = useState(null);
   const categories = useCategories();
 
   const categoryId = searchParams.get('category');
-  const radius = RADIUS_OPTIONS.includes(Number(searchParams.get('radius')))
-    ? Number(searchParams.get('radius'))
-    : 5;
 
   const setParam = (key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -123,38 +116,43 @@ export default function VendorsMapPage() {
   };
 
   const query = useQuery({
-    queryKey: ['vendors', 'map', round(coords.lat), round(coords.lng), radius, categoryId ?? 'all'],
+    queryKey: [
+      'vendors',
+      'map',
+      located ? round(coords.lat) : null,
+      located ? round(coords.lng) : null,
+      categoryId ?? 'all',
+    ],
     queryFn: () =>
-      fetchNearbyVendors({
-        lat: coords.lat,
-        lng: coords.lng,
-        radius,
+      fetchMapVendors({
+        ...(located ? { lat: coords.lat, lng: coords.lng } : {}),
         category_id: categoryId ?? undefined,
-        sort: 'distance',
-        page: 1,
-        limit: MAP_LIMIT,
       }),
-    staleTime: 45_000,
-    refetchInterval: isTracking ? LIVE_REFRESH_MS : false,
-    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    refetchInterval: MAP_REFRESH_MS,
+    refetchOnWindowFocus: true,
     select: (data) => {
-      const vendors = pickList(data, 'vendors').map(normalizeVendor);
-      return {
-        vendors,
-        total: data?.meta?.total ?? vendors.length,
-        mapped: vendors.filter((vendor) => vendor.coordinates?.lat != null).length,
-      };
+      const vendors = pickList(data, 'vendors').map(normalizeVendor).filter(hasCoords);
+      return { vendors, total: data?.meta?.total ?? vendors.length };
     },
   });
 
   const vendors = useMemo(() => query.data?.vendors ?? [], [query.data]);
   const total = query.data?.total ?? 0;
-  const mapped = query.data?.mapped ?? 0;
+
+  // The list follows the part of the map the customer is looking at.
+  const inView = useMemo(
+    () => (viewBounds ? vendors.filter((vendor) => viewBounds.contains(lngLatOf(vendor))) : vendors),
+    [vendors, viewBounds],
+  );
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   // { vendorId | 'customer', marker } so list clicks can open the right popup.
   const markersRef = useRef([]);
+  // Which result set the camera was last framed for: periodic refreshes must
+  // not yank the map away from where the customer is exploring.
+  const framedForRef = useRef(null);
 
   // The map panel is replaced by an error card when the vendor list fails, so
   // the map is (re)created whenever its container is shown.
@@ -169,13 +167,17 @@ export default function VendorsMapPage() {
       container: mapContainerRef.current,
       style: CARTO_STYLE_URL,
       center: [coords.lng, coords.lat],
-      zoom: 13,
+      zoom: 12,
       // CARTO's style already carries the OpenStreetMap/CARTO attribution.
       attributionControl: { compact: true },
     });
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     map.addControl(new FullscreenControl(), 'top-right');
-    map.on('load', () => setMapsStatus('ready'));
+    map.on('load', () => {
+      setMapsStatus('ready');
+      setViewBounds(map.getBounds());
+    });
+    map.on('moveend', () => setViewBounds(map.getBounds()));
     // Only failing to fetch the style itself is fatal (bad key / offline);
     // a missing tile, font or icon is recoverable and must not hide the map.
     let styleFetched = false;
@@ -192,12 +194,22 @@ export default function VendorsMapPage() {
       map.remove();
       mapInstanceRef.current = null;
       markersRef.current = [];
+      framedForRef.current = null;
     };
-    // Initial centre only; later position changes are handled by fitBounds.
+    // Initial centre only; later framing is handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showMap]);
 
-  // (Re)draw markers whenever the vendor set or customer position changes.
+  const fitAll = useCallback(() => {
+    const map = mapInstanceRef.current;
+    if (!map || vendors.length === 0) return;
+    const bounds = new LngLatBounds(lngLatOf(vendors[0]), lngLatOf(vendors[0]));
+    vendors.forEach((vendor) => bounds.extend(lngLatOf(vendor)));
+    if (located) bounds.extend([coords.lng, coords.lat]);
+    map.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 600 });
+  }, [vendors, located, coords.lat, coords.lng]);
+
+  // (Re)draw markers whenever the open kitchens or customer position change.
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || mapsStatus !== 'ready') return;
@@ -206,34 +218,43 @@ export default function VendorsMapPage() {
     markersRef.current = [];
 
     const origin = [coords.lng, coords.lat];
-    const bounds = new LngLatBounds(origin, origin);
-
-    const customerMarker = new Marker({ color: CUSTOMER_COLOR, scale: 1.1 })
-      .setLngLat(origin)
-      .setPopup(new Popup({ offset: 30 }).setDOMContent(buildCustomerInfo(label)))
-      .addTo(map);
-    customerMarker.getElement().style.zIndex = '2';
-    customerMarker.getElement().setAttribute('aria-label', 'Your location');
-    markersRef.current.push({ vendorId: 'customer', marker: customerMarker });
+    if (located) {
+      const customerMarker = new Marker({ color: CUSTOMER_COLOR, scale: 1.1 })
+        .setLngLat(origin)
+        .setPopup(new Popup({ offset: 30 }).setDOMContent(buildCustomerInfo(label)))
+        .addTo(map);
+      customerMarker.getElement().style.zIndex = '2';
+      customerMarker.getElement().setAttribute('aria-label', 'Your location');
+      markersRef.current.push({ vendorId: 'customer', marker: customerMarker });
+    }
 
     vendors.forEach((vendor) => {
-      if (vendor.coordinates?.lat == null || vendor.coordinates?.lng == null) return;
-      const position = [vendor.coordinates.lng, vendor.coordinates.lat];
       const marker = new Marker({ color: VENDOR_COLOR, scale: 0.95 })
-        .setLngLat(position)
-        .setPopup(new Popup({ offset: 28 }).setDOMContent(buildInfoContent(vendor)))
+        .setLngLat(lngLatOf(vendor))
+        .setPopup(new Popup({ offset: 28 }).setDOMContent(buildInfoContent(vendor, isGps && vendor.hasDistance)))
         .addTo(map);
       marker.getElement().setAttribute('aria-label', vendor.name);
       markersRef.current.push({ vendorId: vendor.id, marker });
-      bounds.extend(position);
     });
 
-    if (vendors.length > 0) {
+    // Frame the camera once per result set (first load, new category or a
+    // new customer position), never on the periodic refresh.
+    if (query.isPending) return;
+    const frameKey = `${categoryId ?? 'all'}|${located ? `${round(coords.lat)},${round(coords.lng)}` : '-'}`;
+    if (framedForRef.current === frameKey) return;
+    framedForRef.current = frameKey;
+
+    if (vendors.length === 0) {
+      map.easeTo({ center: origin, zoom: 12 });
+    } else if (located) {
+      // Vendors arrive nearest first: frame the customer and the closest few.
+      const bounds = new LngLatBounds(origin, origin);
+      vendors.slice(0, INITIAL_NEAREST).forEach((vendor) => bounds.extend(lngLatOf(vendor)));
       map.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 600 });
     } else {
-      map.easeTo({ center: origin, zoom: 13 });
+      fitAll();
     }
-  }, [vendors, mapsStatus, coords.lat, coords.lng, label]);
+  }, [vendors, mapsStatus, coords.lat, coords.lng, label, isGps, located, categoryId, query.isPending, fitAll]);
 
   const recenter = useCallback(() => {
     const map = mapInstanceRef.current;
@@ -243,8 +264,8 @@ export default function VendorsMapPage() {
 
   const focusVendor = useCallback((vendor) => {
     const map = mapInstanceRef.current;
-    if (!map || vendor.coordinates?.lat == null) return;
-    map.flyTo({ center: [vendor.coordinates.lng, vendor.coordinates.lat], zoom: 16 });
+    if (!map) return;
+    map.flyTo({ center: lngLatOf(vendor), zoom: 16 });
     markersRef.current.forEach(({ marker }) => marker.getPopup()?.remove());
     const entry = markersRef.current.find((item) => item.vendorId === vendor.id);
     if (entry && !entry.marker.getPopup().isOpen()) entry.marker.togglePopup();
@@ -272,6 +293,9 @@ export default function VendorsMapPage() {
     );
   };
 
+  const mapButton =
+    'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur border border-stone-200 text-xs font-bold text-stone-700 shadow-md hover:text-[#542813] transition active:scale-95';
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20 animate-fade-in">
       <Link
@@ -282,42 +306,19 @@ export default function VendorsMapPage() {
         <span>Back to list</span>
       </Link>
 
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-            Kitchens Near You · Map
-          </h1>
-          <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
-            <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
-            {label || currentLocation} · within {radius} km
-            {!query.isPending && !query.isError && (
-              <span className="bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] px-2.5 py-0.5 rounded-full font-extrabold text-[11px]">
-                {mapped} of {total} on map
-              </span>
-            )}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400">
-            Radius
-          </span>
-          {RADIUS_OPTIONS.map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setParam('radius', value)}
-              aria-pressed={radius === value}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 ${
-                radius === value
-                  ? 'bg-gradient-to-r from-[#2b1206] to-[#4e2410] text-white border-[#2b1206] shadow-md shadow-[#2b1206]/20'
-                  : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300 hover:text-stone-900 hover:bg-stone-50'
-              }`}
-            >
-              {value} km
-            </button>
-          ))}
-        </div>
+      <div className="mb-5">
+        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+          Open Kitchens · Map
+        </h1>
+        <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
+          <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
+          Every kitchen that is open right now. Move and zoom the map to explore.
+          {!query.isPending && !query.isError && (
+            <span className="bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] px-2.5 py-0.5 rounded-full font-extrabold text-[11px]">
+              {total} open
+            </span>
+          )}
+        </p>
       </div>
 
       {categories.data?.length > 0 && (
@@ -352,8 +353,8 @@ export default function VendorsMapPage() {
 
       {!showMap ? (
         <ErrorState
-          title="Nearby kitchens failed to load"
-          message={query.error?.message || 'We could not reach the nearby vendors endpoint.'}
+          title="Open kitchens failed to load"
+          message={query.error?.message || 'We could not reach the kitchens map endpoint.'}
           onRetry={query.refetch}
           isRetrying={query.isFetching}
         />
@@ -364,24 +365,30 @@ export default function VendorsMapPage() {
             <div className="relative rounded-3xl overflow-hidden border border-stone-200/80 shadow-sm bg-stone-100 h-[60vh] min-h-[380px]">
               {renderMap()}
               {mapsStatus === 'ready' && (
-                <button
-                  type="button"
-                  onClick={recenter}
-                  className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 backdrop-blur border border-stone-200 text-xs font-bold text-stone-700 shadow-md hover:text-[#542813] transition active:scale-95"
-                >
-                  <Navigation className="w-3.5 h-3.5" />
-                  Recenter
-                </button>
+                <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
+                  {vendors.length > 0 && (
+                    <button type="button" onClick={fitAll} className={mapButton}>
+                      <Expand className="w-3.5 h-3.5" />
+                      Show all kitchens
+                    </button>
+                  )}
+                  {located && (
+                    <button type="button" onClick={recenter} className={mapButton}>
+                      <Navigation className="w-3.5 h-3.5" />
+                      Recenter
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Vendor list */}
+          {/* Kitchens in the area on screen */}
           <div className="lg:col-span-1 order-2 lg:order-1">
             <div className="bg-white rounded-3xl border border-stone-200/80 shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
                 <span className="text-xs font-black uppercase tracking-wider text-stone-500">
-                  {total} kitchens
+                  {inView.length} open in this area
                 </span>
                 <Store className="w-4 h-4 text-stone-400" />
               </div>
@@ -394,15 +401,17 @@ export default function VendorsMapPage() {
                       <div className="h-2.5 w-1/3 bg-stone-100 rounded mt-2" />
                     </div>
                   ))
-                ) : vendors.length === 0 ? (
+                ) : inView.length === 0 ? (
                   <div className="p-6 text-center">
                     <ChefHat className="w-7 h-7 text-[#542813] mx-auto" />
                     <p className="text-xs text-stone-500 mt-2">
-                      No kitchens within {radius} km. Try a wider radius.
+                      {vendors.length === 0
+                        ? 'No kitchens are open right now. Check back soon.'
+                        : 'No open kitchens in this area. Zoom out or tap “Show all kitchens”.'}
                     </p>
                   </div>
                 ) : (
-                  vendors.map((vendor) => (
+                  inView.map((vendor) => (
                     <button
                       key={vendor.id}
                       type="button"
@@ -425,14 +434,13 @@ export default function VendorsMapPage() {
                         <div className="text-[11px] text-stone-500 mt-0.5 flex items-center gap-1.5">
                           <MapPin className="w-3 h-3 text-[#8a5332]" />
                           <span className="truncate">{vendor.neighborhood}</span>
-                          <span className="text-stone-300">·</span>
-                          <span className="font-semibold">{vendor.distanceKm} km</span>
+                          {isGps && vendor.hasDistance && (
+                            <>
+                              <span className="text-stone-300">·</span>
+                              <span className="font-semibold">{vendor.distanceKm} km</span>
+                            </>
+                          )}
                         </div>
-                        {vendor.coordinates?.lat == null && (
-                          <span className="text-[10px] text-amber-700 font-semibold">
-                            No map coordinates
-                          </span>
-                        )}
                       </div>
                     </button>
                   ))

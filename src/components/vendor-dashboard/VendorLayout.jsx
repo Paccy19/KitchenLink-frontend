@@ -272,42 +272,30 @@ function PendingReviewPopup({ onClose }) {
   );
 }
 
-const timeAgo = (iso) => {
-  if (!iso) return '';
-  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes} min ago`;
-  return `${Math.round(minutes / 60)} h ago`;
-};
-
 /**
- * Open/close switch. Opening asks the browser for the vendor's GPS position:
- * customers only see the kitchen as nearby while it is open with a fresh
- * location.
+ * Open/close switch. An open store shows on the map and to nearby customers
+ * at its registered kitchen coordinates (set in profile settings).
  */
 function StoreToggle({ vendor, status, error, onToggle }) {
   const busy = status !== 'idle';
   const live = vendor.isLive;
-  const needsLocation = vendor.isOpen && !live;
+  const hasCoords = vendor.liveLocation?.lat != null && vendor.liveLocation?.lng != null;
+  const needsLocation = !live && !hasCoords;
 
   let label = 'Store Closed';
-  let hint = 'Open to share your location and appear to nearby customers.';
+  let hint = 'Open your store to appear on the map and to nearby customers.';
   let tone = 'bg-stone-200 text-stone-600';
   let dot = 'bg-stone-400';
-  if (status === 'locating') {
-    label = 'Getting your location…';
-    hint = 'Allow location access when your browser asks.';
-  } else if (status === 'saving') {
+  if (status === 'saving') {
     label = 'Saving…';
     hint = '';
   } else if (live) {
     label = 'Store Open';
-    hint = `Visible to nearby customers · location ${timeAgo(vendor.liveLocation?.updatedAt)}`;
+    hint = 'Visible on the map at your kitchen location.';
     tone = 'bg-emerald-100 text-emerald-800';
     dot = 'bg-emerald-500';
   } else if (needsLocation) {
-    label = 'Share location to go live';
-    hint = 'Your store is hidden until you share your current location.';
+    hint = "Add your kitchen's coordinates in Profile before opening.";
     tone = 'bg-amber-100 text-amber-800';
     dot = 'bg-amber-500';
   }

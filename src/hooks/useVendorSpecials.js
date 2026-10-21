@@ -10,11 +10,12 @@ const round = (value) => Number(Number(value).toFixed(4));
  * active location. Cached briefly so a fresh announcement shows up quickly.
  */
 export default function useVendorSpecials({ enabled = true } = {}) {
-  const { coords } = useLocation();
+  const { coords, source } = useLocation();
+  const located = source !== 'default';
 
   return useQuery({
-    queryKey: ['home', 'specials', round(coords.lat), round(coords.lng)],
-    queryFn: () => fetchVendorSpecials({ lat: coords.lat, lng: coords.lng }),
+    queryKey: ['home', 'specials', located ? round(coords.lat) : null, located ? round(coords.lng) : null],
+    queryFn: () => fetchVendorSpecials(located ? { lat: coords.lat, lng: coords.lng } : {}),
     enabled,
     staleTime: 60_000,
     refetchOnWindowFocus: false,

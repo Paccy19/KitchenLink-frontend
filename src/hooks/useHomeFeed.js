@@ -11,11 +11,15 @@ const round = (value) => Number(Number(value).toFixed(4));
  * Cached for 60s, keyed by coordinates so a location change refetches.
  */
 export default function useHomeFeed() {
-  const { coords, label, isTracking } = useLocation();
+  const { coords, label, isTracking, source } = useLocation();
+  // The Kigali-centre fallback is not the customer's position: without a real
+  // location the feed shows top kitchens instead of distances from the city centre.
+  const located = source !== 'default';
 
   return useQuery({
-    queryKey: ['home', 'feed', round(coords.lat), round(coords.lng)],
-    queryFn: () => fetchHomeFeed({ lat: coords.lat, lng: coords.lng, label }),
+    queryKey: ['home', 'feed', located ? round(coords.lat) : null, located ? round(coords.lng) : null],
+    queryFn: () =>
+      fetchHomeFeed(located ? { lat: coords.lat, lng: coords.lng, label } : {}),
     staleTime: 60_000,
     refetchInterval: isTracking ? LIVE_REFRESH_MS : false,
     refetchOnWindowFocus: false,

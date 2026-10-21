@@ -20,6 +20,8 @@ import {
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
 import { VENDOR_TYPE_OPTIONS } from '../../data/vendorOptions';
+import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinatesPicker';
+import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
 
 const STEPS = [
   { id: 1, label: 'Business', icon: Store },
@@ -36,6 +38,8 @@ const INITIAL = {
   description: '',
   location: '',
   address: '',
+  // Kitchen coordinates as typed / picked on the map (strings).
+  coords: { lat: '', lng: '' },
   foodCategories: [],
   openTime: '08:00',
   closeTime: '20:00',
@@ -87,7 +91,10 @@ export default function VendorRegisterPage() {
       }
     }
     if (current === 2) {
-      if (!form.location.trim()) next.location = 'Location is required.';
+      if (!form.location.trim()) next.location = 'Your area is required.';
+      if (!parseCoords(form.coords)) {
+        next.coords = "Enter your kitchen's latitude and longitude, or pick it on the map.";
+      }
       if (form.foodCategories.length === 0) next.foodCategories = 'Select at least one food category.';
     }
     if (current === 3) {
@@ -115,7 +122,7 @@ export default function VendorRegisterPage() {
     setSubmitting(true);
     try {
       const vendor = await registerVendor(
-        { ...form },
+        { ...form, ...parseCoords(form.coords) },
         form.documents,
       );
       setCreated(vendor);
@@ -291,25 +298,26 @@ export default function VendorRegisterPage() {
         {step === 2 && (
           <div className="space-y-4 animate-fade-in">
             <StepHeader title="Operations" subtitle="Where you cook and what you serve" />
-            <Field label="Location / area" error={errors.location} icon={MapPin}>
-              <input
-                type="text"
-                value={form.location}
-                onChange={(event) => update({ location: event.target.value })}
-                placeholder="e.g. Kimironko, Kigali"
-                className={inputClass(errors.location)}
+            <div>
+              <p className="text-xs font-bold text-stone-500 flex items-center gap-1.5 mb-1">
+                <MapPin className="w-3.5 h-3.5 text-[#8a5332]" /> Kitchen location
+              </p>
+              <p className="text-[11px] text-stone-500 mb-3">
+                Type your area to see it on the map, then your street to place your kitchen. When your store
+                is open, customers find you on the map here. You can change it later in your profile.
+              </p>
+              <KitchenLocationFields
+                area={form.location}
+                address={form.address}
+                coords={form.coords}
+                onChange={({ area, ...rest }) =>
+                  update(area !== undefined ? { ...rest, location: area } : rest)
+                }
+                errors={{ area: errors.location, coords: errors.coords }}
+                inputClass={inputClass}
+                addressLabel="Street address (optional)"
               />
-            </Field>
-
-            <Field label="Full address (optional)">
-              <input
-                type="text"
-                value={form.address}
-                onChange={(event) => update({ address: event.target.value })}
-                placeholder="Street, landmark"
-                className={inputClass()}
-              />
-            </Field>
+            </div>
 
             <div>
               <label className="text-xs font-bold text-stone-500 block mb-2">Food categories</label>

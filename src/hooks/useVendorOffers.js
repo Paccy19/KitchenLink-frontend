@@ -7,11 +7,12 @@ const round = (value) => Number(Number(value).toFixed(4));
 
 /** GET /vendors/offers — upcoming "Offer Days" announced by kitchens. */
 export default function useVendorOffers({ enabled = true } = {}) {
-  const { coords } = useLocation();
+  const { coords, source } = useLocation();
+  const located = source !== 'default';
 
   return useQuery({
-    queryKey: ['home', 'offers', round(coords.lat), round(coords.lng)],
-    queryFn: () => fetchVendorOffers({ lat: coords.lat, lng: coords.lng }),
+    queryKey: ['home', 'offers', located ? round(coords.lat) : null, located ? round(coords.lng) : null],
+    queryFn: () => fetchVendorOffers(located ? { lat: coords.lat, lng: coords.lng } : {}),
     enabled,
     staleTime: 60_000,
     refetchOnWindowFocus: false,

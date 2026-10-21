@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { Bike, Clock, MapPin, Navigation, Star } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
 import { formatRwf } from '../../api/normalize';
+import { useLocation } from '../../context/LocationContext';
 
 const TYPE_STYLES = {
   'Home Cook': 'bg-[#3d1b0c] text-white',
@@ -53,11 +54,15 @@ export function VendorAvatar({ vendor, className = 'w-9 h-9 rounded-xl text-sm' 
  */
 export default function VendorCard({ vendor, variant = 'grid', showDescription = true }) {
   const isTile = variant === 'tile';
+  // Distances are only meaningful from the customer's measured GPS position,
+  // not from the city-centre fallback or a picked neighbourhood.
+  const { isGps } = useLocation();
+  const showDistance = isGps && vendor.hasDistance;
 
   return (
     <Link
       to={`/vendor/${vendor.id}`}
-      aria-label={`${vendor.name}, ${vendor.type}, rated ${vendor.rating}, ${vendor.distanceKm} kilometres away`}
+      aria-label={`${vendor.name}, ${vendor.type}, rated ${vendor.rating}${showDistance ? `, ${vendor.distanceKm} kilometres away` : ''}`}
       className={clsx(
         'group block bg-white overflow-hidden border border-stone-200/80 shadow-sm hover:shadow-2xl hover:border-[#ebd7c5] hover:-translate-y-1.5 transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#542813]/25 rounded-3xl',
         isTile ? 'min-w-[268px] max-w-[268px] snap-start' : 'h-full',
@@ -134,7 +139,7 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
         )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-stone-100 text-xs font-semibold text-stone-600">
-          {vendor.hasDistance && (
+          {showDistance && (
             <span className="inline-flex items-center gap-1" title="Distance from you">
               <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
               {vendor.distanceKm} km

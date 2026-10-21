@@ -45,6 +45,15 @@ export function fetchNearbyVendors(params = {}) {
   return apiRequest('/home/vendors/nearby', params);
 }
 
+/**
+ * GET /home/vendors/map?lat&lng&category_id — every kitchen whose store is
+ * open, at any distance, for exploring on the map. With lat/lng each has
+ * `distance_km` and they come nearest first.
+ */
+export function fetchMapVendors(params = {}) {
+  return apiRequest('/home/vendors/map', params);
+}
+
 /** GET /vendors/offers?lat&lng — upcoming "Offer Days" from every kitchen, soonest first. */
 export function fetchVendorOffers(params = {}) {
   return apiRequest('/vendors/offers', params);
@@ -177,3 +186,20 @@ export const markNotificationRead = (notificationId) =>
   apiJson('POST', `/notifications/${encodeURIComponent(notificationId)}/read`);
 export const markAllNotificationsRead = () =>
   apiJson('POST', '/notifications/read-all');
+
+/**
+ * GET /geo/places/autocomplete?q&lat&lng — place suggestions (areas, streets,
+ * landmarks) while a vendor types their kitchen's location.
+ * @returns {Promise<{suggestions: Array<{id:string, name:string, secondary:string, kind:'area'|'street'|'place', lat?:number, lng?:number, bounds?:number[]|null}>}>}
+ */
+export function fetchPlaceSuggestions({ q, lat, lng } = {}) {
+  return apiRequest('/geo/places/autocomplete', { q, lat, lng });
+}
+
+/**
+ * GET /geo/places/details?id — a picked place: position, the box to frame
+ * ([west, south, east, north]) and, for areas, the zone outline (GeoJSON).
+ */
+export function fetchPlaceDetails(id) {
+  return apiRequest('/geo/places/details', { id });
+}

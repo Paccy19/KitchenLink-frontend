@@ -141,6 +141,7 @@ export function mapVendorAccount(raw = {}) {
     email: raw.email || '',
     location: raw.location?.neighborhood || raw.location?.address || 'Kigali',
     address: raw.location?.address || '',
+    neighborhood: raw.location?.neighborhood || '',
     description: raw.description || '',
     avatar: raw.profile_image_url || raw.banner_image_url || '',
     cover: raw.banner_image_url || '',

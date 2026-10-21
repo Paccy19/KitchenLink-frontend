@@ -133,9 +133,8 @@ export default function VendorOverviewPage() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 font-medium">
           <AlertTriangle className="w-5 h-5 flex-shrink-0" />
           <span className="flex-1">
-            {vendor.isOpen
-              ? 'Your location has expired, so your store is hidden from customers. Share your current location to appear nearby again.'
-              : 'Your store is closed and hidden from customers. Open it and share your current location so nearby customers can find you and order.'}
+            Your store is closed and hidden from the map. Open it so nearby customers can find your
+            kitchen and order.
           </span>
           <button
             type="button"
@@ -144,7 +143,7 @@ export default function VendorOverviewPage() {
             className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition active:scale-95 disabled:opacity-60"
           >
             <MapPin className="w-3.5 h-3.5" />
-            {storeStatus === 'locating' ? 'Getting location…' : 'Open store & share location'}
+            {storeStatus === 'saving' ? 'Opening…' : 'Open store'}
           </button>
         </div>
       )}

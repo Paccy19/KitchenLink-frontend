@@ -43,37 +43,6 @@ const readFlag = (key, fallback = false) => {
 
 const EMPTY_STATS = mapStats({});
 
-// While the store is open, re-share the vendor's position this often so moving
-// vendors (food trucks) stay accurate and the location never goes stale.
-const LOCATION_REFRESH_MS = 5 * 60 * 1000;
-
-/** Browser GPS position as a promise, with vendor-friendly error messages. */
-function getCurrentPosition() {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('This browser cannot share your location. Use a phone or browser with location (GPS) support.'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) =>
-        resolve({
-          latitude: Number(position.coords.latitude.toFixed(6)),
-          longitude: Number(position.coords.longitude.toFixed(6)),
-          accuracy_m: Math.round(position.coords.accuracy ?? 0),
-        }),
-      (geoError) => {
-        const messages = {
-          1: 'Location permission was denied. Allow location access for this site so customers can find your store.',
-          2: 'Your location is unavailable right now. Turn on GPS / location services and try again.',
-          3: 'Getting your location took too long. Move to an open area or check your GPS, then try again.',
-        };
-        reject(new Error(messages[geoError?.code] || 'Could not get your location. Please try again.'));
-      },
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 },
-    );
-  });
-}
-
 export function VendorProvider({ children }) {
   const queryClient = useQueryClient();
   const [vendor, setVendor] = useState(null);
@@ -96,7 +65,7 @@ export function VendorProvider({ children }) {
   const [loginOtpPreview, setLoginOtpPreview] = useState('');
   // Set when the API reports this vendor as suspended/rejected: { status, reason, support_phone, ... }.
   const [accountBlock, setAccountBlock] = useState(null);
-  // 'idle' | 'locating' | 'saving' while opening/closing the store.
+  // 'idle' | 'saving' while opening/closing the store.
   const [storeStatus, setStoreStatus] = useState('idle');
   const [storeError, setStoreError] = useState('');
   const mounted = useRef(true);
@@ -348,8 +317,8 @@ export function VendorProvider({ children }) {
       JSON.stringify({
         neighborhood: data.location,
         address: data.address || data.location,
-        latitude: data.latitude ?? -1.9441,
-        longitude: data.longitude ?? 30.0619,
+        latitude: data.latitude,
+        longitude: data.longitude,
       }),
     );
     form.append('food_categories', JSON.stringify(data.foodCategories || []));
@@ -391,6 +360,8 @@ export function VendorProvider({ children }) {
       if (patch.bannerImage !== undefined && patch.bannerImage !== '') {
         payload.banner_image_base64 = patch.bannerImage;
       }
+      // Registered kitchen location: { latitude, longitude, address, neighborhood }.
+      if (patch.location) payload.location = patch.location;
       if (Object.keys(payload).length === 0) return;
       const { vendor: raw } = await vendorApi.updateProfile(payload);
       if (mounted.current) setVendor(mapVendorAccount(raw));
@@ -399,20 +370,15 @@ export function VendorProvider({ children }) {
   );
 
   /**
-   * Opening the store requires sharing the vendor's live GPS position so
-   * nearby customers can find the kitchen; closing hides it from customers.
+   * Opens or closes the store. An open store shows on the map at the kitchen's
+   * registered coordinates; the vendor's own position is never read.
    * Errors are surfaced through `storeError` rather than thrown.
    */
   const setStoreOpen = useCallback(async (open) => {
     setStoreError('');
+    setStoreStatus('saving');
     try {
-      let payload = { is_open: false };
-      if (open) {
-        setStoreStatus('locating');
-        payload = { is_open: true, ...(await getCurrentPosition()) };
-      }
-      setStoreStatus('saving');
-      const { vendor: raw } = await vendorApi.setAvailability(payload);
+      const { vendor: raw } = await vendorApi.setAvailability({ is_open: Boolean(open) });
       if (mounted.current) setVendor(mapVendorAccount(raw));
       return true;
     } catch (err) {
@@ -429,28 +395,6 @@ export function VendorProvider({ children }) {
   );
 
   const clearStoreError = useCallback(() => setStoreError(''), []);
-
-  // Keep a live store's position fresh while the dashboard is in use (moving
-  // vendors stay accurate). An expired location is never re-shared silently:
-  // going live again must be a deliberate "open store" action by the vendor.
-  const storeIsLive = Boolean(authToken && vendor?.isLive);
-  useEffect(() => {
-    if (!storeIsLive) return undefined;
-    const refresh = () => {
-      getCurrentPosition()
-        .then((coords) => vendorApi.setAvailability({ is_open: true, ...coords }))
-        .then(({ vendor: raw }) => {
-          if (!mounted.current) return;
-          setVendor(mapVendorAccount(raw));
-          setStoreError('');
-        })
-        .catch((err) => {
-          if (mounted.current) setStoreError(err.message);
-        });
-    };
-    const timer = setInterval(refresh, LOCATION_REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [storeIsLive]);
 
   /* ------------------------------ special ------------------------------ */
 
