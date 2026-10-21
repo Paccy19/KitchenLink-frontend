@@ -203,3 +203,8 @@ export function fetchPlaceSuggestions({ q, lat, lng } = {}) {
 export function fetchPlaceDetails(id) {
   return apiRequest('/geo/places/details', { id });
 }
+
+/** GET /geo/places/reverse?lat&lng — the area and street at a point ({ area, street }). */
+export function fetchPlaceAt({ lat, lng }) {
+  return apiRequest('/geo/places/reverse', { lat, lng });
+}
