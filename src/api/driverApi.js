@@ -314,11 +314,15 @@ export const driverApi = {
       body: payload,
     }),
 
-  updateLocation: ({ latitude, longitude }) =>
+  // heading (degrees), speed_mps and accuracy_m are optional GPS extras.
+  updateLocation: ({ latitude, longitude, heading, speedMps, accuracyM }) =>
     driverRequest('/driver/location', {
       method: 'PATCH',
-      body: { latitude, longitude },
+      body: { latitude, longitude, heading, speed_mps: speedMps, accuracy_m: accuracyM },
     }),
+  // Route + turn-by-turn steps to the kitchen, then the customer.
+  navigation: (deliveryId) =>
+    driverRequest(`/driver/deliveries/${encodeURIComponent(deliveryId)}/navigation`),
   setAvailability: (isOnline) =>
     driverRequest('/driver/availability', {
       method: 'PATCH',

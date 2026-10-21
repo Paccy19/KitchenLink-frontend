@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
+import LiveDeliveryTracker from '../components/tracking/LiveDeliveryTracker';
 import { formatScheduledFor } from '../utils/schedule';
 
 function StepIcon({ iconKey, className = "w-4 h-4" }) {
@@ -300,8 +301,13 @@ export default function OrderTrackingPage() {
         {/* Left Column: Driver Information & Live Map Simulation */}
         <div className="lg:col-span-7 space-y-6">
           
-          {/* Driver Card */}
-          {order.driver && ['assigned', 'picked_up', 'out_for_delivery', 'delivered'].includes(order.status) && (
+          {/* Live map of the delivery worker, from the moment one accepts */}
+          {!isPickup && !isCancelled && !isDeliveredOrDone && (
+            <LiveDeliveryTracker orderId={order.id} enabled={apiEnabled} />
+          )}
+
+          {/* Driver Card (after delivery) */}
+          {order.driver && isDeliveredOrDone && (
             <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm">
               <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                 Assigned Delivery Worker

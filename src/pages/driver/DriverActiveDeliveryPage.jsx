@@ -15,7 +15,7 @@ import {
 import { useDriver } from '../../context/DriverContext';
 import { CONTEXT_ACTIONS } from '../../data/driverOptions';
 import DriverStatusStepper from '../../components/driver-dashboard/DriverStatusStepper';
-import RoutePanel from '../../components/driver-dashboard/RoutePanel';
+import DriverNavigation from '../../components/driver-dashboard/DriverNavigation';
 import OrderProgressPanel from '../../components/driver-dashboard/OrderProgressPanel';
 import PickupClock from '../../components/driver-dashboard/PickupClock';
 import EmptyState from '../../components/common/EmptyState';
@@ -186,6 +186,9 @@ export default function DriverActiveDeliveryPage() {
 
       <PickupClock delivery={activeDelivery} />
 
+      {/* GPS navigation: to the kitchen, then to the customer */}
+      <DriverNavigation delivery={activeDelivery} />
+
       <DriverStatusStepper status={activeDelivery.status} />
 
       <OrderProgressPanel progress={activeDelivery.orderProgress} />
@@ -277,17 +280,6 @@ export default function DriverActiveDeliveryPage() {
 
         {/* Right column */}
         <div className="space-y-4">
-          <RoutePanel
-            pickup={{
-              lat: activeDelivery.vendor.latitude,
-              lng: activeDelivery.vendor.longitude,
-            }}
-            dropoff={{
-              lat: activeDelivery.dropoff.latitude,
-              lng: activeDelivery.dropoff.longitude,
-            }}
-          />
-
           {action ? (
             <div className="rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 space-y-3">
               <div>

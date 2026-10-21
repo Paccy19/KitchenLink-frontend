@@ -49,6 +49,26 @@ const DELIVERY_ALERTS = {
 // really nearby are offered orders.
 const LOCATION_SHARE_MS = 60 * 1000;
 
+// Live tracking during a delivery: send a fix at most every 4 s when the
+// rider moved 8 m+, and at least every 15 s while standing still.
+const LIVE_SEND_MIN_MS = 4000;
+const LIVE_SEND_MAX_MS = 15000;
+const LIVE_SEND_MIN_MOVE_M = 8;
+
+const toRad = (deg) => (deg * Math.PI) / 180;
+function metresBetween(a, b) {
+  const x = toRad(b.longitude - a.longitude) * Math.cos(toRad((a.latitude + b.latitude) / 2));
+  const y = toRad(b.latitude - a.latitude);
+  return Math.hypot(x, y) * 6371000;
+}
+function bearingBetween(a, b) {
+  const y = Math.sin(toRad(b.longitude - a.longitude)) * Math.cos(toRad(b.latitude));
+  const x =
+    Math.cos(toRad(a.latitude)) * Math.sin(toRad(b.latitude)) -
+    Math.sin(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.cos(toRad(b.longitude - a.longitude));
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
 export function DriverProvider({ children }) {
   const toast = useToast();
   const [driver, setDriver] = useState(null);
@@ -470,8 +490,10 @@ export function DriverProvider({ children }) {
   // Keep the position current while online (and while delivering), so the
   // 7.5 km matching uses where the driver really is.
   const onDuty = Boolean(authToken) && Boolean(driver?.isOnline ?? stats.isOnline);
+  // While delivering, live GPS tracking (below) replaces the minute updates.
+  const delivering = Boolean(authToken && activeDelivery);
   useEffect(() => {
-    if (!onDuty) return undefined;
+    if (!onDuty || delivering) return undefined;
     const share = () => {
       if (document.visibilityState === 'hidden') return;
       shareLocation().catch(() => null);
@@ -479,7 +501,56 @@ export function DriverProvider({ children }) {
     share();
     const timer = setInterval(share, LOCATION_SHARE_MS);
     return () => clearInterval(timer);
-  }, [onDuty, shareLocation]);
+  }, [onDuty, delivering, shareLocation]);
+
+  // Live GPS while a delivery is active: the customer watches the rider move
+  // on their map and the navigation view follows them, like a GPS tracker.
+  const [liveFix, setLiveFix] = useState(null);
+  const [gpsError, setGpsError] = useState('');
+  useEffect(() => {
+    if (!delivering || typeof navigator === 'undefined' || !navigator.geolocation) return undefined;
+    let previous = null;
+    let lastSent = null;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        const fix = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          heading: Number.isFinite(pos.coords.heading) ? pos.coords.heading : null,
+          speedMps: Number.isFinite(pos.coords.speed) ? pos.coords.speed : null,
+          accuracyM: Math.round(pos.coords.accuracy ?? 0),
+          at: now,
+        };
+        // Phones only report a heading while moving; derive it from the last fix otherwise.
+        if (fix.heading == null && previous && metresBetween(previous, fix) >= 4) {
+          fix.heading = bearingBetween(previous, fix);
+        } else if (fix.heading == null && previous) {
+          fix.heading = previous.heading;
+        }
+        previous = fix;
+        setLiveFix(fix);
+        setLocation({ latitude: fix.latitude, longitude: fix.longitude });
+        setGpsError('');
+
+        const moved = lastSent ? metresBetween(lastSent, fix) : Infinity;
+        const since = lastSent ? now - lastSent.at : Infinity;
+        if (since >= LIVE_SEND_MIN_MS && (moved >= LIVE_SEND_MIN_MOVE_M || since >= LIVE_SEND_MAX_MS)) {
+          lastSent = fix;
+          driverApi.updateLocation(fix).catch(() => null);
+        }
+      },
+      (err) => {
+        setGpsError(
+          err?.code === 1
+            ? 'Location permission is off. Allow location so the customer can follow your delivery.'
+            : 'Waiting for GPS… move to an open area if this takes long.',
+        );
+      },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [delivering]);
 
   /* --------------------------- delivery actions ------------------------ */
 
@@ -566,6 +637,8 @@ export function DriverProvider({ children }) {
       markAllNotificationsRead,
       location,
       sharingLocation,
+      liveFix,
+      gpsError,
       isAuthenticated,
       hasToken,
       marketplaceMode,
@@ -613,6 +686,8 @@ export function DriverProvider({ children }) {
       markAllNotificationsRead,
       location,
       sharingLocation,
+      liveFix,
+      gpsError,
       isAuthenticated,
       hasToken,
       marketplaceMode,

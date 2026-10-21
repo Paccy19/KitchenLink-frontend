@@ -208,3 +208,11 @@ export function fetchPlaceDetails(id) {
 export function fetchPlaceAt({ lat, lng }) {
   return apiRequest('/geo/places/reverse', { lat, lng });
 }
+
+/**
+ * GET /orders/{order_id}/live — the delivery worker's live position, the road
+ * route to where they are heading (kitchen, then you) and the ETA.
+ */
+export function fetchOrderLive(orderId) {
+  return apiRequest(`/orders/${encodeURIComponent(orderId)}/live`);
+}
