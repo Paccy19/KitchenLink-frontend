@@ -1,49 +1,36 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
- * Full-screen state for a map panel shown as a fixed overlay (works on every
- * phone, unlike the element Fullscreen API on iPhones). While open the page
- * behind doesn't scroll, and Escape or the phone's Back button closes it.
- * `storageKey` remembers the choice for next time.
+ * Full-screen state for a map panel shown as a fixed overlay (works on
+ * iPhones too, unlike the element Fullscreen API). While open, the page
+ * behind is frozen in place — `position: fixed` on the body, which also stops
+ * iOS Safari from scrolling it — and Escape closes the overlay.
  */
-export default function useFullScreenOverlay(storageKey) {
-  const [open, setOpen] = useState(() => {
-    try {
-      return Boolean(storageKey) && localStorage.getItem(storageKey) === '1';
-    } catch {
-      return false;
-    }
-  });
-
-  const set = useCallback(
-    (next) => {
-      setOpen(next);
-      try {
-        if (storageKey) localStorage.setItem(storageKey, next ? '1' : '0');
-      } catch {
-        /* storage unavailable */
-      }
-    },
-    [storageKey],
-  );
+export default function useFullScreenOverlay() {
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return undefined;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = 'hidden';
-    // A history entry so Back closes the map instead of leaving the page.
-    window.history.pushState({ ofkFullMap: true }, '');
-    const onPop = () => set(false);
-    const onKey = (event) => event.key === 'Escape' && set(false);
-    window.addEventListener('popstate', onPop);
+    const { body } = document;
+    const scrollY = window.scrollY;
+    const saved = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+    body.style.overflow = 'hidden';
+    const onKey = (event) => event.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = overflow;
-      window.removeEventListener('popstate', onPop);
       window.removeEventListener('keydown', onKey);
-      if (window.history.state?.ofkFullMap) window.history.back();
+      Object.assign(body.style, saved);
+      window.scrollTo(0, scrollY);
     };
-  }, [open, set]);
+  }, [open]);
 
-  return [open, set];
+  return [open, setOpen];
 }

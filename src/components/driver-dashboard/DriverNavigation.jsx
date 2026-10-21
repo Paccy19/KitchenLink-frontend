@@ -9,8 +9,6 @@ import {
   ExternalLink,
   Flag,
   Map as MapIcon,
-  Maximize2,
-  Minimize2,
   RotateCcw,
   RefreshCw,
   Store,
@@ -21,6 +19,7 @@ import { useDriver } from '../../context/DriverContext';
 import { formatDistance, formatMinutes, nextStep } from '../../utils/routeMath';
 import LiveRouteMap from '../tracking/LiveRouteMap';
 import useFullScreenOverlay from '../../hooks/useFullScreenOverlay';
+import { FullScreenPanel, FullScreenToggle, safeBottom, safeTop } from '../tracking/FullScreenPanel';
 
 const REFRESH_MS = 15000;
 const OFF_ROUTE_M = 50;
@@ -48,8 +47,7 @@ export default function DriverNavigation({ delivery }) {
   const { liveFix, gpsError } = useDriver();
   const [nav, setNav] = useState(null);
   const [follow, setFollow] = useState(true);
-  // Remembered: a driver who likes full-screen navigation gets it every time.
-  const [full, setFull] = useFullScreenOverlay('ofk_driver_nav_full');
+  const [full, setFull] = useFullScreenOverlay();
   const lastFetch = useRef(0);
 
   const load = async () => {
@@ -116,19 +114,13 @@ export default function DriverNavigation({ delivery }) {
     if (progress && progress.offRouteM > OFF_ROUTE_M && Date.now() - lastFetch.current > REROUTE_GAP_MS) load();
   }, [progress?.offRouteM]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (nav && !nav.active) return null;
+  // Delivery finished (or no longer navigable): leave full screen.
+  const finished = Boolean(nav && !nav.active);
+  useEffect(() => {
+    if (finished && full) setFull(false);
+  }, [finished, full, setFull]);
 
-  const fullToggle = (
-    <button
-      type="button"
-      onClick={() => setFull(!full)}
-      aria-label={full ? 'Exit full screen' : 'Full screen navigation'}
-      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 border border-stone-200 shadow-md text-xs font-bold text-stone-700"
-    >
-      {full ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-      {full ? 'Exit full screen' : 'Full screen'}
-    </button>
-  );
+  if (finished) return null;
 
   const toKitchen = nav?.phase === 'to_kitchen' || delivery.status === 'assigned_to_driver';
   const target = toKitchen
@@ -141,20 +133,15 @@ export default function DriverNavigation({ delivery }) {
   const arrived = progress && progress.remainingM < 40;
 
   return (
-    <div
-      className={
-        full
-          ? 'fixed inset-0 z-[1000] bg-white flex flex-col'
-          : 'rounded-3xl bg-white border border-stone-200/80 shadow-sm overflow-hidden'
-      }
-      role={full ? 'dialog' : undefined}
-      aria-modal={full || undefined}
-      aria-label={full ? 'Navigation' : undefined}
+    <FullScreenPanel
+      full={full}
+      label="Navigation"
+      className="rounded-3xl bg-white border border-stone-200/80 shadow-sm overflow-hidden"
     >
       {/* Next turn */}
       <div
         className="bg-gradient-to-r from-[#12200b] to-[#2a3f1b] text-white px-4 py-3 flex items-center gap-3 flex-shrink-0"
-        style={full ? { paddingTop: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+        style={safeTop(full)}
       >
         <span className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
           <TurnIcon maneuver={arrived ? { type: 'arrive' } : progress?.step?.maneuver} className="w-7 h-7" />
@@ -166,7 +153,19 @@ export default function DriverNavigation({ delivery }) {
               <p className="text-sm font-bold text-white/90 truncate mt-0.5">{progress.step?.instruction || 'Continue'}</p>
             </>
           ) : arrived ? (
-            <p className="text-lg font-black">{toKitchen ? "You're at the kitchen" : "You're at the customer"}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-lg font-black">{toKitchen ? "You're at the kitchen" : "You're at the customer"}</p>
+              {full && (
+                // The pickup / delivery confirmation lives on the page behind.
+                <button
+                  type="button"
+                  onClick={() => setFull(false)}
+                  className="px-3 py-1.5 rounded-xl bg-white text-[#1c2b12] text-xs font-black"
+                >
+                  {toKitchen ? 'Confirm pickup' : 'Complete delivery'}
+                </button>
+              )}
+            </div>
           ) : (
             <p className="text-sm font-bold text-white/80">{gpsError || 'Finding your position…'}</p>
           )}
@@ -188,7 +187,9 @@ export default function DriverNavigation({ delivery }) {
           frameKey={`${nav?.phase || delivery.status}-${full}`}
           className={full ? 'h-full !rounded-none' : 'h-[65vh] min-h-[360px] !rounded-none'}
         />
-        <div className="absolute top-3 left-3">{fullToggle}</div>
+        <div className="absolute top-3 left-3">
+          <FullScreenToggle full={full} onChange={setFull} label="navigation" />
+        </div>
         <div className="absolute bottom-10 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none">
           <div className="pointer-events-auto rounded-2xl bg-white/95 border border-stone-200 shadow-md px-3 py-2">
             {progress ? (
@@ -229,7 +230,7 @@ export default function DriverNavigation({ delivery }) {
       {!toKitchen && (delivery.dropoff.address || delivery.dropoff.note) && (
         <div
           className="px-4 py-3 border-t border-stone-100 text-xs flex-shrink-0"
-          style={full ? { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' } : undefined}
+          style={safeBottom(full)}
         >
           <p className="font-bold text-gray-900">{delivery.dropoff.address}</p>
           {delivery.dropoff.note && <p className="text-stone-500 mt-0.5">Note: {delivery.dropoff.note}</p>}
@@ -238,6 +239,6 @@ export default function DriverNavigation({ delivery }) {
       {gpsError && progress && (
         <p className="px-4 py-2 text-[11px] font-semibold text-amber-800 bg-amber-50 border-t border-amber-200">{gpsError}</p>
       )}
-    </div>
+    </FullScreenPanel>
   );
 }

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Bike, Crosshair, Map as MapIcon, Maximize2, Minimize2, Phone, Radio, Star, X } from 'lucide-react';
+import { Bike, Crosshair, Map as MapIcon, Phone, Radio, Star, X } from 'lucide-react';
 import { fetchOrderLive } from '../../api/endpoints';
 import { formatDistance, formatMinutes } from '../../utils/routeMath';
 import LiveRouteMap from './LiveRouteMap';
 import useFullScreenOverlay from '../../hooks/useFullScreenOverlay';
+import { FullScreenPanel, FullScreenToggle, safeBottom, safeTop } from './FullScreenPanel';
 
 const POLL_MS = 4000;
 const timeOf = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -20,7 +21,7 @@ const agoOf = (iso) => {
 export default function LiveDeliveryTracker({ orderId, enabled = true }) {
   const [live, setLive] = useState(null);
   const [follow, setFollow] = useState(false);
-  const [full, setFull] = useFullScreenOverlay(null);
+  const [full, setFull] = useFullScreenOverlay();
 
   useEffect(() => {
     if (!enabled || !orderId) return undefined;
@@ -54,19 +55,14 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
   const rider = fix ? { lat: fix.latitude, lng: fix.longitude, heading: fix.heading } : null;
 
   return (
-    <div
-      className={
-        full
-          ? 'fixed inset-0 z-[1000] bg-white flex flex-col'
-          : 'bg-white rounded-3xl border border-stone-200/80 shadow-sm overflow-hidden'
-      }
-      role={full ? 'dialog' : undefined}
-      aria-modal={full || undefined}
-      aria-label={full ? 'Live delivery map' : undefined}
+    <FullScreenPanel
+      full={full}
+      label="Live delivery map"
+      className="bg-white rounded-3xl border border-stone-200/80 shadow-sm overflow-hidden"
     >
       <div
         className={`flex flex-wrap items-start justify-between gap-3 ${full ? 'px-4 pb-3 border-b border-stone-100' : 'p-5'}`}
-        style={full ? { paddingTop: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+        style={safeTop(full)}
       >
         <div className="min-w-0 flex-1">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-blue-700">
@@ -117,15 +113,9 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
           frameKey={`${live.phase}-${full}`}
           className={full ? 'h-full !rounded-none' : 'h-[60vh] min-h-[340px] max-h-[560px]'}
         />
-        <button
-          type="button"
-          onClick={() => setFull(!full)}
-          aria-label={full ? 'Exit full screen' : 'Full screen map'}
-          className={`absolute top-3 ${full ? 'left-3' : 'left-6'} inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 border border-stone-200 shadow-md text-xs font-bold text-stone-700 hover:text-blue-700`}
-        >
-          {full ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          {full ? 'Exit full screen' : 'Full screen'}
-        </button>
+        <div className={`absolute top-3 ${full ? 'left-3' : 'left-6'}`}>
+          <FullScreenToggle full={full} onChange={setFull} />
+        </div>
         {rider && (
           <button
             type="button"
@@ -152,7 +142,7 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
       {driver && (
         <div
           className={`p-5 flex items-center justify-between gap-3 ${full ? 'border-t border-stone-100 py-3' : ''}`}
-          style={full ? { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' } : undefined}
+          style={safeBottom(full)}
         >
           <div className="flex items-center gap-3 min-w-0">
             {driver.avatar_url ? (
@@ -184,6 +174,6 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
           )}
         </div>
       )}
-    </div>
+    </FullScreenPanel>
   );
 }

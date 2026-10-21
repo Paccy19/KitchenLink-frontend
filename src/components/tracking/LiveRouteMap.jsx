@@ -101,12 +101,9 @@ export default function LiveRouteMap({
       if (followRef.current) onFollowRef.current?.(false);
     });
     mapRef.current = map;
-    // Redraw whenever the box changes size (full screen, rotating the phone,
-    // the page layout settling) so the map never shows blank or cut off.
-    const resizer = new ResizeObserver(() => map.resize());
-    resizer.observe(containerRef.current);
+    // MapLibre follows its container's size itself (trackResize), so full
+    // screen and rotating the phone just work.
     return () => {
-      resizer.disconnect();
       cancelAnimationFrame(glide.current.frame);
       map.remove();
       mapRef.current = null;
@@ -179,6 +176,9 @@ export default function LiveRouteMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
+    // The box may have just changed size (e.g. full screen toggled in this
+    // same render): measure it now so the camera fits the new size.
+    map.resize();
     if (follow && rider?.lat != null) {
       map.easeTo({
         center: [rider.lng, rider.lat],
