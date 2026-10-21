@@ -495,6 +495,17 @@ export function VendorProvider({ children }) {
     [orders, refreshOrders, refreshDashboard, refreshWallet, markSynced],
   );
 
+  /** Pickup orders: the customer collected it; completes the order with their code. */
+  const confirmPickup = useCallback(
+    async (orderId, pickupCode) => {
+      const target = orders.find((order) => order.id === orderId);
+      await vendorApi.confirmPickup(target?.backendId || orderId, pickupCode);
+      await Promise.all([refreshOrders(), refreshDashboard(), refreshWallet()]);
+      markSynced();
+    },
+    [orders, refreshOrders, refreshDashboard, refreshWallet, markSynced],
+  );
+
   const acceptOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Accepted'), [updateOrderStatus]);
   const rejectOrder = useCallback((orderId) => updateOrderStatus(orderId, 'Cancelled'), [updateOrderStatus]);
 
@@ -570,6 +581,7 @@ export function VendorProvider({ children }) {
       deleteMenuItem,
       toggleItemAvailability,
       updateOrderStatus,
+      confirmPickup,
       acceptOrder,
       rejectOrder,
       requestWithdrawal,
@@ -622,6 +634,7 @@ export function VendorProvider({ children }) {
       deleteMenuItem,
       toggleItemAvailability,
       updateOrderStatus,
+      confirmPickup,
       acceptOrder,
       rejectOrder,
       requestWithdrawal,

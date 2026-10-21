@@ -166,6 +166,33 @@ export function mapDelivery(raw = {}) {
     otpRequired: Boolean(raw.otp_required),
     otpCode: raw.dev_otp || '',
     proofPhotoUrl: raw.proof_photo_url || '',
+    // Offered at placement: the kitchen may still be cooking.
+    kitchenReady: raw.kitchen_ready !== false,
+    readyAt: raw.ready_at ?? null,
+    expectedReadyAt: raw.expected_ready_at ?? null,
+    pickupDueAt: raw.pickup_due_at ?? null,
+    pickupGraceMinutes: Number(raw.pickup_grace_minutes ?? 15),
+    latePickup: raw.late_pickup
+      ? {
+          flaggedAt: raw.late_pickup.flagged_at,
+          minutesLate: raw.late_pickup.minutes_late ?? null,
+          chargeStatus: raw.late_pickup.charge_status || 'pending',
+          chargeRwf: raw.late_pickup.charge_rwf ?? null,
+        }
+      : null,
+    // The order as the customer follows it (assigned driver only).
+    orderProgress: raw.order_progress
+      ? {
+          status: raw.order_progress.status,
+          label: raw.order_progress.label,
+          history: (raw.order_progress.history || []).map((entry) => ({
+            status: entry.status,
+            label: entry.label,
+            at: entry.at,
+            note: entry.note || '',
+          })),
+        }
+      : null,
     assignedAt: raw.assigned_at ?? null,
     pickedUpAt: raw.picked_up_at ?? null,
     outForDeliveryAt: raw.out_for_delivery_at ?? null,

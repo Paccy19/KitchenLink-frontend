@@ -16,6 +16,8 @@ import { useDriver } from '../../context/DriverContext';
 import { CONTEXT_ACTIONS } from '../../data/driverOptions';
 import DriverStatusStepper from '../../components/driver-dashboard/DriverStatusStepper';
 import RoutePanel from '../../components/driver-dashboard/RoutePanel';
+import OrderProgressPanel from '../../components/driver-dashboard/OrderProgressPanel';
+import PickupClock from '../../components/driver-dashboard/PickupClock';
 import EmptyState from '../../components/common/EmptyState';
 import { useToast } from '../../components/common/Toast';
 
@@ -151,12 +153,15 @@ export default function DriverActiveDeliveryPage() {
     try {
       await updateStatus(activeDelivery.id, action.to);
       toast.success(action.to === 'picked_up' ? 'Pickup confirmed — thanks!' : 'Status updated');
-    } catch {
-      /* toast handles errors */
+    } catch (err) {
+      toast.error(err?.message || 'Could not update the delivery.');
     } finally {
       setBusy(false);
     }
   };
+
+  // The food can only be collected once the kitchen marks it ready.
+  const waitingForKitchen = activeDelivery.status === 'assigned_to_driver' && !activeDelivery.kitchenReady;
 
   const googleMapsVendor = activeDelivery.vendor.latitude != null
     ? `https://www.google.com/maps/dir/?api=1&destination=${activeDelivery.vendor.latitude},${activeDelivery.vendor.longitude}&travelmode=driving`
@@ -179,7 +184,11 @@ export default function DriverActiveDeliveryPage() {
         </span>
       </div>
 
+      <PickupClock delivery={activeDelivery} />
+
       <DriverStatusStepper status={activeDelivery.status} />
+
+      <OrderProgressPanel progress={activeDelivery.orderProgress} />
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="space-y-4">
@@ -283,16 +292,20 @@ export default function DriverActiveDeliveryPage() {
             <div className="rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 space-y-3">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Next step</p>
-                <p className="mt-1 text-sm font-bold text-stone-600">{action.hint}</p>
+                <p className="mt-1 text-sm font-bold text-stone-600">
+                  {waitingForKitchen
+                    ? "Go to the kitchen and wait nearby. You can confirm pickup once the kitchen marks the food ready."
+                    : action.hint}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={handleAction}
-                disabled={busy}
+                disabled={busy || waitingForKitchen}
                 className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-[#1c2b12] via-[#3b5327] to-[#12200b] text-white font-black text-sm shadow-md transition active:scale-95 disabled:opacity-60"
               >
                 <ArrowRight className="w-4 h-4" />
-                {busy ? 'Updating…' : action.label}
+                {busy ? 'Updating…' : waitingForKitchen ? 'Waiting for the kitchen…' : action.label}
               </button>
               {activeDelivery.status === 'out_for_delivery' && (
                 <p className="text-xs text-stone-400 font-medium text-center">

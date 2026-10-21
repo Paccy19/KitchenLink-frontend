@@ -179,7 +179,7 @@ export default function DriverDashboardPage() {
           title={isOnline ? 'No deliveries on the board right now' : 'You are offline'}
           message={
             isOnline
-              ? 'When a vendor marks an order as ready, it will show up here automatically. Offers refresh every few seconds.'
+              ? 'Orders placed at kitchens within 7.5 km of you show up here the moment they are placed. The first delivery worker to accept gets the delivery.'
               : 'Flip the big switch above to go online and nearby delivery offers will appear here.'
           }
         />

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Phone, MapPin, Clock, Eye, Check, X, CalendarClock } from 'lucide-react';
+import { Phone, MapPin, Clock, Eye, Check, X, CalendarClock, Store } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
+import ConfirmPickupForm from './ConfirmPickupForm';
 import {
   ORDER_ACTION_LABEL,
   ORDER_CANCELLABLE_STATUSES,
@@ -38,6 +39,12 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#faf6f2] text-[#542813] border border-[#ebd7c5]">
                 <CalendarClock className="w-3 h-3" />
                 {order.orderTypeCode === 'preorder' ? 'Pre-order' : 'Scheduled'}
+              </span>
+            )}
+            {order.isPickup && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <Store className="w-3 h-3" />
+                Customer pickup
               </span>
             )}
           </div>
@@ -96,11 +103,12 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
         </span>
       </div>
 
-      {order.status === 'Ready' && (
+      {order.status === 'Ready' && !order.isPickup && (
         <p className="text-[11px] font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
           {READY_ORDER_NOTE}
         </p>
       )}
+      {order.status === 'Ready' && order.isPickup && <ConfirmPickupForm order={order} />}
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <button

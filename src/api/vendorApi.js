@@ -211,10 +211,18 @@ export function mapOrder(raw = {}) {
     orderNumber: raw.order_number || '',
     status,
     createdAt: raw.created_at,
+    // 'pickup': the customer collects it here; the vendor confirms with their code.
+    isPickup: raw.fulfillment === 'pickup',
+    canConfirmPickup: Boolean(raw.can_confirm_pickup),
+    pickupAttemptsLeft: raw.pickup_attempts_left ?? null,
+    collectedAt: raw.collected_at || null,
     customer: {
       name: raw.customer?.name || 'Customer',
       phone: raw.customer?.phone_number || '',
-      address: delivery.address || delivery.neighborhood || '',
+      address:
+        raw.fulfillment === 'pickup'
+          ? 'Collects at your kitchen'
+          : delivery.address || delivery.neighborhood || '',
       note: delivery.note || '',
     },
     items: (raw.items || []).map((item) => ({
@@ -369,6 +377,12 @@ export const vendorApi = {
     vendorRequest(`/vendor/orders/${encodeURIComponent(orderId)}/status`, {
       method: 'PATCH',
       body: { status },
+    }),
+  // Pickup orders: the customer collected it (vendor enters their code).
+  confirmPickup: (orderId, pickupCode) =>
+    vendorRequest(`/vendor/orders/${encodeURIComponent(orderId)}/collect`, {
+      method: 'POST',
+      body: { pickup_code: pickupCode },
     }),
 
   wallet: () => vendorRequest('/vendor/wallet'),

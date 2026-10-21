@@ -17,9 +17,14 @@ export default function DeliveryOfferCard({ delivery, busy = false, onAccept, on
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-extrabold text-gray-900 truncate">{heading}</p>
-          <p className="text-[11px] font-bold text-[#4a6a34]">
-            Order {delivery.orderNumber} · {delivery.statusLabel}
-          </p>
+          <p className="text-[11px] font-bold text-[#4a6a34]">Order {delivery.orderNumber}</p>
+          <span
+            className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
+              delivery.kitchenReady ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+            }`}
+          >
+            {delivery.kitchenReady ? 'Ready for pickup' : 'Kitchen preparing'}
+          </span>
         </div>
         <span className="flex-shrink-0 text-right">
           <span className="block text-sm font-black text-emerald-600">
@@ -50,10 +55,16 @@ export default function DeliveryOfferCard({ delivery, busy = false, onAccept, on
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-xs font-bold text-stone-500 border-t border-stone-100 pt-3">
-        <span className="inline-flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-bold text-stone-500 border-t border-stone-100 pt-3">
+        {delivery.distanceFromDriverKm != null && (
+          <span className="inline-flex items-center gap-1" title="From you to the kitchen">
+            <Store className="w-3.5 h-3.5 text-[#3b5327]" />
+            {Number(delivery.distanceFromDriverKm).toFixed(1)} km to kitchen
+          </span>
+        )}
+        <span className="inline-flex items-center gap-1" title="Kitchen to customer">
           <Navigation className="w-3.5 h-3.5 text-[#3b5327]" />
-          {delivery.routeDistanceKm ? `${delivery.routeDistanceKm.toFixed(1)} km` : '—'}
+          {delivery.routeDistanceKm ? `${delivery.routeDistanceKm.toFixed(1)} km trip` : '—'}
         </span>
         <span className="inline-flex items-center gap-1">
           <Coins className="w-3.5 h-3.5 text-[#3b5327]" />

@@ -18,6 +18,16 @@ export const ORDER_STATUSES = [
   { id: 'cancelled', label: 'Cancelled', icon: '×', description: 'This order has been cancelled.' },
 ];
 
+// Orders the customer collects at the kitchen: no delivery worker steps.
+export const PICKUP_ORDER_STATUSES = [
+  { id: 'placed', label: 'Order placed', icon: 'clipboard', description: 'Your order was sent to the kitchen.' },
+  { id: 'confirmed', label: 'Confirmed by kitchen', icon: 'check-circle', description: 'The kitchen accepted your order.' },
+  { id: 'preparing', label: 'Preparing your food', icon: 'chef-hat', description: 'Fresh ingredients are being cooked.' },
+  { id: 'ready', label: 'Ready to collect', icon: 'shopping-bag', description: 'Go to the kitchen and give them your pickup code.' },
+  { id: 'delivered', label: 'Collected', icon: 'package', description: 'You collected your order. Enjoy your meal!' },
+  { id: 'cancelled', label: 'Cancelled', icon: '×', description: 'This order has been cancelled.' },
+];
+
 export const OrderProvider = ({ children }) => {
   const { accessToken } = useAuth();
   const apiEnabled = Boolean(accessToken);
@@ -65,6 +75,7 @@ export const OrderProvider = ({ children }) => {
     paymentMethod,
     paymentDetails,
     orderType = 'immediate',
+    fulfillment = 'delivery',
     scheduledFor = null,
     specialText = '',
   }) => {
@@ -80,6 +91,7 @@ export const OrderProvider = ({ children }) => {
         payment_method: paymentMethod.code,
         payment_details: paymentDetails,
         order_type: orderType,
+        fulfillment,
         scheduled_for: scheduledFor,
         special_text: specialText,
       });

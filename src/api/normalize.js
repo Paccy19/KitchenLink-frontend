@@ -218,6 +218,20 @@ export function normalizeOrder(raw = {}) {
     createdAt: toText(raw.created_at, raw.placed_at),
     orderType: toText(raw.order_type, 'immediate'),
     orderTypeLabel: toText(raw.order_type_label, 'Immediate'),
+    // 'pickup': the customer collects it at the kitchen with `pickup.code`.
+    fulfillment: toText(raw.fulfillment, 'delivery'),
+    pickup: raw.pickup
+      ? {
+          address: toText(raw.pickup.address),
+          neighborhood: toText(raw.pickup.neighborhood),
+          latitude: raw.pickup.latitude ?? null,
+          longitude: raw.pickup.longitude ?? null,
+          vendorPhone: toText(raw.pickup.vendor_phone),
+          code: toText(raw.pickup.code),
+          readyForCollection: Boolean(raw.pickup.ready_for_collection),
+          collectedAt: raw.pickup.collected_at ?? null,
+        }
+      : null,
     scheduledFor: toText(raw.scheduled_for),
     specialText: toText(raw.special_text),
     vendorId: toText(vendor.id),

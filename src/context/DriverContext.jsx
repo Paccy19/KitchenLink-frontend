@@ -36,6 +36,19 @@ const readFlag = (key, fallback = false) => {
 
 const EMPTY_STATS = mapDriverStats({});
 
+// Delivery updates that pop up as they arrive, with their toast style.
+const DELIVERY_ALERTS = {
+  delivery_ready: 'success',
+  delivery_pickup_reminder: 'error',
+  delivery_late: 'error',
+  delivery_taken: 'info',
+  delivery_cancelled: 'error',
+};
+
+// While online, the position is re-sent this often so only drivers who are
+// really nearby are offered orders.
+const LOCATION_SHARE_MS = 60 * 1000;
+
 export function DriverProvider({ children }) {
   const toast = useToast();
   const [driver, setDriver] = useState(null);
@@ -124,23 +137,32 @@ export function DriverProvider({ children }) {
     const count = Number(raw.unread_count ?? mapped.filter((n) => !n.read).length);
 
     const firstBatch = knownNotificationIds.current.size === 0;
-    const freshOffers = mapped.filter(
-      (n) => n.type === 'delivery_offer' && !n.read && !knownNotificationIds.current.has(n.id),
-    );
+    const fresh = mapped.filter((n) => !n.read && !knownNotificationIds.current.has(n.id));
+    const freshOffers = fresh.filter((n) => n.type === 'delivery_offer');
 
-    if (!firstBatch && freshOffers.length > 0) {
-      const offer = freshOffers[0];
-      const vendor = offer.data.vendor_name || 'A nearby vendor';
-      const earnings = Number(offer.data.earnings_rwf || 0);
+    const systemAlert = (title, body) => {
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.visibilityState !== 'visible') {
-        new Notification(offer.title || 'New order ready for pickup', {
-          body: `${vendor} · earn ${earnings.toLocaleString()} RWF`,
-          icon: '/favicon.svg',
-        });
+        new Notification(title, { body, icon: '/favicon.svg' });
       }
-      toast.info(`${vendor} has an order ready for pickup · earn ${earnings.toLocaleString()} RWF`);
+    };
+
+    if (!firstBatch) {
+      if (freshOffers.length > 0) {
+        const offer = freshOffers[0];
+        const vendor = offer.data.vendor_name || 'A nearby vendor';
+        const earnings = Number(offer.data.earnings_rwf || 0);
+        systemAlert(offer.title || 'New order to deliver', `${vendor} · earn ${earnings.toLocaleString()} RWF`);
+        toast.info(`${offer.title || 'New order'} · ${vendor} · earn ${earnings.toLocaleString()} RWF`);
+      }
+      // Assignment updates: food ready, pickup reminders, late pickup, taken, cancelled.
+      fresh
+        .filter((n) => DELIVERY_ALERTS[n.type])
+        .forEach((n) => {
+          systemAlert(n.title, n.body);
+          toast[DELIVERY_ALERTS[n.type]](n.body || n.title);
+        });
     }
-    freshOffers.forEach((n) => knownNotificationIds.current.add(n.id));
+    fresh.forEach((n) => knownNotificationIds.current.add(n.id));
 
     setNotifications(mapped);
     setUnreadCount(count);
@@ -445,15 +467,40 @@ export function DriverProvider({ children }) {
     [],
   );
 
+  // Keep the position current while online (and while delivering), so the
+  // 7.5 km matching uses where the driver really is.
+  const onDuty = Boolean(authToken) && Boolean(driver?.isOnline ?? stats.isOnline);
+  useEffect(() => {
+    if (!onDuty) return undefined;
+    const share = () => {
+      if (document.visibilityState === 'hidden') return;
+      shareLocation().catch(() => null);
+    };
+    share();
+    const timer = setInterval(share, LOCATION_SHARE_MS);
+    return () => clearInterval(timer);
+  }, [onDuty, shareLocation]);
+
   /* --------------------------- delivery actions ------------------------ */
 
   const acceptDelivery = useCallback(
     async (id) => {
-      await driverApi.acceptDelivery(id);
+      let result;
+      try {
+        result = await driverApi.acceptDelivery(id);
+      } catch (err) {
+        // e.g. "Order … has already been assigned to another delivery worker."
+        if (mounted.current) {
+          toast.error(err.message || 'Could not accept this delivery.');
+          setAvailableDeliveries((prev) => prev.filter((d) => d.id !== id));
+        }
+        refreshAvailable().catch(() => null);
+        throw err;
+      }
       const [active, av] = await Promise.all([refreshActive(), refreshAvailable()]);
       await refreshStats();
       if (mounted.current) {
-        toast.success('Delivery accepted — head to the vendor');
+        toast.success(result?.message ? `Delivery accepted. ${result.message}` : 'Delivery accepted — head to the vendor');
         setAvailableDeliveries((prev) => prev.filter((d) => d.id !== id));
       }
       return active || av.find((d) => d.id === id);

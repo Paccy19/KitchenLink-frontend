@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Phone, MapPin, Check, X as XIcon, Clock, CreditCard, FileText } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
+import ConfirmPickupForm from './ConfirmPickupForm';
 import {
   ORDER_ACTION_LABEL,
   ORDER_CANCELLABLE_STATUSES,
@@ -152,7 +153,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
             </div>
             <div className="flex justify-between text-stone-600">
               <span>Delivery fee</span>
-              <span className="font-semibold">{order.deliveryFee.toLocaleString()} RWF</span>
+              <span className="font-semibold">
+                {order.isPickup ? 'None (customer pickup)' : `${order.deliveryFee.toLocaleString()} RWF`}
+              </span>
             </div>
             <div className="flex justify-between text-stone-600">
               <span>Platform commission ({commissionPercent}% of subtotal)</span>
@@ -167,15 +170,20 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
               <span className="font-black">{payout.toLocaleString()} RWF</span>
             </div>
             <p className="text-[10px] text-stone-400 font-medium pt-1">
-              The {order.deliveryFee.toLocaleString()} RWF delivery fee goes to the delivery worker.
+              {order.isPickup
+                ? 'The customer collects this order at your kitchen. Enter their pickup code to complete it.'
+                : `The ${order.deliveryFee.toLocaleString()} RWF delivery fee goes to the delivery worker.`}
             </p>
           </div>
         </div>
 
-        {order.status === 'Ready' && (
+        {order.status === 'Ready' && !order.isPickup && (
           <p className="mx-5 sm:mx-6 mb-4 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
             {READY_ORDER_NOTE}
           </p>
+        )}
+        {order.status === 'Ready' && order.isPickup && (
+          <ConfirmPickupForm order={order} onDone={onClose} className="mx-5 sm:mx-6 mb-4" />
         )}
 
         {canCancel && (

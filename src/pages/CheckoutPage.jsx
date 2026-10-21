@@ -11,6 +11,8 @@ import {
   CreditCard,
   Coins,
   Wallet,
+  Bike,
+  Store,
 } from 'lucide-react';
 import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -81,6 +83,8 @@ export default function CheckoutPage() {
     apiError: cartApiError,
     isSyncing,
     orderType,
+    fulfillment,
+    setFulfillment,
     scheduledDate,
     scheduledTime,
     preorderSpecial,
@@ -96,19 +100,25 @@ export default function CheckoutPage() {
         ? preorderSpecial.deliveryAt
         : null;
 
+  // Pickup: the customer collects the food at the kitchen — no delivery fee,
+  // no delivery worker, and the kitchen confirms with the customer's code.
+  const isPickup = fulfillment === 'pickup';
+
   const scheduleLabel =
     orderType === 'immediate'
-      ? 'Immediate Delivery'
+      ? isPickup ? 'Pick up as soon as it is ready' : 'Immediate Delivery'
       : orderType === 'preorder'
-        ? 'Pre-Order'
-        : 'Scheduled Delivery';
+        ? isPickup ? 'Pre-Order · pickup' : 'Pre-Order'
+        : isPickup ? 'Scheduled Pickup' : 'Scheduled Delivery';
 
   const scheduleDescription =
     orderType === 'immediate'
-      ? 'Estimated delivery time: 25–35 minutes after kitchen preparation'
+      ? isPickup
+        ? "We'll send you a pickup code the moment the kitchen marks your food ready."
+        : 'Estimated delivery time: 25–35 minutes after kitchen preparation'
       : orderType === 'preorder' && preorderSpecial
-        ? `${preorderSpecial.text} — arrives by ${formatScheduledFor(scheduledFor)}`
-        : `Scheduled to arrive: ${scheduledDate} at ${scheduledTime}`;
+        ? `${preorderSpecial.text} — ${isPickup ? 'ready to collect' : 'arrives'} by ${formatScheduledFor(scheduledFor)}`
+        : `${isPickup ? 'Ready to collect' : 'Scheduled to arrive'}: ${scheduledDate} at ${scheduledTime}`;
 
   // Selected address state
   const [selectedAddressId, setSelectedAddressId] = useState(() => {
@@ -221,11 +231,11 @@ export default function CheckoutPage() {
 
     const currentAddr = user.addresses?.find((a) => a.id === selectedAddressId)
       || user.addresses?.[0];
-    if (!currentAddr?.street) {
+    if (!isPickup && !currentAddr?.street) {
       setErrorMsg('Add or select a delivery address before placing your order.');
       return;
     }
-    if (deliveryFee == null) {
+    if (!isPickup && deliveryFee == null) {
       setErrorMsg("We couldn't calculate the delivery fee for your location. Please check your location and try again.");
       return;
     }
@@ -244,14 +254,17 @@ export default function CheckoutPage() {
       const orderId = await placeOrder({
         items: cartItems,
         vendor: activeVendor,
-        deliveryAddress: currentAddr,
-        deliveryLocation: {
-          address: currentAddr.street,
-          neighborhood: currentAddr.district,
-          latitude: coords.lat,
-          longitude: coords.lng,
-          note: [currentAddr.instructions, orderNotes].filter(Boolean).join(' | '),
-        },
+        deliveryAddress: isPickup ? null : currentAddr,
+        fulfillment,
+        deliveryLocation: isPickup
+          ? { note: orderNotes }
+          : {
+              address: currentAddr.street,
+              neighborhood: currentAddr.district,
+              latitude: coords.lat,
+              longitude: coords.lng,
+              note: [currentAddr.instructions, orderNotes].filter(Boolean).join(' | '),
+            },
         paymentMethod: {
           code: method.code,
           label: method.label,
@@ -295,7 +308,7 @@ export default function CheckoutPage() {
             Checkout & Confirmation
           </h1>
           <p className="text-xs text-stone-500 font-medium">
-            Review delivery destination, scheduling and safe escrow payment
+            Choose delivery or pickup, review timing and pay safely in escrow
           </p>
         </div>
       </div>
@@ -313,11 +326,11 @@ export default function CheckoutPage() {
                   1
                 </div>
                 <h3 className="font-extrabold text-gray-900 text-base">
-                  Delivery Destination
+                  {isPickup ? 'Pickup at the kitchen' : 'Delivery Destination'}
                 </h3>
               </div>
 
-              {!showNewAddressForm && (
+              {!isPickup && !showNewAddressForm && (
                 <button
                   onClick={() => setShowNewAddressForm(true)}
                   className="text-xs font-bold text-[#542813] hover:underline flex items-center gap-1 whitespace-nowrap flex-shrink-0"
@@ -328,7 +341,54 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {!showNewAddressForm ? (
+            <div role="radiogroup" aria-label="How do you want to get your order?" className="grid grid-cols-2 gap-2.5">
+              {[
+                { id: 'delivery', label: 'Deliver to me', hint: 'A delivery worker brings it', icon: Bike },
+                { id: 'pickup', label: "I'll pick it up", hint: 'Collect at the kitchen · no delivery fee', icon: Store },
+              ].map((option) => {
+                const Icon = option.icon;
+                const selected = fulfillment === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => {
+                      setFulfillment(option.id);
+                      setErrorMsg('');
+                    }}
+                    className={`flex items-start gap-2.5 p-3.5 rounded-2xl border text-left transition ${
+                      selected
+                        ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
+                        : 'border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${selected ? 'text-[#542813]' : 'text-stone-400'}`} />
+                    <span className="min-w-0">
+                      <span className="block font-bold text-xs text-gray-900">{option.label}</span>
+                      <span className="block text-[11px] text-stone-500 mt-0.5">{option.hint}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {isPickup ? (
+              <div className="p-3.5 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] flex items-start gap-3 text-xs">
+                <Store className="w-5 h-5 text-[#8a5332] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-[#3d1b0c]">
+                    Collect from {activeVendor?.name || 'the kitchen'}
+                    {activeVendor?.location ? ` · ${activeVendor.location}` : ''}
+                  </p>
+                  <p className="text-stone-600 mt-0.5">
+                    When your food is ready we'll send you a 6-digit pickup code (it also shows on your order page).
+                    Give it to the kitchen when you collect your order.
+                  </p>
+                </div>
+              </div>
+            ) : !showNewAddressForm ? (
               <div className="space-y-2.5">
                 {user.addresses && user.addresses.length > 0 ? (
                   user.addresses.map((addr) => (
@@ -432,7 +492,7 @@ export default function CheckoutPage() {
                 2
               </div>
               <h3 className="font-extrabold text-gray-900 text-base">
-                Delivery Schedule
+                {isPickup ? 'Pickup Time' : 'Delivery Schedule'}
               </h3>
             </div>
 
@@ -448,7 +508,7 @@ export default function CheckoutPage() {
                 )}
               </div>
             </div>
-            {apiEnabled && orderType !== 'immediate' && (
+            {apiEnabled && orderType !== 'immediate' && !isPickup && (
               <p className="text-xs font-semibold text-stone-500">
                 Please keep this delivery time free — your delivery worker is dispatched close to the scheduled time.
               </p>
@@ -574,12 +634,12 @@ export default function CheckoutPage() {
           {/* 4. Notes for Kitchen or Rider */}
           <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-stone-600">
-              Order Notes / Delivery Instructions
+              {isPickup ? 'Order Notes for the Kitchen' : 'Order Notes / Delivery Instructions'}
             </label>
             <textarea
               value={orderNotes}
               onChange={(e) => setOrderNotes(e.target.value)}
-              placeholder="Any special notes for the kitchen or delivery worker..."
+              placeholder={isPickup ? 'Any special notes for the kitchen (e.g. when you will come)...' : 'Any special notes for the kitchen or delivery worker...'}
               rows={2}
               className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition resize-none"
             />
@@ -635,7 +695,9 @@ export default function CheckoutPage() {
                 <span className="font-bold">{deliveryFeeValue(deliveryFee, deliveryQuote)}</span>
               </div>
               <p className="text-[10px] leading-relaxed text-stone-400 font-medium">
-                The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.
+                {isPickup
+                  ? "You collect your order at the kitchen, so there's no delivery fee."
+                  : 'The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.'}
               </p>
               <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
                 <span>Total Due</span>

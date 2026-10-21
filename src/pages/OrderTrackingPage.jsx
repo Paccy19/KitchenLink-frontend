@@ -16,9 +16,11 @@ import {
   ShoppingBag,
   ShieldCheck,
   CalendarClock,
-  LifeBuoy
+  LifeBuoy,
+  Store,
+  Navigation,
 } from 'lucide-react';
-import { useOrders, ORDER_STATUSES } from '../context/OrderContext';
+import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
 import { formatScheduledFor } from '../utils/schedule';
 
@@ -68,11 +70,18 @@ export default function OrderTrackingPage() {
     );
   }
 
-  const currentStatusIndex = ORDER_STATUSES.findIndex((s) => s.id === order.status);
+  // Pickup orders: collected at the kitchen with a code, no delivery worker.
+  const isPickup = order.fulfillment === 'pickup';
+  const statuses = isPickup ? PICKUP_ORDER_STATUSES : ORDER_STATUSES;
+  const currentStatusIndex = statuses.findIndex((s) => s.id === order.status);
   const isDeliveredOrDone = order.status === 'delivered';
   const isCancelled = order.status === 'cancelled';
   const canCancel = ['placed', 'confirmed', 'preparing', 'ready'].includes(order.status);
-  const progressStatuses = ORDER_STATUSES.filter((status) => status.id !== 'cancelled');
+  const progressStatuses = statuses.filter((status) => status.id !== 'cancelled');
+  const pickupDirections =
+    isPickup && order.pickup?.latitude != null
+      ? `https://www.google.com/maps/dir/?api=1&destination=${order.pickup.latitude},${order.pickup.longitude}`
+      : '';
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
@@ -125,11 +134,17 @@ export default function OrderTrackingPage() {
               {isDeliveredOrDone ? 'Order complete' : isCancelled ? 'Order cancelled' : 'Order status'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-1">
-              {ORDER_STATUSES[currentStatusIndex]?.label || order.status.replaceAll('_', ' ')}
+              {statuses[currentStatusIndex]?.label || order.status.replaceAll('_', ' ')}
             </h1>
             <p className="text-xs sm:text-sm text-stone-600 mt-1 font-medium">
-              {ORDER_STATUSES[currentStatusIndex]?.description}
+              {statuses[currentStatusIndex]?.description}
             </p>
+            {isPickup && (
+              <span className="inline-flex items-center gap-1.5 mt-3 mr-2 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-[#faf6f2] text-[#542813] border border-[#ebd7c5]">
+                <Store className="w-3.5 h-3.5" />
+                You pick up
+              </span>
+            )}
             {order.orderType && order.orderType !== 'immediate' && (
               <span className="inline-flex items-center gap-1.5 mt-3 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-[#f5f6e9] text-[#6b6f3a] border border-[#d9dcc0]">
                 <CalendarClock className="w-3.5 h-3.5" />
@@ -141,7 +156,7 @@ export default function OrderTrackingPage() {
 
           <div className="text-left sm:text-right">
             <span className="text-[10px] uppercase font-bold text-stone-400 block">
-              Estimated Delivery
+              {isPickup ? 'Expected ready' : 'Estimated Delivery'}
             </span>
             <div className="text-lg font-black text-[#4e2410] flex items-center sm:justify-end gap-1.5">
               <Clock className="w-4 h-4 text-[#8a5332]" />
@@ -175,7 +190,7 @@ export default function OrderTrackingPage() {
             />
 
             {/* Stepper nodes */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 relative z-10">
+            <div className={`grid grid-cols-2 gap-3 relative z-10 ${isPickup ? 'sm:grid-cols-5' : 'sm:grid-cols-4 lg:grid-cols-8'}`}>
               {progressStatuses.map((step, idx) => {
                 const isPassed = idx <= currentStatusIndex;
                 const isCurrent = idx === currentStatusIndex;
@@ -217,6 +232,36 @@ export default function OrderTrackingPage() {
         )}
 
       </div>
+
+      {/* Pickup code: shown while the food waits at the kitchen */}
+      {isPickup && order.pickup?.code && (
+        <div className="mb-8 rounded-3xl border-2 border-dashed border-[#6d391d]/40 bg-gradient-to-br from-[#fff7ee] to-[#faf6f2] p-6 sm:p-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#2b1206] via-[#8a5332] to-[#2b1206]" />
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#6d391d]">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Your pickup code
+          </div>
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
+              <div className="font-mono text-5xl sm:text-6xl tracking-[0.25em] font-black text-[#2b1206] bg-white/80 border border-[#ebd7c5] rounded-2xl px-5 py-3 shadow-sm select-all">
+                {order.pickup.code}
+              </div>
+              <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-[240px] leading-relaxed">
+                Your food is ready. Give this code to the kitchen when you collect your order.
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-stone-400 self-start sm:self-center">
+              Also sent to your phone
+            </span>
+          </div>
+        </div>
+      )}
+      {isPickup && isDeliveredOrDone && (
+        <div className="mb-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <p className="text-sm font-semibold text-emerald-800">You collected your order. Enjoy your meal!</p>
+        </div>
+      )}
 
       {/* Delivery confirmation code */}
       {order.deliveryCode && !order.deliveryConfirmed && (
@@ -292,7 +337,46 @@ export default function OrderTrackingPage() {
             </div>
           )}
 
+          {/* Pickup location */}
+          {isPickup && (
+            <div className="bg-gradient-to-br from-stone-50 to-[#faf6f2] rounded-3xl p-6 border border-stone-200/80">
+              <span className="text-xs font-bold uppercase text-stone-500 flex items-center gap-1 mb-4">
+                <Store className="w-4 h-4 text-[#8a5332]" />
+                <span>Pick up at</span>
+              </span>
+              <div className="bg-white/85 rounded-2xl p-4 border border-stone-100 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="text-xs flex-1 min-w-0">
+                  <p className="font-bold text-gray-900">{order.vendorName}</p>
+                  <p className="text-stone-600">
+                    {[order.pickup?.address, order.pickup?.neighborhood].filter(Boolean).join(', ') || 'Kitchen address unavailable'}
+                  </p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  {pickupDirections && (
+                    <a
+                      href={pickupDirections}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
+                    >
+                      <Navigation className="w-3.5 h-3.5 text-[#6d391d]" /> Directions
+                    </a>
+                  )}
+                  {order.pickup?.vendorPhone && (
+                    <a
+                      href={`tel:${order.pickup.vendorPhone}`}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-[#6d391d]" /> Call kitchen
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Delivery destination */}
+          {!isPickup && (
           <div className="bg-gradient-to-br from-stone-50 to-[#faf6f2] rounded-3xl p-6 border border-stone-200/80 relative overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold uppercase text-stone-500 flex items-center gap-1">
@@ -311,6 +395,7 @@ export default function OrderTrackingPage() {
               </div>
             </div>
           </div>
+          )}
 
         </div>
 
@@ -345,8 +430,8 @@ export default function OrderTrackingPage() {
                 <span>{order.pricing.subtotal.toLocaleString()} RWF</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>Delivery Fee</span>
-                <span>{order.pricing.deliveryFee.toLocaleString()} RWF</span>
+                <span>Delivery Fee{isPickup ? ' (you pick up)' : ''}</span>
+                <span>{isPickup ? 'Free' : `${order.pricing.deliveryFee.toLocaleString()} RWF`}</span>
               </div>
               <div className="flex justify-between text-sm font-black text-gray-900 pt-2 border-t border-stone-200">
                 <span>Total Paid</span>

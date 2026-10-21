@@ -31,6 +31,8 @@ export const CartProvider = ({ children }) => {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [orderType, setOrderType] = useState('immediate'); // 'immediate' | 'scheduled' | 'preorder'
+  // 'delivery' (a delivery worker brings it) | 'pickup' (collected at the kitchen, no delivery fee)
+  const [fulfillment, setFulfillment] = useState('delivery');
   const [scheduledDate, setScheduledDate] = useState('Tomorrow');
   const [scheduledTime, setScheduledTime] = useState('12:30 PM');
   // When orderType is 'preorder', this is the vendor announcement the basket
@@ -315,12 +317,14 @@ export const CartProvider = ({ children }) => {
   const clearAfterCheckout = () => {
     setCartItems([]);
     setActiveVendor(null);
+    setFulfillment('delivery');
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   // Delivery is priced by road distance from the kitchen to the customer, so
   // it is re-quoted whenever the kitchen or the delivery location changes.
-  const quoteEnabled = Boolean(cartItems.length && activeVendor?.id && coords);
+  const isPickup = fulfillment === 'pickup';
+  const quoteEnabled = Boolean(cartItems.length && activeVendor?.id && coords && !isPickup);
   const quoteQuery = useQuery({
     queryKey: ['delivery-quote', activeVendor?.id, coords?.lat, coords?.lng],
     queryFn: () => fetchDeliveryQuote(activeVendor.id, coords),
@@ -328,9 +332,10 @@ export const CartProvider = ({ children }) => {
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
-  const deliveryFee = !cartItems.length ? 0 : quoteQuery.data?.delivery_fee_rwf ?? null;
+  const deliveryFee = !cartItems.length || isPickup ? 0 : quoteQuery.data?.delivery_fee_rwf ?? null;
   const deliveryQuote = {
-    distanceKm: quoteQuery.data?.distance_km ?? null,
+    distanceKm: isPickup ? null : quoteQuery.data?.distance_km ?? null,
+    isPickup,
     isLoading: quoteEnabled && quoteQuery.isPending,
     isError: quoteQuery.isError,
   };
@@ -358,6 +363,8 @@ export const CartProvider = ({ children }) => {
       totalItemCount,
       orderType,
       setOrderType,
+      fulfillment,
+      setFulfillment,
       scheduledDate,
       setScheduledDate,
       scheduledTime,
@@ -376,9 +383,12 @@ export const CartProvider = ({ children }) => {
 export const useCart = () => useContext(CartContext);
 
 export const deliveryFeeLabel = (quote) =>
-  quote?.distanceKm != null ? `Delivery fee (${quote.distanceKm} km)` : 'Delivery fee';
+  quote?.isPickup
+    ? 'Delivery fee (you pick up)'
+    : quote?.distanceKm != null ? `Delivery fee (${quote.distanceKm} km)` : 'Delivery fee';
 
 export const deliveryFeeValue = (fee, quote) => {
+  if (quote?.isPickup) return 'Free';
   if (quote?.isLoading) return 'Calculating…';
   if (fee == null) return 'Unavailable';
   return `${fee.toLocaleString()} RWF`;
