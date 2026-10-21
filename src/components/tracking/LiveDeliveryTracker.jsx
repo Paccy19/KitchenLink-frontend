@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Bike, Crosshair, Map as MapIcon, Phone, Radio, Star } from 'lucide-react';
+import { Bike, Crosshair, Map as MapIcon, Maximize2, Minimize2, Phone, Radio, Star, X } from 'lucide-react';
 import { fetchOrderLive } from '../../api/endpoints';
 import { formatDistance, formatMinutes } from '../../utils/routeMath';
 import LiveRouteMap from './LiveRouteMap';
+import useFullScreenOverlay from '../../hooks/useFullScreenOverlay';
 
 const POLL_MS = 4000;
 const timeOf = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -19,6 +20,7 @@ const agoOf = (iso) => {
 export default function LiveDeliveryTracker({ orderId, enabled = true }) {
   const [live, setLive] = useState(null);
   const [follow, setFollow] = useState(false);
+  const [full, setFull] = useFullScreenOverlay(null);
 
   useEffect(() => {
     if (!enabled || !orderId) return undefined;
@@ -40,6 +42,11 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
     };
   }, [orderId, enabled]);
 
+  // Delivered (or no longer tracked): leave full screen.
+  useEffect(() => {
+    if (full && live && !live.active) setFull(false);
+  }, [full, live, setFull]);
+
   if (!live?.active) return null;
 
   const { driver, route, kitchen, destination } = live;
@@ -47,14 +54,26 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
   const rider = fix ? { lat: fix.latitude, lng: fix.longitude, heading: fix.heading } : null;
 
   return (
-    <div className="bg-white rounded-3xl border border-stone-200/80 shadow-sm overflow-hidden">
-      <div className="p-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <div
+      className={
+        full
+          ? 'fixed inset-0 z-[1000] bg-white flex flex-col'
+          : 'bg-white rounded-3xl border border-stone-200/80 shadow-sm overflow-hidden'
+      }
+      role={full ? 'dialog' : undefined}
+      aria-modal={full || undefined}
+      aria-label={full ? 'Live delivery map' : undefined}
+    >
+      <div
+        className={`flex flex-wrap items-start justify-between gap-3 ${full ? 'px-4 pb-3 border-b border-stone-100' : 'p-5'}`}
+        style={full ? { paddingTop: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+      >
+        <div className="min-w-0 flex-1">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-blue-700">
             <Radio className="w-3.5 h-3.5 animate-pulse" /> Live tracking
           </span>
           <h3 className="font-black text-gray-900 text-lg mt-0.5">{live.phase_label}</h3>
-          <p className="text-xs text-stone-500 font-medium">
+          <p className={`text-xs text-stone-500 font-medium ${full ? 'hidden sm:block' : ''}`}>
             {live.phase === 'to_kitchen'
               ? live.kitchen_ready
                 ? 'Your food is ready and your delivery worker is on the way to collect it.'
@@ -73,9 +92,19 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
             </p>
           </div>
         )}
+        {full && (
+          <button
+            type="button"
+            onClick={() => setFull(false)}
+            aria-label="Close full screen map"
+            className="w-10 h-10 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center flex-shrink-0"
+          >
+            <X className="w-5 h-5 text-stone-700" />
+          </button>
+        )}
       </div>
 
-      <div className="relative px-3">
+      <div className={full ? 'relative flex-1 min-h-0' : 'relative px-3'}>
         <LiveRouteMap
           rider={rider}
           kitchen={kitchen?.latitude != null ? { lat: kitchen.latitude, lng: kitchen.longitude, label: kitchen.name } : null}
@@ -85,14 +114,23 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
           geometry={route?.geometry}
           follow={follow}
           onFollowChange={setFollow}
-          frameKey={live.phase}
-          className="h-72 sm:h-96"
+          frameKey={`${live.phase}-${full}`}
+          className={full ? 'h-full !rounded-none' : 'h-[60vh] min-h-[340px] max-h-[560px]'}
         />
+        <button
+          type="button"
+          onClick={() => setFull(!full)}
+          aria-label={full ? 'Exit full screen' : 'Full screen map'}
+          className={`absolute top-3 ${full ? 'left-3' : 'left-6'} inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 border border-stone-200 shadow-md text-xs font-bold text-stone-700 hover:text-blue-700`}
+        >
+          {full ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          {full ? 'Exit full screen' : 'Full screen'}
+        </button>
         {rider && (
           <button
             type="button"
             onClick={() => setFollow((value) => !value)}
-            className="absolute bottom-3 left-6 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 border border-stone-200 shadow-md text-xs font-bold text-stone-700 hover:text-blue-700"
+            className={`absolute bottom-10 ${full ? 'left-3' : 'left-6'} inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 border border-stone-200 shadow-md text-xs font-bold text-stone-700 hover:text-blue-700`}
           >
             {follow ? <MapIcon className="w-3.5 h-3.5" /> : <Crosshair className="w-3.5 h-3.5" />}
             {follow ? 'Show whole route' : 'Follow rider'}
@@ -112,7 +150,10 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
       )}
 
       {driver && (
-        <div className="p-5 flex items-center justify-between gap-3">
+        <div
+          className={`p-5 flex items-center justify-between gap-3 ${full ? 'border-t border-stone-100 py-3' : ''}`}
+          style={full ? { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' } : undefined}
+        >
           <div className="flex items-center gap-3 min-w-0">
             {driver.avatar_url ? (
               <img src={driver.avatar_url} alt="" className="w-12 h-12 rounded-2xl object-cover border border-stone-200" />

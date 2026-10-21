@@ -101,7 +101,12 @@ export default function LiveRouteMap({
       if (followRef.current) onFollowRef.current?.(false);
     });
     mapRef.current = map;
+    // Redraw whenever the box changes size (full screen, rotating the phone,
+    // the page layout settling) so the map never shows blank or cut off.
+    const resizer = new ResizeObserver(() => map.resize());
+    resizer.observe(containerRef.current);
     return () => {
+      resizer.disconnect();
       cancelAnimationFrame(glide.current.frame);
       map.remove();
       mapRef.current = null;
@@ -201,7 +206,9 @@ export default function LiveRouteMap({
   if (!start) return null;
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-stone-100 ${className}`}>
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* Explicit size: MapLibre makes its container position:relative, so
+          "absolute inset-0" alone would collapse it to a thin strip. */}
+      <div ref={containerRef} className="w-full h-full" />
       {failed && (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-xs font-semibold text-stone-500 bg-stone-50">
           The map could not load. Check your internet connection.

@@ -9,6 +9,8 @@ import {
   ExternalLink,
   Flag,
   Map as MapIcon,
+  Maximize2,
+  Minimize2,
   RotateCcw,
   RefreshCw,
   Store,
@@ -18,6 +20,7 @@ import { driverApi } from '../../api/driverApi';
 import { useDriver } from '../../context/DriverContext';
 import { formatDistance, formatMinutes, nextStep } from '../../utils/routeMath';
 import LiveRouteMap from '../tracking/LiveRouteMap';
+import useFullScreenOverlay from '../../hooks/useFullScreenOverlay';
 
 const REFRESH_MS = 15000;
 const OFF_ROUTE_M = 50;
@@ -45,6 +48,8 @@ export default function DriverNavigation({ delivery }) {
   const { liveFix, gpsError } = useDriver();
   const [nav, setNav] = useState(null);
   const [follow, setFollow] = useState(true);
+  // Remembered: a driver who likes full-screen navigation gets it every time.
+  const [full, setFull] = useFullScreenOverlay('ofk_driver_nav_full');
   const lastFetch = useRef(0);
 
   const load = async () => {
@@ -113,6 +118,18 @@ export default function DriverNavigation({ delivery }) {
 
   if (nav && !nav.active) return null;
 
+  const fullToggle = (
+    <button
+      type="button"
+      onClick={() => setFull(!full)}
+      aria-label={full ? 'Exit full screen' : 'Full screen navigation'}
+      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 border border-stone-200 shadow-md text-xs font-bold text-stone-700"
+    >
+      {full ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+      {full ? 'Exit full screen' : 'Full screen'}
+    </button>
+  );
+
   const toKitchen = nav?.phase === 'to_kitchen' || delivery.status === 'assigned_to_driver';
   const target = toKitchen
     ? { lat: delivery.vendor.latitude, lng: delivery.vendor.longitude }
@@ -124,9 +141,21 @@ export default function DriverNavigation({ delivery }) {
   const arrived = progress && progress.remainingM < 40;
 
   return (
-    <div className="rounded-3xl bg-white border border-stone-200/80 shadow-sm overflow-hidden">
+    <div
+      className={
+        full
+          ? 'fixed inset-0 z-[1000] bg-white flex flex-col'
+          : 'rounded-3xl bg-white border border-stone-200/80 shadow-sm overflow-hidden'
+      }
+      role={full ? 'dialog' : undefined}
+      aria-modal={full || undefined}
+      aria-label={full ? 'Navigation' : undefined}
+    >
       {/* Next turn */}
-      <div className="bg-gradient-to-r from-[#12200b] to-[#2a3f1b] text-white px-4 py-3 flex items-center gap-3">
+      <div
+        className="bg-gradient-to-r from-[#12200b] to-[#2a3f1b] text-white px-4 py-3 flex items-center gap-3 flex-shrink-0"
+        style={full ? { paddingTop: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+      >
         <span className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
           <TurnIcon maneuver={arrived ? { type: 'arrive' } : progress?.step?.maneuver} className="w-7 h-7" />
         </span>
@@ -148,7 +177,7 @@ export default function DriverNavigation({ delivery }) {
         </span>
       </div>
 
-      <div className="relative">
+      <div className={full ? 'relative flex-1 min-h-0' : 'relative'}>
         <LiveRouteMap
           rider={rider}
           kitchen={delivery.vendor.latitude != null ? { lat: delivery.vendor.latitude, lng: delivery.vendor.longitude, label: delivery.vendor.name } : null}
@@ -156,10 +185,11 @@ export default function DriverNavigation({ delivery }) {
           geometry={route?.geometry}
           follow={follow && Boolean(rider)}
           onFollowChange={setFollow}
-          frameKey={nav?.phase || delivery.status}
-          className="h-[55vh] min-h-[320px] !rounded-none"
+          frameKey={`${nav?.phase || delivery.status}-${full}`}
+          className={full ? 'h-full !rounded-none' : 'h-[65vh] min-h-[360px] !rounded-none'}
         />
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none">
+        <div className="absolute top-3 left-3">{fullToggle}</div>
+        <div className="absolute bottom-10 left-3 right-3 flex items-end justify-between gap-2 pointer-events-none">
           <div className="pointer-events-auto rounded-2xl bg-white/95 border border-stone-200 shadow-md px-3 py-2">
             {progress ? (
               <>
@@ -197,7 +227,10 @@ export default function DriverNavigation({ delivery }) {
       </div>
 
       {!toKitchen && (delivery.dropoff.address || delivery.dropoff.note) && (
-        <div className="px-4 py-3 border-t border-stone-100 text-xs">
+        <div
+          className="px-4 py-3 border-t border-stone-100 text-xs flex-shrink-0"
+          style={full ? { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' } : undefined}
+        >
           <p className="font-bold text-gray-900">{delivery.dropoff.address}</p>
           {delivery.dropoff.note && <p className="text-stone-500 mt-0.5">Note: {delivery.dropoff.note}</p>}
         </div>
