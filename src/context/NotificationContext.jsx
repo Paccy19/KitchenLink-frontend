@@ -11,6 +11,8 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [apiError, setApiError] = useState('');
+  // True once the list has loaded, so only later arrivals pop up on screen.
+  const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!apiEnabled) return;
@@ -18,6 +20,7 @@ export const NotificationProvider = ({ children }) => {
       const response = await fetchNotifications({ limit: 30 });
       setNotifications(response.notifications ?? []);
       setUnreadCount(response.unread_count ?? 0);
+      setLoaded(true);
       setApiError('');
     } catch (error) {
       setApiError(error.message);
@@ -28,6 +31,7 @@ export const NotificationProvider = ({ children }) => {
     if (!apiEnabled) {
       setNotifications([]);
       setUnreadCount(0);
+      setLoaded(false);
       return undefined;
     }
     refresh();
@@ -63,12 +67,13 @@ export const NotificationProvider = ({ children }) => {
   const value = useMemo(() => ({
     notifications,
     unreadCount,
+    loaded,
     apiError,
     refresh,
     markRead,
     markAllRead,
     apiEnabled,
-  }), [notifications, unreadCount, apiError, refresh, apiEnabled]);
+  }), [notifications, unreadCount, loaded, apiError, refresh, apiEnabled]);
 
   return (
     <NotificationContext.Provider value={value}>

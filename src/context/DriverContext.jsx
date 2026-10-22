@@ -89,6 +89,8 @@ export function DriverProvider({ children }) {
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  // True once notifications have loaded, so only later arrivals pop up.
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
 
   const [lastSyncedAt, setLastSyncedAt] = useState(() => new Date().toISOString());
   const knownOfferIds = useRef(new Set());
@@ -172,20 +174,17 @@ export function DriverProvider({ children }) {
         const vendor = offer.data.vendor_name || 'A nearby vendor';
         const earnings = Number(offer.data.earnings_rwf || 0);
         systemAlert(offer.title || 'New order to deliver', `${vendor} · earn ${earnings.toLocaleString()} RWF`);
-        toast.info(`${offer.title || 'New order'} · ${vendor} · earn ${earnings.toLocaleString()} RWF`);
       }
       // Assignment updates: food ready, pickup reminders, late pickup, taken, cancelled.
       fresh
         .filter((n) => DELIVERY_ALERTS[n.type])
-        .forEach((n) => {
-          systemAlert(n.title, n.body);
-          toast[DELIVERY_ALERTS[n.type]](n.body || n.title);
-        });
+        .forEach((n) => systemAlert(n.title, n.body));
     }
     fresh.forEach((n) => knownNotificationIds.current.add(n.id));
 
     setNotifications(mapped);
     setUnreadCount(count);
+    setNotificationsLoaded(true);
     return mapped;
   }, [toast]);
 
@@ -632,6 +631,7 @@ export function DriverProvider({ children }) {
       earnings,
       notifications,
       unreadCount,
+      notificationsLoaded,
       refreshNotifications,
       markNotificationRead,
       markAllNotificationsRead,
@@ -681,6 +681,7 @@ export function DriverProvider({ children }) {
       earnings,
       notifications,
       unreadCount,
+      notificationsLoaded,
       refreshNotifications,
       markNotificationRead,
       markAllNotificationsRead,

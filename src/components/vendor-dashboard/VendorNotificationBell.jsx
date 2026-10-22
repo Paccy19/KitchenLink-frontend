@@ -4,10 +4,11 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { notificationLink } from '../../utils/notificationLink';
 import { notificationMeta, timeAgo } from './notificationMeta';
+import NotificationPopups from '../common/NotificationPopups';
 
 /** Header bell: the latest vendor notifications; each opens its own page. */
 export default function VendorNotificationBell() {
-  const { notifications, unreadNotifications, markNotificationRead, markAllNotificationsRead } = useVendor();
+  const { notifications, unreadNotifications, notificationsLoaded, markNotificationRead, markAllNotificationsRead } = useVendor();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
@@ -29,6 +30,12 @@ export default function VendorNotificationBell() {
 
   return (
     <div className="relative" ref={ref}>
+      <NotificationPopups
+        notifications={notifications}
+        loaded={notificationsLoaded}
+        linkFor={(notification) => notificationLink(notification, 'vendor')}
+        onRead={(notification) => !notification.read && markNotificationRead(notification.id)}
+      />
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

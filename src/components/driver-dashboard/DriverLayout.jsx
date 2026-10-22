@@ -24,6 +24,7 @@ import useDriverRealtime from '../../hooks/useDriverRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
 import ThemeToggle from '../common/ThemeToggle';
 import { notificationLink } from '../../utils/notificationLink';
+import NotificationPopups from '../common/NotificationPopups';
 
 const NAV = [
   { to: '/driver-dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -67,6 +68,7 @@ export default function DriverLayout() {
     isAuthenticated,
     notifications,
     unreadCount,
+    notificationsLoaded,
     markNotificationRead,
     markAllNotificationsRead,
     logout,
@@ -197,6 +199,12 @@ export default function DriverLayout() {
 
   return (
     <div className="min-h-screen bg-[#faf7f4]">
+      <NotificationPopups
+        notifications={notifications}
+        loaded={notificationsLoaded}
+        linkFor={(notification) => notificationLink(notification, 'driver')}
+        onRead={(notification) => !notification.read && markNotificationRead(notification.id)}
+      />
       <div className="mx-auto max-w-[1400px] flex">
         {/* Desktop sidebar */}
         <aside className="hidden lg:flex flex-col w-72 flex-shrink-0 border-r border-stone-200/80 bg-white min-h-screen sticky top-0 h-screen p-5">

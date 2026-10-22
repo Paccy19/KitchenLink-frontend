@@ -17,6 +17,7 @@ import {
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
 import { formatRelative } from './ui';
+import NotificationPopups from '../common/NotificationPopups';
 
 const TYPE_META = {
   vendor_application: { icon: Store, tone: 'bg-amber-50 text-amber-600' },
@@ -28,6 +29,7 @@ const TYPE_META = {
   owner_finance: { icon: Landmark, tone: 'bg-violet-50 text-violet-600' },
   payout_update: { icon: Wallet, tone: 'bg-violet-50 text-violet-600' },
   refund_update: { icon: RotateCcw, tone: 'bg-sky-50 text-sky-600' },
+  late_pickup: { icon: Bike, tone: 'bg-red-50 text-red-600' },
   general: { icon: Bell, tone: 'bg-stone-100 text-stone-600' },
 };
 
@@ -40,6 +42,7 @@ const FALLBACK_LINK = {
   payment_failed: '/admin-dashboard/payments',
   owner_finance: '/admin-dashboard/platform',
   refund_update: '/admin-dashboard/refunds',
+  late_pickup: '/admin-dashboard/deliveries?tab=late',
 };
 
 export default function AdminNotificationBell() {
@@ -53,7 +56,7 @@ export default function AdminNotificationBell() {
     queryKey: ['admin', 'notifications'],
     queryFn: () => adminApi.listNotifications({ limit: 20 }),
     enabled: Boolean(hasToken),
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
   const markRead = useMutation({
@@ -87,6 +90,12 @@ export default function AdminNotificationBell() {
 
   return (
     <div className="relative" ref={wrapperRef}>
+      <NotificationPopups
+        notifications={notifications}
+        loaded={listQuery.isSuccess}
+        linkFor={(item) => item.data?.link || FALLBACK_LINK[item.type] || '/admin-dashboard'}
+        onRead={(item) => !item.read && markRead.mutate(item.id)}
+      />
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}

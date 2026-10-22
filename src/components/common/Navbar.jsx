@@ -32,6 +32,7 @@ import { useDriver } from '../../context/DriverContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { notificationLink } from '../../utils/notificationLink';
+import NotificationPopups from './NotificationPopups';
 import RoleSelectModal from '../auth/RoleSelectModal';
 import ThemeToggle from './ThemeToggle';
 import {
@@ -70,7 +71,7 @@ export default function Navbar() {
     admin,
   } = useAdmin();
   const adminSignedIn = isAdminSignedIn || hasAdminToken;
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { notifications, unreadCount, loaded: notificationsLoaded, markRead, markAllRead } = useNotifications();
 
   // A vendor/driver only gets a way back to their dashboard after explicitly
   // choosing to visit the marketplace, and only while browsing marketplace/shop pages.
@@ -151,6 +152,14 @@ export default function Navbar() {
 
   return (
     <>
+      {isAuthenticated && (
+        <NotificationPopups
+          notifications={notifications}
+          loaded={notificationsLoaded}
+          linkFor={(notification) => notificationLink(notification, 'customer')}
+          onRead={(notification) => !notification.read && markRead(notification.id)}
+        />
+      )}
       <header ref={headerRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
       {/* Top Banner for Pre-order & Scheduled Meals reminder */}
       <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] border-b border-[#4e2410]/50 text-[#f5ebe1] text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2 overflow-hidden">

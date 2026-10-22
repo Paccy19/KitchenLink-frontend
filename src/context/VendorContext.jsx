@@ -53,6 +53,8 @@ export function VendorProvider({ children }) {
   const [dashboard, setDashboard] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  // True once notifications have loaded, so only later arrivals pop up.
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   const [categories, setCategories] = useState([]);
   const [isRegistered, setIsRegistered] = useState(() => readFlag(STORAGE.registered));
   const [lastSyncedAt, setLastSyncedAt] = useState(() => new Date().toISOString());
@@ -139,6 +141,7 @@ export function VendorProvider({ children }) {
     const data = await vendorApi.notifications({ limit: 50 });
     if (!mounted.current) return;
     setNotifications(data.notifications || []);
+    setNotificationsLoaded(true);
     setUnreadNotifications(data.unread_count ?? 0);
   }, []);
 
@@ -587,6 +590,7 @@ export function VendorProvider({ children }) {
       requestWithdrawal,
       notifications,
       unreadNotifications,
+      notificationsLoaded,
       refreshNotifications,
       markNotificationRead,
       markAllNotificationsRead,
@@ -640,6 +644,7 @@ export function VendorProvider({ children }) {
       requestWithdrawal,
       notifications,
       unreadNotifications,
+      notificationsLoaded,
       refreshNotifications,
       markNotificationRead,
       markAllNotificationsRead,
