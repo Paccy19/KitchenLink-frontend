@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, ShoppingBag, Trash2 } from 'lucide-react';
 import EmptyState from '../components/common/EmptyState';
@@ -7,12 +7,15 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../components/common/Toast';
 import { useWishlist } from '../context/WishlistContext';
 import { formatRwf } from '../api/normalize';
+import FoodItemModal from '../components/vendor/FoodItemModal';
 
 export default function WishlistPage() {
   const navigate = useNavigate();
   const { items, removeFromWishlist, apiError } = useWishlist();
   const { addToCart } = useCart();
   const toast = useToast();
+  // Tapping a dish opens its details here; the shopper stays on this page.
+  const [openDish, setOpenDish] = useState(null);
 
   const handleRemove = (dishId) => {
     removeFromWishlist(dishId).catch((error) => toast.error(error.message));
@@ -20,7 +23,7 @@ export default function WishlistPage() {
 
   const handleAddToCart = async ({ dish, vendor }) => {
     if (dish.options?.length) {
-      navigate(`/vendor/${vendor.id}?dish=${encodeURIComponent(dish.id)}`);
+      setOpenDish({ dish, vendor });
       return;
     }
     const added = await addToCart(dish, vendor, {}, 1);
@@ -71,24 +74,32 @@ export default function WishlistPage() {
               key={dish.id}
               className="flex gap-4 rounded-3xl border border-gray-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <Link to={`/vendor/${vendor.id}`} className="flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setOpenDish({ dish, vendor })}
+                aria-label={`View ${dish.name}`}
+                className="flex-shrink-0"
+              >
                 <LazyImage
                   src={dish.image}
                   alt={dish.name}
                   aspect="aspect-square"
                   className="w-24 h-24 sm:w-28 sm:h-28"
                 />
-              </Link>
+              </button>
               <div className="min-w-0 flex-1 flex flex-col">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <Link
-                      to={`/vendor/${vendor.id}`}
-                      className="font-extrabold text-sm text-gray-900 hover:text-orange-600 line-clamp-2"
+                    <button
+                      type="button"
+                      onClick={() => setOpenDish({ dish, vendor })}
+                      className="text-left font-extrabold text-sm text-gray-900 hover:text-orange-600 line-clamp-2"
                     >
                       {dish.name}
+                    </button>
+                    <Link to={`/vendor/${vendor.id}`} className="block text-xs text-gray-500 mt-1 truncate hover:underline">
+                      {vendor.name}
                     </Link>
-                    <p className="text-xs text-gray-500 mt-1 truncate">{vendor.name}</p>
                   </div>
                   <button
                     type="button"
@@ -115,6 +126,16 @@ export default function WishlistPage() {
             </article>
           ))}
         </div>
+      )}
+
+      {openDish && (
+        <FoodItemModal
+          item={openDish.dish}
+          vendor={openDish.vendor}
+          isOpen
+          onClose={() => setOpenDish(null)}
+          showKitchenLink
+        />
       )}
     </div>
   );

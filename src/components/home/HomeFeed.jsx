@@ -9,7 +9,6 @@ import DishCard from './DishCard';
 import SpecialCard from './SpecialCard';
 import LocationIndicator from './LocationIndicator';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
-import FoodItemModal from '../vendor/FoodItemModal';
 import EmptyState, { ErrorState } from '../common/EmptyState';
 import { HomeFeedSkeleton, VendorTileSkeleton, DishCardSkeleton } from '../common/Skeleton';
 import { useToast } from '../common/Toast';
@@ -63,7 +62,6 @@ export default function HomeFeed() {
   const urlQuery = searchParams.get('q') ?? '';
   const [query, setQuery] = useState(urlQuery);
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
-  const [selectedDish, setSelectedDish] = useState(null);
 
   const feed = useHomeFeed();
   const categories = useCategories({ enabled: !urlQuery.trim() });
@@ -284,14 +282,6 @@ export default function HomeFeed() {
             </div>
           </section>
 
-          {selectedDish && (
-            <FoodItemModal
-              item={selectedDish.dish}
-              vendor={selectedDish.vendor}
-              isOpen
-              onClose={() => setSelectedDish(null)}
-            />
-          )}
         </div>
       )}
     </div>
