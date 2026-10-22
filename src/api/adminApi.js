@@ -138,6 +138,9 @@ export const adminApi = {
   liveMap: () => adminRequest('/admin/operations/live-map'),
   latePickups: (params) => adminRequest(`/admin/operations/late-pickups${qs(params)}`),
   operationsRules: () => adminRequest('/admin/operations/rules'),
+  // Delivery timing rules (warning / late charge / automatic reassign), in minutes.
+  deliveryTiming: () => adminRequest('/admin/operations/delivery-timing'),
+  saveDeliveryTiming: (body) => adminRequest('/admin/operations/delivery-timing', { method: 'PUT', body }),
 
   listOrders: (params) => adminRequest(`/admin/orders${qs(params)}`),
   getOrder: (id) => adminRequest(`/admin/orders/${encodeURIComponent(id)}`),

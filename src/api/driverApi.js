@@ -170,7 +170,18 @@ export function mapDelivery(raw = {}) {
     kitchenReady: raw.kitchen_ready !== false,
     readyAt: raw.ready_at ?? null,
     expectedReadyAt: raw.expected_ready_at ?? null,
+    pickupWarnAt: raw.pickup_warn_at ?? null,
     pickupDueAt: raw.pickup_due_at ?? null,
+    // When the order is taken away and given to another worker (null = never).
+    pickupReassignAt: raw.pickup_reassign_at ?? null,
+    // The admin's current timing rules, shown before accepting.
+    pickupRules: raw.pickup_rules
+      ? {
+          warningMinutes: raw.pickup_rules.warning_minutes,
+          chargeAfterMinutes: raw.pickup_rules.charge_after_minutes,
+          reassignAfterMinutes: raw.pickup_rules.reassign_after_minutes ?? null,
+        }
+      : null,
     pickupGraceMinutes: Number(raw.pickup_grace_minutes ?? 15),
     latePickup: raw.late_pickup
       ? {

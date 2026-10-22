@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bike, Navigation, MapPin, Store, Coins, Phone, ArrowRight } from 'lucide-react';
+import { Bike, Navigation, MapPin, Store, Coins, Phone, ArrowRight, Timer } from 'lucide-react';
 
 /**
  * A single available delivery offer with large Accept / Reject actions.
@@ -76,6 +76,20 @@ export default function DeliveryOfferCard({ delivery, busy = false, onAccept, on
           </span>
         )}
       </div>
+
+      {/* The admin's pickup rules, so the worker knows before accepting. */}
+      {delivery.pickupRules && (
+        <p className="flex items-start gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] font-semibold text-amber-900">
+          <Timer className="w-4 h-4 flex-shrink-0" />
+          <span>
+            Collect within {delivery.pickupRules.chargeAfterMinutes} min of the food being ready, or a late-pickup charge applies
+            {delivery.pickupRules.reassignAfterMinutes
+              ? `; after ${delivery.pickupRules.reassignAfterMinutes} min the order goes to another delivery worker`
+              : ''}
+            .
+          </span>
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-2.5">
         <button

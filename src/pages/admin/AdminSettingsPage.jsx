@@ -5,6 +5,7 @@ import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
 import Can from '../../components/admin-dashboard/Can';
+import DeliveryTimingCard from '../../components/admin-dashboard/DeliveryTimingCard';
 import {
   Badge,
   Button,
@@ -65,6 +66,10 @@ export default function AdminSettingsPage() {
       )}
 
       <TwoFactorCard admin={admin} onChanged={refreshProfile} />
+
+      <Can permission="deliveries:read">
+        <DeliveryTimingCard />
+      </Can>
 
       <Can permission="dashboard:read">
         <OperationsRulesCard />
@@ -183,8 +188,12 @@ function OperationsRulesCard() {
             <RuleRow label="Max deliveries at once per worker" value={rules.dispatch.max_active_deliveries_per_driver} />
 
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Pickup clock (delivery workers)</p>
-            <RuleRow label="Time to collect once food is ready" value={`${rules.pickup_clock.grace_minutes} min`} />
-            <RuleRow label="Warning sent after" value={`${rules.pickup_clock.warning_after_minutes} min`} />
+            <RuleRow label="Reminder after" value={`${rules.pickup_clock.warning_after_minutes} min`} />
+            <RuleRow label="Late-pickup charge after" value={`${rules.pickup_clock.grace_minutes} min`} />
+            <RuleRow
+              label="Given to another worker after"
+              value={rules.pickup_clock.reassign_after_minutes ? `${rules.pickup_clock.reassign_after_minutes} min` : 'Off'}
+            />
             <RuleRow label="Late-pickup charge" value={rules.pickup_clock.charge_amount} warn />
           </div>
           <div>
@@ -194,7 +203,7 @@ function OperationsRulesCard() {
             <RuleRow label="Wrong codes before the order locks" value={rules.customer_pickup.max_wrong_codes} />
 
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Delivery fee</p>
-            <Row
+            <RuleRow
               label="Price"
               value={`${rules.fees.base_rwf} RWF + ${rules.fees.per_km_rwf} RWF/km (min ${rules.fees.minimum_rwf} RWF)`}
             />
