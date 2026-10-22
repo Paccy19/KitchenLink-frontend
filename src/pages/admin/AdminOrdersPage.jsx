@@ -4,6 +4,7 @@ import { ClipboardList, Search } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
+import AdminDeliveryLive from '../../components/admin-dashboard/AdminDeliveryLive';
 import {
   Badge,
   Button,
@@ -42,7 +43,7 @@ const CLOSED = ['delivered', 'cancelled'];
 
 export default function AdminOrdersPage() {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ status: '', from: '', to: '' });
+  const [filters, setFilters] = useState({ status: '', fulfillment: '', from: '', to: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState(null);
@@ -64,6 +65,7 @@ export default function AdminOrdersPage() {
     queryFn: () =>
       adminApi.listOrders({
         status: filters.status,
+        fulfillment: filters.fulfillment,
         search: filters.search,
         from: filters.from ? `${filters.from}T00:00:00` : '',
         to: filters.to ? `${filters.to}T23:59:59` : '',
@@ -117,6 +119,9 @@ export default function AdminOrdersPage() {
 
   const data = listQuery.data || EMPTY;
   const order = detailQuery.data?.order;
+  const delivery = detailQuery.data?.delivery;
+  const dispatch = detailQuery.data?.dispatch;
+  const isPickup = order?.fulfillment === 'pickup';
 
   const applyFilter = (patch) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -134,7 +139,7 @@ export default function AdminOrdersPage() {
       <PageHeader title="Orders" description="Search, override statuses and reassign delivery workers." />
 
       <Card title="Filters" bodyClassName="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -157,6 +162,11 @@ export default function AdminOrdersPage() {
                 {toTitle(status)}
               </option>
             ))}
+          </Select>
+          <Select value={filters.fulfillment} onChange={(event) => applyFilter({ fulfillment: event.target.value })}>
+            <option value="">Delivery & pickup</option>
+            <option value="delivery">Delivery only</option>
+            <option value="pickup">Customer pickup only</option>
           </Select>
           <div className="grid grid-cols-2 gap-2">
             <Input
@@ -199,6 +209,9 @@ export default function AdminOrdersPage() {
                     <p className="text-[11px] text-stone-400">
                       {toTitle(row.payment_method)} · {row.payment_status}
                     </p>
+                    <Badge tone={row.fulfillment === 'pickup' ? 'violet' : 'blue'} className="mt-1">
+                      {row.fulfillment === 'pickup' ? 'Pickup' : 'Delivery'}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-stone-600">
                     <p className="text-sm font-semibold text-gray-800">{row.vendor?.name || '—'}</p>
@@ -243,9 +256,10 @@ export default function AdminOrdersPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <Info label="Vendor" value={order.vendor?.name || '—'} />
               <Info label="Customer" value={order.customer?.name || '—'} />
-              <Info label="Delivery worker" value={order.driver?.name || 'Unassigned'} />
+              <Info label="How" value={order.fulfillment_label || 'Delivery'} />
+              {!isPickup && <Info label="Delivery worker" value={order.driver?.name || 'Unassigned'} />}
               <Info label="Subtotal" value={formatRwf(order.subtotal_rwf)} />
-              <Info label="Delivery fee" value={formatRwf(order.delivery_fee_rwf)} />
+              <Info label="Delivery fee" value={isPickup ? 'None (pickup)' : formatRwf(order.delivery_fee_rwf)} />
               <Info label="Total" value={formatRwf(order.total_amount_rwf)} />
               <Info
                 label="Order type"
@@ -263,6 +277,16 @@ export default function AdminOrdersPage() {
               )}
               {order.special_text && <Info label="Special" value={order.special_text} />}
             </div>
+
+            {isPickup && order.pickup && <PickupSection pickup={order.pickup} status={order.status} />}
+            {!isPickup && delivery && <DeliverySection delivery={delivery} dispatch={dispatch} />}
+            {!isPickup && !delivery && !CLOSED.includes(order.status) && (
+              <p className="text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2">
+                {order.order_type && order.order_type !== 'immediate'
+                  ? 'Scheduled order: delivery workers are offered it when the kitchen marks it ready.'
+                  : 'No delivery yet — it is created and offered to nearby delivery workers once the order is paid.'}
+              </p>
+            )}
 
             <div>
               <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-2">Items</p>
@@ -298,13 +322,18 @@ export default function AdminOrdersPage() {
             <Can permission="orders:write">
             <div className="flex flex-wrap gap-2 pt-2 border-t border-stone-100">
               <Button onClick={() => openModal(setStatusOpen)}>Set status</Button>
-              <Button
-                variant="secondary"
-                onClick={() => openModal(setReassignOpen)}
-                disabled={CLOSED.includes(order.status)}
-              >
-                Reassign delivery worker
-              </Button>
+              {!isPickup && (
+                <Button
+                  variant="secondary"
+                  onClick={() => openModal(setReassignOpen)}
+                  disabled={
+                    CLOSED.includes(order.status) ||
+                    ['picked_up', 'out_for_delivery', 'delivered', 'completed'].includes(delivery?.status)
+                  }
+                >
+                  {order.driver ? 'Reassign delivery worker' : 'Assign delivery worker'}
+                </Button>
+              )}
               <Button
                 variant="danger"
                 onClick={() => openModal(setCancelOpen)}
@@ -421,6 +450,87 @@ export default function AdminOrdersPage() {
           )}
         </div>
       </Modal>
+    </div>
+  );
+}
+
+/** Pickup orders: where collection stands (the code itself is never shown). */
+function PickupSection({ pickup, status }) {
+  return (
+    <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4 space-y-2">
+      <p className="text-xs font-black uppercase tracking-wider text-violet-700">Customer pickup</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Info label="Pickup code sent" value={pickup.code_sent_at ? formatDate(pickup.code_sent_at) : 'Not yet (sent when ready)'} />
+        <Info label="Wrong codes" value={`${pickup.wrong_attempts} of ${pickup.max_attempts}`} />
+        <Info
+          label="Collected"
+          value={pickup.collected_at ? formatDate(pickup.collected_at) : status === 'ready' ? 'Waiting for customer' : '—'}
+        />
+        <Info label="State" value={pickup.locked ? 'Locked (too many wrong codes)' : pickup.collected_at ? 'Completed' : 'Open'} />
+      </div>
+      {pickup.locked && !pickup.collected_at && (
+        <p className="text-xs font-semibold text-red-700">
+          The vendor entered too many wrong codes. Check with the customer, then use "Set status → Delivered" to complete it.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Delivery orders: dispatch record, pickup clock and the live map. */
+function DeliverySection({ delivery, dispatch }) {
+  const late = delivery.late_pickup;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-sky-100 bg-sky-50/40 p-4 space-y-3">
+        <p className="text-xs font-black uppercase tracking-wider text-sky-700">Delivery</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Info label="Delivery status" value={delivery.status_label || toTitle(delivery.status)} />
+          <Info label="Food" value={delivery.kitchen_ready ? `Ready ${formatDate(delivery.ready_at)}` : 'Kitchen preparing'} />
+          <Info label="Accepted" value={delivery.assigned_at ? formatDate(delivery.assigned_at) : 'Not yet'} />
+          <Info label="Collect by" value={delivery.pickup_due_at ? formatDate(delivery.pickup_due_at) : '—'} />
+          <Info label="Picked up" value={delivery.picked_up_at ? formatDate(delivery.picked_up_at) : '—'} />
+          <Info label="Delivered" value={delivery.completed_at ? formatDate(delivery.completed_at) : '—'} />
+          <Info label="Rider earns" value={formatRwf(delivery.promised_earnings_rwf)} />
+          <Info label="Trip" value={delivery.route_distance_km != null ? `${delivery.route_distance_km} km` : '—'} />
+        </div>
+        {late && (
+          <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            Late pickup{late.minutes_late != null ? ` — collected ${late.minutes_late} min late` : ' — not collected within the grace period'}.
+            Charge: {late.charge_status}.
+          </p>
+        )}
+        {dispatch && (
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-1.5">
+              Offered to {dispatch.offers.length} delivery worker{dispatch.offers.length === 1 ? '' : 's'} within {dispatch.radius_km} km
+              {dispatch.last_broadcast_at ? ` · last broadcast ${formatDate(dispatch.last_broadcast_at)}` : ''}
+            </p>
+            {dispatch.offers.length === 0 ? (
+              <p className="text-xs text-amber-700">No delivery worker was in range yet. Open orders are re-offered every minute.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {dispatch.offers.map((offer) => (
+                  <Badge
+                    key={offer.driver_id}
+                    tone={offer.response === 'accepted' ? 'green' : offer.response === 'rejected' ? 'red' : 'slate'}
+                  >
+                    {offer.driver_name} ·{' '}
+                    {offer.response === 'accepted'
+                      ? 'accepted'
+                      : offer.response === 'cancelled'
+                        ? 'taken by another'
+                        : offer.response === 'rejected'
+                          ? 'declined'
+                          : 'offered'}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <AdminDeliveryLive deliveryId={delivery.id} />
     </div>
   );
 }

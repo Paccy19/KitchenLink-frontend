@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { ShieldCheck, AlertTriangle, Smartphone } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
+import Can from '../../components/admin-dashboard/Can';
 import {
   Badge,
   Button,
@@ -64,6 +65,10 @@ export default function AdminSettingsPage() {
       )}
 
       <TwoFactorCard admin={admin} onChanged={refreshProfile} />
+
+      <Can permission="dashboard:read">
+        <OperationsRulesCard />
+      </Can>
 
       <Card title="Profile">
         <div className="flex items-center gap-4">
@@ -138,6 +143,74 @@ export default function AdminSettingsPage() {
 }
 
 /** Turn SMS codes on (verify a phone) or off (confirmed with a code). */
+/**
+ * The delivery, pickup, tracking and SMS rules the platform is running with
+ * (from the server configuration; read-only here).
+ */
+function RuleRow({ label, value, warn = false }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-stone-50 last:border-0">
+      <span className="text-sm text-stone-600">{label}</span>
+      <span className={`text-sm font-bold text-right ${warn ? 'text-amber-700' : 'text-gray-900'}`}>{value}</span>
+    </div>
+  );
+}
+
+function OperationsRulesCard() {
+  const { data: rules, error } = useQuery({
+    queryKey: ['admin', 'operations-rules'],
+    queryFn: () => adminApi.operationsRules(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return (
+    <Card
+      title="Delivery & pickup rules"
+      description="How orders are dispatched, collected and tracked right now. These come from the server configuration."
+    >
+      {error ? (
+        <ErrorNote error={error} />
+      ) : !rules ? (
+        <p className="text-sm text-stone-400">Loading…</p>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-1">Dispatch</p>
+            <RuleRow label="Delivery workers notified within" value={`${rules.dispatch.radius_km} km of the kitchen`} />
+            <RuleRow label="When" value={rules.dispatch.offered_when} />
+            <RuleRow label="Their location must be newer than" value={`${rules.dispatch.driver_location_max_age_minutes} min`} />
+            <RuleRow label="Open orders re-offered every" value={`${rules.dispatch.rebroadcast_every_seconds} s`} />
+            <RuleRow label="Max deliveries at once per worker" value={rules.dispatch.max_active_deliveries_per_driver} />
+
+            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Pickup clock (delivery workers)</p>
+            <RuleRow label="Time to collect once food is ready" value={`${rules.pickup_clock.grace_minutes} min`} />
+            <RuleRow label="Warning sent after" value={`${rules.pickup_clock.warning_after_minutes} min`} />
+            <RuleRow label="Late-pickup charge" value={rules.pickup_clock.charge_amount} warn />
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-1">Customer pickup</p>
+            <RuleRow label="Delivery fee" value="None" />
+            <RuleRow label="Pickup code" value={`${rules.customer_pickup.code_digits} digits, sent when ready`} />
+            <RuleRow label="Wrong codes before the order locks" value={rules.customer_pickup.max_wrong_codes} />
+
+            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Delivery fee</p>
+            <Row
+              label="Price"
+              value={`${rules.fees.base_rwf} RWF + ${rules.fees.per_km_rwf} RWF/km (min ${rules.fees.minimum_rwf} RWF)`}
+            />
+            <RuleRow label="Share paid to the delivery worker" value={`${rules.fees.driver_share_percent}%`} />
+
+            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Maps & messages</p>
+            <RuleRow label="Routes & live tracking" value={rules.tracking.routes_provider} warn={!rules.tracking.google_key_configured} />
+            <RuleRow label="Place search" value={rules.tracking.place_search_provider} />
+            <RuleRow label="SMS" value={rules.sms.note} warn={!rules.sms.configured} />
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function TwoFactorCard({ admin, onChanged }) {
   const enabled = Boolean(admin?.two_factor_enabled);
   const [phone, setPhone] = useState(admin?.phone || '');

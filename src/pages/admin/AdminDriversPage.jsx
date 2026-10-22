@@ -19,6 +19,7 @@ import {
   StatusBadge,
   Table,
   formatDate,
+  formatRelative,
   formatRwf,
   toTitle,
 } from '../../components/admin-dashboard/ui';
@@ -140,6 +141,7 @@ export default function AdminDriversPage() {
                 { key: 'contact', label: 'Contact' },
                 { key: 'status', label: 'Status' },
                 { key: 'online', label: 'Availability' },
+                { key: 'location', label: 'Location' },
                 { key: 'earnings', label: 'Earnings' },
                 { key: 'actions', label: '', className: 'text-right' },
               ]}
@@ -161,6 +163,34 @@ export default function AdminDriversPage() {
                     <Badge tone={driver.is_online ? 'green' : 'slate'}>
                       {driver.is_online ? 'Online' : 'Offline'}
                     </Badge>
+                    {driver.active_deliveries_count > 0 && (
+                      <p className="text-[11px] text-orange-700 font-semibold mt-1">
+                        {driver.active_deliveries_count} active deliver{driver.active_deliveries_count === 1 ? 'y' : 'ies'}
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {/* Orders are only offered to drivers whose phone reported a position recently. */}
+                    {driver.location?.updated_at ? (
+                      <>
+                        <p className="text-xs font-semibold text-gray-800">{formatRelative(driver.location.updated_at)}</p>
+                        <p className={`text-[11px] font-semibold ${driver.location.counts_for_dispatch ? 'text-emerald-700' : 'text-stone-400'}`}>
+                          {driver.location.counts_for_dispatch ? 'Gets nearby orders' : 'Too old for dispatch'}
+                        </p>
+                        {driver.location.latitude != null && (
+                          <a
+                            href={`https://www.google.com/maps?q=${driver.location.latitude},${driver.location.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] font-bold text-sky-700 hover:underline"
+                          >
+                            Map
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-stone-400">Never shared</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-bold text-gray-900">{formatRwf(driver.total_earnings_rwf)}</p>

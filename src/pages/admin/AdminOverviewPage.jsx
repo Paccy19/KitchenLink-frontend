@@ -68,6 +68,30 @@ export default function AdminOverviewPage() {
         <StatCard label="Open Complaints" value={complaints.open} icon={MessageSquareWarning} tone="red" />
       </div>
 
+      {data.operations && (
+        <Card
+          title="Needs attention now"
+          description="Dispatch, customer pickups and kitchens, live."
+          action={
+            <Link to="/admin-dashboard/deliveries" className="text-xs font-bold text-[#1f2937] hover:underline">
+              Live map
+            </Link>
+          }
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
+            <AttentionLink to="/admin-dashboard/deliveries" label="Waiting for a delivery worker" value={data.operations.orders_awaiting_driver} warn />
+            <AttentionLink to="/admin-dashboard/deliveries" label="Late pickups (charge pending)" value={data.operations.late_pickups_pending_charge} warn />
+            <AttentionLink to="/admin-dashboard/orders" label="Pickups awaiting collection" value={data.operations.pickups_awaiting_collection} />
+            <AttentionLink to="/admin-dashboard/orders" label="Pickups locked (wrong codes)" value={data.operations.pickups_locked} warn />
+            <AttentionLink to="/admin-dashboard/vendors" label="Kitchens open now" value={data.operations.kitchens_open} />
+            <AttentionLink to="/admin-dashboard/drivers" label="Delivery workers ready for orders" value={data.operations.drivers_matchable} />
+          </div>
+          <p className="mt-3 text-[11px] text-stone-400">
+            {data.operations.pickup_orders_last_24h} customer pickup order{data.operations.pickup_orders_last_24h === 1 ? '' : 's'} in the last 24 hours.
+          </p>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card title="Vendors">
           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -147,6 +171,22 @@ export default function AdminOverviewPage() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** A count that links to where it is handled; amber when it needs action. */
+function AttentionLink({ to, label, value, warn = false }) {
+  const alert = warn && value > 0;
+  return (
+    <Link
+      to={to}
+      className={`rounded-xl px-3 py-2 border transition hover:shadow-sm ${
+        alert ? 'bg-amber-50 border-amber-200' : 'bg-stone-50 border-transparent'
+      }`}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 leading-tight">{label}</p>
+      <p className={`text-lg font-black ${alert ? 'text-amber-700' : 'text-gray-900'}`}>{value}</p>
+    </Link>
   );
 }
 

@@ -13,6 +13,7 @@ import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -31,6 +32,8 @@ import {
   toTitle,
 } from '../../components/admin-dashboard/ui';
 import StatusModal from '../../components/admin-dashboard/StatusModal';
+import LiveRouteMap from '../../components/tracking/LiveRouteMap';
+import { KIGALI_CENTER } from '../../lib/mapStyle';
 
 const EMPTY = { items: [], total: 0, page: 1, limit: 20 };
 
@@ -190,6 +193,9 @@ export default function AdminVendorsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={vendor.status} />
+                    <Badge tone={vendor.is_open ? 'green' : 'slate'} className="mt-1">
+                      {vendor.is_open ? 'Store open' : 'Store closed'}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-stone-700 font-bold">{formatRwf(vendor.total_sales_rwf)}</td>
                   <td className="px-4 py-3 text-xs text-stone-500">
@@ -251,6 +257,8 @@ export default function AdminVendorsPage() {
               <Info label="Balance" value={formatRwf(detailQuery.data.vendor.available_balance_rwf)} />
               <Info label="Phone" value={detailQuery.data.vendor.phone || '—'} />
             </div>
+
+            <KitchenLocation vendor={detailQuery.data.vendor} />
 
             {(detailQuery.data.vendor.rejection_reason || detailQuery.data.vendor.suspension_reason) && (
               <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
@@ -386,6 +394,53 @@ export default function AdminVendorsPage() {
       </Modal>
 
       {mutation.isError && <ErrorNote error={mutation.error} />}
+    </div>
+  );
+}
+
+/**
+ * The kitchen's registered location (set by the vendor at registration or
+ * in their profile) and whether the store is open — only open stores are on
+ * the customer map and offered to delivery workers.
+ */
+function KitchenLocation({ vendor }) {
+  const { latitude: lat, longitude: lng, updated_at: updatedAt } = vendor.location || {};
+  const hasCoords = lat != null && lng != null;
+  // Vendors registered before kitchen coordinates were collected got the city centre.
+  const isDefault = hasCoords && Math.abs(lat - KIGALI_CENTER.lat) < 1e-4 && Math.abs(lng - KIGALI_CENTER.lng) < 1e-4;
+  return (
+    <div className="rounded-2xl border border-stone-200 overflow-hidden">
+      <div className="px-4 py-3 flex flex-wrap items-start justify-between gap-2">
+        <div className="text-sm min-w-0">
+          <p className="text-xs font-black uppercase tracking-wider text-stone-400">Kitchen location</p>
+          <p className="font-bold text-gray-900 mt-1">{[vendor.address, vendor.neighborhood].filter(Boolean).join(', ') || 'No address'}</p>
+          <p className="text-xs text-stone-500 font-mono">
+            {hasCoords ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : 'No coordinates'}
+            {updatedAt ? ` · set ${formatDate(updatedAt)}` : ''}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1.5">
+          <Badge tone={vendor.is_open ? 'green' : 'slate'}>{vendor.is_open ? 'Store open · on the map' : 'Store closed · hidden'}</Badge>
+          {hasCoords && (
+            <a
+              href={`https://www.google.com/maps?q=${lat},${lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-bold text-sky-700 hover:underline"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Google Maps
+            </a>
+          )}
+        </div>
+      </div>
+      {isDefault && (
+        <p className="mx-4 mb-3 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          This is the Kigali city-centre default, not the real kitchen. Ask the vendor to set their location in Profile.
+        </p>
+      )}
+      {hasCoords && (
+        <LiveRouteMap kitchen={{ lat, lng, label: vendor.name }} className="h-56 !rounded-none" />
+      )}
     </div>
   );
 }

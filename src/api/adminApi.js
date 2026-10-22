@@ -132,6 +132,12 @@ export const adminApi = {
   setDriverStatus: (id, body) =>
     adminRequest(`/admin/drivers/${encodeURIComponent(id)}/status`, { method: 'PATCH', body }),
   liveDeliveries: (params) => adminRequest(`/admin/deliveries/live${qs(params)}`),
+  // One delivery's rider position, route and ETA.
+  deliveryLive: (deliveryId) => adminRequest(`/admin/deliveries/${encodeURIComponent(deliveryId)}/live`),
+  // Operations: live map, late pickups, rules in force.
+  liveMap: () => adminRequest('/admin/operations/live-map'),
+  latePickups: (params) => adminRequest(`/admin/operations/late-pickups${qs(params)}`),
+  operationsRules: () => adminRequest('/admin/operations/rules'),
 
   listOrders: (params) => adminRequest(`/admin/orders${qs(params)}`),
   getOrder: (id) => adminRequest(`/admin/orders/${encodeURIComponent(id)}`),
