@@ -5,6 +5,7 @@ import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import AdminDeliveryLive from '../../components/admin-dashboard/AdminDeliveryLive';
+import AssignNearbyDriverModal from '../../components/admin-dashboard/AssignNearbyDriverModal';
 import {
   Badge,
   Button,
@@ -52,8 +53,6 @@ export default function AdminOrdersPage() {
   const [reassignOpen, setReassignOpen] = useState(false);
   const [statusValue, setStatusValue] = useState('confirmed');
   const [note, setNote] = useState('');
-  const [driverId, setDriverId] = useState('');
-  const [error, setError] = useState('');
   const focusId = useFocusParam('order');
 
   useEffect(() => {
@@ -80,12 +79,6 @@ export default function AdminOrdersPage() {
     enabled: Boolean(detailId),
   });
 
-  const driversQuery = useQuery({
-    queryKey: ['admin', 'drivers', 'approved'],
-    queryFn: () => adminApi.listDrivers({ status: 'approved', limit: 100 }),
-    enabled: reassignOpen,
-  });
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
     queryClient.invalidateQueries({ queryKey: ['admin', 'order', detailId] });
@@ -107,16 +100,6 @@ export default function AdminOrdersPage() {
       setNote('');
     },
   });
-  const reassignMutation = useMutation({
-    mutationFn: () => adminApi.reassignDriver(detailId, { driver_id: driverId, note }),
-    onSuccess: () => {
-      invalidate();
-      setReassignOpen(false);
-      setNote('');
-      setDriverId('');
-    },
-  });
-
   const data = listQuery.data || EMPTY;
   const order = detailQuery.data?.order;
   const delivery = detailQuery.data?.delivery;
@@ -129,7 +112,6 @@ export default function AdminOrdersPage() {
   };
 
   const openModal = (setter) => {
-    setError('');
     setNote('');
     setter(true);
   };
@@ -331,7 +313,7 @@ export default function AdminOrdersPage() {
                     ['picked_up', 'out_for_delivery', 'delivered', 'completed'].includes(delivery?.status)
                   }
                 >
-                  {order.driver ? 'Reassign delivery worker' : 'Assign delivery worker'}
+                  {order.driver ? 'Reassign to a nearby worker' : 'Assign a nearby worker'}
                 </Button>
               )}
               <Button
@@ -346,7 +328,6 @@ export default function AdminOrdersPage() {
 
             {statusMutation.isError && <ErrorNote error={statusMutation.error} />}
             {cancelMutation.isError && <ErrorNote error={cancelMutation.error} />}
-            {reassignMutation.isError && <ErrorNote error={reassignMutation.error} />}
           </div>
         ) : null}
       </Modal>
@@ -406,50 +387,12 @@ export default function AdminOrdersPage() {
         </Field>
       </Modal>
 
-      <Modal
+      <AssignNearbyDriverModal
+        orderId={detailId}
         open={reassignOpen}
-        title="Reassign delivery worker"
         onClose={() => setReassignOpen(false)}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setReassignOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (!driverId) {
-                  setError('Select a delivery worker.');
-                  return;
-                }
-                setError('');
-                reassignMutation.mutate();
-              }}
-              disabled={reassignMutation.isPending}
-            >
-              {reassignMutation.isPending ? 'Assigning…' : 'Assign'}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Field label="Delivery worker">
-            <Select value={driverId} onChange={(event) => setDriverId(event.target.value)}>
-              <option value="">Select an approved delivery worker…</option>
-              {(driversQuery.data?.items || []).map((driver) => (
-                <option key={driver.id} value={driver.id}>
-                  {driver.name} · {driver.phone || toTitle(driver.vehicle_type)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Note (optional)">
-            <Textarea value={note} onChange={(event) => setNote(event.target.value)} />
-          </Field>
-          {error && (
-            <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
-          )}
-        </div>
-      </Modal>
+        onDone={invalidate}
+      />
     </div>
   );
 }
@@ -494,6 +437,16 @@ function DeliverySection({ delivery, dispatch }) {
           <Info label="Rider earns" value={formatRwf(delivery.promised_earnings_rwf)} />
           <Info label="Trip" value={delivery.route_distance_km != null ? `${delivery.route_distance_km} km` : '—'} />
         </div>
+        {dispatch?.replaced_late?.length > 0 && (
+          <div className="text-xs text-stone-600 space-y-1">
+            {dispatch.replaced_late.map((record, index) => (
+              <p key={index}>
+                <strong>{record.driver_name}</strong> was replaced{record.reassigned_at ? ` ${formatDate(record.reassigned_at)}` : ''} for
+                being late{record.minutes_late != null ? ` (${record.minutes_late} min)` : ''} · charge {record.charge_status}
+              </p>
+            ))}
+          </div>
+        )}
         {late && (
           <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
             Late pickup{late.minutes_late != null ? ` — collected ${late.minutes_late} min late` : ' — not collected within the grace period'}.

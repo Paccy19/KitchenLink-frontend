@@ -78,9 +78,10 @@ export default function AdminOverviewPage() {
             </Link>
           }
         >
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3 text-sm">
             <AttentionLink to="/admin-dashboard/deliveries" label="Waiting for a delivery worker" value={data.operations.orders_awaiting_driver} warn />
-            <AttentionLink to="/admin-dashboard/deliveries" label="Late pickups (charge pending)" value={data.operations.late_pickups_pending_charge} warn />
+            <AttentionLink to="/admin-dashboard/deliveries?tab=late" label="Late, not yet collected" value={data.operations.late_pickups_waiting} warn />
+            <AttentionLink to="/admin-dashboard/deliveries?tab=late" label="Late pickups (charge pending)" value={data.operations.late_pickups_pending_charge} warn />
             <AttentionLink to="/admin-dashboard/orders" label="Pickups awaiting collection" value={data.operations.pickups_awaiting_collection} />
             <AttentionLink to="/admin-dashboard/orders" label="Pickups locked (wrong codes)" value={data.operations.pickups_locked} warn />
             <AttentionLink to="/admin-dashboard/vendors" label="Kitchens open now" value={data.operations.kitchens_open} />

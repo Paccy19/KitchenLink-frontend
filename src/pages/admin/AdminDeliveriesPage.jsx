@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Bike, Map as MapIcon, Timer } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import AdminOperationsMap from '../../components/admin-dashboard/AdminOperationsMap';
+import AssignNearbyDriverModal from '../../components/admin-dashboard/AssignNearbyDriverModal';
+import Can from '../../components/admin-dashboard/Can';
 import {
   Badge,
+  Button,
   Card,
   EmptyState,
   ErrorNote,
@@ -42,7 +45,12 @@ function PickupState({ delivery }) {
 }
 
 export default function AdminDeliveriesPage() {
-  const [tab, setTab] = useState('map');
+  // ?tab=late opens the late pickups (the late-pickup alert links here).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = TABS.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'map';
+  const setTab = (id) => setSearchParams(id === 'map' ? {} : { tab: id }, { replace: true });
+  const queryClient = useQueryClient();
+  const [reassignOrderId, setReassignOrderId] = useState(null);
   const [page, setPage] = useState(1);
   const [latePage, setLatePage] = useState(1);
   const [chargeStatus, setChargeStatus] = useState('');
@@ -198,7 +206,13 @@ export default function AdminDeliveriesPage() {
           ) : (
             <>
               <p className="mb-3 text-xs font-semibold text-stone-500">
-                {lateQuery.data.pending_charges} late pickup{lateQuery.data.pending_charges === 1 ? '' : 's'} with a pending charge.
+                {lateQuery.data.pending_charges} late pickup{lateQuery.data.pending_charges === 1 ? '' : 's'} with a pending charge
+                {lateQuery.data.still_waiting > 0 && (
+                  <span className="text-red-700">
+                    {' '}· {lateQuery.data.still_waiting} still waiting at the kitchen — call a nearby worker to take over
+                  </span>
+                )}
+                .
               </p>
               <Table
                 columns={[
@@ -207,10 +221,11 @@ export default function AdminDeliveriesPage() {
                   { key: 'ready', label: 'Food ready / due' },
                   { key: 'late', label: 'Late by' },
                   { key: 'charge', label: 'Charge' },
+                  { key: 'actions', label: '', className: 'text-right' },
                 ]}
               >
                 {lateQuery.data.items.map((row) => (
-                  <tr key={row.id} className="hover:bg-stone-50/60">
+                  <tr key={row.key || row.id} className={row.still_waiting ? 'bg-red-50/40' : 'hover:bg-stone-50/60'}>
                     <td className="px-4 py-3">
                       <Link to={orderLink(row.order_id)} className="font-bold text-gray-900 hover:underline">
                         {row.order_number}
@@ -228,13 +243,26 @@ export default function AdminDeliveriesPage() {
                     <td className="px-4 py-3">
                       <p className="font-bold text-red-700">{row.minutes_late ?? '—'} min</p>
                       <p className="text-[11px] text-stone-400">
-                        {row.still_waiting ? 'Still not collected' : `Collected ${formatDate(row.picked_up_at)}`}
+                        {row.reassigned_at
+                          ? `Replaced ${formatDate(row.reassigned_at)}`
+                          : row.still_waiting
+                            ? 'Still not collected'
+                            : `Collected ${formatDate(row.picked_up_at)}`}
                       </p>
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={row.charge_status === 'pending' ? 'amber' : row.charge_status === 'charged' ? 'red' : 'slate'}>
                         {row.charge_status === 'pending' ? 'Pending' : row.charge_status === 'charged' ? 'Charged' : 'Waived'}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {row.can_reassign && (
+                        <Can permission="orders:write">
+                          <Button size="sm" onClick={() => setReassignOrderId(row.order_id)}>
+                            Find nearby worker
+                          </Button>
+                        </Can>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -244,6 +272,17 @@ export default function AdminDeliveriesPage() {
           )}
         </Card>
       )}
+
+      <AssignNearbyDriverModal
+        orderId={reassignOrderId}
+        open={Boolean(reassignOrderId)}
+        onClose={() => setReassignOrderId(null)}
+        onDone={() => {
+          queryClient.invalidateQueries({ queryKey: ['admin', 'late-pickups'] });
+          queryClient.invalidateQueries({ queryKey: ['admin', 'deliveries'] });
+          queryClient.invalidateQueries({ queryKey: ['admin', 'live-map'] });
+        }}
+      />
     </div>
   );
 }

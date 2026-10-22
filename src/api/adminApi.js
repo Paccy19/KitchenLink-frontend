@@ -141,6 +141,8 @@ export const adminApi = {
 
   listOrders: (params) => adminRequest(`/admin/orders${qs(params)}`),
   getOrder: (id) => adminRequest(`/admin/orders/${encodeURIComponent(id)}`),
+  // Delivery workers near the kitchen, for support to call before reassigning.
+  nearbyDrivers: (id, params) => adminRequest(`/admin/orders/${encodeURIComponent(id)}/nearby-drivers${qs(params)}`),
   updateOrderStatus: (id, body) =>
     adminRequest(`/admin/orders/${encodeURIComponent(id)}/status`, { method: 'PATCH', body }),
   cancelOrder: (id, body) =>
