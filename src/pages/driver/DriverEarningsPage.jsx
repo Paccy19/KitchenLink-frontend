@@ -97,7 +97,7 @@ export default function DriverEarningsPage() {
   const bars = (summary.deliveries || []).slice(-10).map((delivery) => ({
     id: delivery.id,
     orderNumber: delivery.orderNumber,
-    amount: delivery.promisedEarnings,
+    amount: delivery.paidEarnings ?? delivery.promisedEarnings,
   }));
 
   const maxBar = Math.max(1, ...bars.map((bar) => bar.amount));
@@ -340,9 +340,14 @@ export default function DriverEarningsPage() {
                   <p className="text-xs text-stone-500 truncate">
                     {deliveryStatusLabel(delivery.status)} → {delivery.dropoff.address || 'customer'}
                   </p>
+                  {delivery.earningsPenaltyRwf > 0 && (
+                    <p className="text-[11px] font-bold text-red-600">
+                      Late-pickup penalty: −{delivery.earningsPenaltyRwf.toLocaleString()} RWF (from this delivery fee)
+                    </p>
+                  )}
                 </div>
                 <span className="text-sm font-black text-emerald-700">
-                  +{delivery.promisedEarnings.toLocaleString()} RWF
+                  +{(delivery.paidEarnings ?? delivery.promisedEarnings).toLocaleString()} RWF
                 </span>
               </li>
             ))}

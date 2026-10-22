@@ -97,8 +97,13 @@ export default function DriverHistoryPage() {
             <div className="flex items-center gap-3">
               <StatusChip status={delivery.status} />
               <span className="text-sm font-black text-gray-900 w-24 text-right">
-                {delivery.promisedEarnings.toLocaleString()} RWF
+                {(delivery.paidEarnings ?? delivery.promisedEarnings).toLocaleString()} RWF
               </span>
+              {delivery.earningsPenaltyRwf > 0 && (
+                <span className="text-[11px] font-bold text-red-600 text-right">
+                  −{delivery.earningsPenaltyRwf.toLocaleString()} RWF late-pickup penalty
+                </span>
+              )}
             </div>
           </div>
         ))}

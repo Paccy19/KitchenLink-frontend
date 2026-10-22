@@ -180,6 +180,8 @@ export function mapDelivery(raw = {}) {
           warningMinutes: raw.pickup_rules.warning_minutes,
           chargeAfterMinutes: raw.pickup_rules.charge_after_minutes,
           reassignAfterMinutes: raw.pickup_rules.reassign_after_minutes ?? null,
+          // The penalty share of the delivery fee for a late pickup.
+          latePenaltyPercent: Number(raw.pickup_rules.late_penalty_percent ?? 0),
         }
       : null,
     pickupGraceMinutes: Number(raw.pickup_grace_minutes ?? 15),
@@ -189,8 +191,14 @@ export function mapDelivery(raw = {}) {
           minutesLate: raw.late_pickup.minutes_late ?? null,
           chargeStatus: raw.late_pickup.charge_status || 'pending',
           chargeRwf: raw.late_pickup.charge_rwf ?? null,
+          penaltyPercent: raw.late_pickup.penalty_percent ?? null,
+          note: raw.late_pickup.note || '',
         }
       : null,
+    // What was actually paid for this delivery, and the late-pickup penalty
+    // taken out of this order's delivery fee.
+    paidEarnings: raw.paid_earnings_rwf ?? null,
+    earningsPenaltyRwf: Number(raw.earnings_penalty_rwf ?? 0),
     // The order as the customer follows it (assigned driver only).
     orderProgress: raw.order_progress
       ? {

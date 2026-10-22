@@ -10,9 +10,9 @@ const clockAt = (base, minutes) =>
 
 /**
  * Admin: how long a delivery worker has to collect a ready order — when
- * they're reminded, when a late-pickup charge applies, and when the order is
- * taken away and given to another nearby worker. Workers see these rules
- * before they accept.
+ * they're reminded, when a late-pickup charge applies, how much of the
+ * delivery fee is kept as the penalty, and when the order is taken away and
+ * given to another nearby worker. Workers see these rules before they accept.
  */
 export default function DeliveryTimingCard() {
   const { can } = useAdmin();
@@ -30,6 +30,7 @@ export default function DeliveryTimingCard() {
         charge: String(timing.charge_after_minutes),
         reassignOn: timing.reassign_after_minutes != null,
         reassign: String(timing.reassign_after_minutes ?? Number(timing.charge_after_minutes) * 2),
+        penalty: String(timing.late_penalty_percent ?? 0),
       });
     }
   }, [timing, form]);
@@ -40,6 +41,7 @@ export default function DeliveryTimingCard() {
         warning_minutes: Number(form.warning),
         charge_after_minutes: Number(form.charge),
         reassign_after_minutes: form.reassignOn ? Number(form.reassign) : null,
+        late_penalty_percent: Number(form.penalty),
       }),
     onSuccess: () => {
       setSaved(true);
@@ -60,7 +62,10 @@ export default function DeliveryTimingCard() {
     form &&
     Number(form.warning) > 0 &&
     Number(form.charge) > Number(form.warning) &&
-    (!form.reassignOn || Number(form.reassign) > Number(form.charge));
+    (!form.reassignOn || Number(form.reassign) > Number(form.charge)) &&
+    Number.isInteger(Number(form.penalty)) &&
+    Number(form.penalty) >= 0 &&
+    Number(form.penalty) <= 100;
 
   return (
     <Card
@@ -74,7 +79,7 @@ export default function DeliveryTimingCard() {
         <p className="text-sm text-stone-400">Loading…</p>
       ) : (
         <div className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Remind the worker after" hint="minutes">
               <Input type="number" min="1" max="480" value={form.warning} disabled={!canEdit} onChange={(event) => set({ warning: event.target.value })} />
             </Field>
@@ -102,6 +107,17 @@ export default function DeliveryTimingCard() {
                 </label>
               </div>
             </Field>
+            <Field label="Penalty on a late pickup" hint="% of the delivery fee">
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={form.penalty}
+                disabled={!canEdit}
+                onChange={(event) => set({ penalty: event.target.value })}
+              />
+            </Field>
           </div>
 
           <div className="rounded-2xl bg-stone-50 border border-stone-100 p-4 text-sm text-stone-700 space-y-1">
@@ -114,6 +130,12 @@ export default function DeliveryTimingCard() {
                 <p>
                   <strong>{clockAt(example, Number(form.charge))}</strong> — not collected: late pickup recorded, a charge applies, and support is alerted.
                 </p>
+                <p className="text-stone-600">
+                  When the order is delivered, <strong>{Number(form.penalty)}%</strong> of that order's delivery fee is kept as the penalty
+                  {Number(form.penalty) > 0
+                    ? ' — the worker is paid the rest of the fee for that order. Their wallet is never touched.'
+                    : ' — no penalty is taken.'}
+                </p>
                 {form.reassignOn ? (
                   <p>
                     <strong>{clockAt(example, Number(form.reassign))}</strong> — still not collected: the order is taken away and offered to other
@@ -125,7 +147,8 @@ export default function DeliveryTimingCard() {
               </>
             ) : (
               <p className="text-red-700 font-semibold">
-                The reminder must come before the charge{form.reassignOn ? ', and giving it to another worker must come after the charge' : ''}.
+                The reminder must come before the charge{form.reassignOn ? ', and giving it to another worker must come after the charge' : ''}, and the
+                penalty must be a whole number between 0 and 100.
               </p>
             )}
           </div>
@@ -145,6 +168,10 @@ export default function DeliveryTimingCard() {
           </div>
           <p className="text-[11px] text-stone-400">
             Changes apply to orders that become ready after you save. A worker who takes over a late order (assigned by support or re-offered) gets this time again from when they take it.
+          </p>
+          <p className="text-[11px] text-stone-400">
+            The penalty is taken out of the delivery fee of the late order only, when it is delivered — it never comes out of the worker's wallet or from
+            any other order. Set it to 0 to switch the penalty off (late pickups are still recorded).
           </p>
           {mutation.isError && <ErrorNote error={mutation.error} />}
         </div>

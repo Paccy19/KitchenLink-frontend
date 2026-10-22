@@ -177,7 +177,7 @@ export default function AdminDeliveriesPage() {
       {tab === 'late' && (
         <Card
           title="Late pickups"
-          description="Delivery workers who didn't collect the food within the grace period after it was ready. Charges are recorded as pending until charging is set up."
+          description="Delivery workers who didn't collect the food within the grace period after it was ready. The penalty set in Settings is taken out of that order's delivery fee when it is delivered."
           action={
             <div className="w-44">
               <Select
@@ -254,6 +254,15 @@ export default function AdminDeliveriesPage() {
                       <Badge tone={row.charge_status === 'pending' ? 'amber' : row.charge_status === 'charged' ? 'red' : 'slate'}>
                         {row.charge_status === 'pending' ? 'Pending' : row.charge_status === 'charged' ? 'Charged' : 'Waived'}
                       </Badge>
+                      {row.charge_rwf != null && (
+                        <p className="mt-1 text-[11px] font-bold text-red-700">
+                          {row.charge_rwf.toLocaleString()} RWF kept
+                          {row.penalty_percent != null ? ` (${row.penalty_percent}%)` : ''}
+                        </p>
+                      )}
+                      {row.charge_status === 'waived' && row.note && (
+                        <p className="mt-1 text-[11px] text-stone-400">{row.note}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {row.can_reassign && (
