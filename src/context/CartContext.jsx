@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { addCartItem as addRemoteCartItem, clearRemoteCart, fetchCart, fetchDeliveryQuote, removeCartItem as removeRemoteCartItem, replaceRemoteCart, updateCartItem as updateRemoteCartItem } from '../api/endpoints';
 import { useAuth } from './AuthContext';
 import { useLocation } from './LocationContext';
+import { orderingRulesFor } from '../data/vendorTypes';
+import { scheduleDayOptions, scheduleTimeSlots } from '../utils/schedule';
 
 const CartContext = createContext(null);
 const MAX_CART_QUANTITY = 99;
@@ -53,6 +55,8 @@ export const CartProvider = ({ children }) => {
           id: payload.vendor.id,
           name: payload.vendor.name,
           type: payload.vendor.vendor_type,
+          typeCode: payload.vendor.vendor_type,
+          ordering: payload.vendor.ordering,
           location: '',
           deliveryFee: payload.delivery_fee_rwf,
         }
@@ -137,6 +141,8 @@ export const CartProvider = ({ children }) => {
         id: vendor.id,
         name: vendor.name,
         type: vendor.type,
+        typeCode: vendor.typeCode,
+        ordering: vendor.ordering,
         location: vendor.location,
         deliveryFee: vendor.deliveryFee || 1000
       });
@@ -224,6 +230,8 @@ export const CartProvider = ({ children }) => {
       id: incomingVendor.id,
       name: incomingVendor.name,
       type: incomingVendor.type,
+      typeCode: incomingVendor.typeCode,
+      ordering: incomingVendor.ordering,
       location: incomingVendor.location,
       deliveryFee: incomingVendor.deliveryFee || 1000
     });
@@ -342,6 +350,25 @@ export const CartProvider = ({ children }) => {
   const grandTotal = subtotal + (deliveryFee ?? 0);
   const totalItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
+  // The kitchen type's ordering rules (advance-only, notice, days ahead,
+  // minimum order, basket size) — the server enforces the same at checkout.
+  const orderingRules = activeVendor ? orderingRulesFor(activeVendor.ordering, activeVendor.typeCode || activeVendor.type) : null;
+  const scheduleDays = scheduleDayOptions(orderingRules);
+  const scheduleSlots = scheduleTimeSlots(scheduledDate, orderingRules);
+
+  // Advance-only kitchens (caterers, chefs, meal-prep) can't take orders for
+  // now, and a picked day/time must stay inside the kitchen's window.
+  useEffect(() => {
+    if (!orderingRules || !cartItems.length) return;
+    if (!orderingRules.orderNow && orderType === 'immediate') setOrderType('scheduled');
+    if (orderType !== 'scheduled') return;
+    if (scheduleDays.length && !scheduleDays.some((day) => day.value === scheduledDate)) {
+      setScheduledDate(scheduleDays[0].value);
+    } else if (scheduleSlots.length && !scheduleSlots.includes(scheduledTime)) {
+      setScheduledTime(scheduleSlots[0]);
+    }
+  });
+
   return (
     <CartContext.Provider value={{
       cartItems,
@@ -349,6 +376,9 @@ export const CartProvider = ({ children }) => {
       clearApiError: () => setApiError(''),
       isSyncing,
       activeVendor,
+      orderingRules,
+      scheduleDays,
+      scheduleSlots,
       isCartOpen,
       setIsCartOpen,
       addToCart,

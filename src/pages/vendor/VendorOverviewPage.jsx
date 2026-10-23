@@ -21,6 +21,7 @@ import OrderStatusBadge from '../../components/vendor-dashboard/OrderStatusBadge
 import SpecialComposer from '../../components/vendor-dashboard/SpecialComposer';
 import OfferDayComposer from '../../components/vendor-dashboard/OfferDayComposer';
 import TypeTipsCard from '../../components/vendor-dashboard/TypeTipsCard';
+import OrderingRulesCard from '../../components/vendor-dashboard/OrderingRulesCard';
 
 const money = (value) => `${value.toLocaleString()} RWF`;
 
@@ -227,6 +228,8 @@ export default function VendorOverviewPage() {
           </div>
 
           <TypeTipsCard />
+
+          <OrderingRulesCard compact />
 
           <div id="special" className="scroll-mt-24">
             <SpecialComposer />

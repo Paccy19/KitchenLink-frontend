@@ -16,6 +16,7 @@ import { useVendor } from '../../context/VendorContext';
 import VendorTypeBadge from '../../components/common/VendorTypeBadge';
 import KitchenLocationCard from '../../components/vendor-dashboard/KitchenLocationCard';
 import VendorTypeCard from '../../components/vendor-dashboard/VendorTypeCard';
+import OrderingRulesCard from '../../components/vendor-dashboard/OrderingRulesCard';
 import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function VendorProfilePage() {
@@ -226,6 +227,8 @@ export default function VendorProfilePage() {
       </form>
 
       <VendorTypeCard />
+
+      <OrderingRulesCard />
 
       <KitchenLocationCard />
 

@@ -18,7 +18,8 @@ import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../context/CartCont
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
-import { buildScheduledFor, formatScheduledFor } from '../utils/schedule';
+import { buildScheduledFor, formatScheduledFor, scheduleDayLabel } from '../utils/schedule';
+import { basketRuleProblem } from '../data/vendorTypes';
 import { PHONE_MAX_LENGTH, sanitizePhoneInput } from '../utils/validation';
 
 const PAYMENT_METHODS = [
@@ -89,6 +90,8 @@ export default function CheckoutPage() {
     scheduledDate,
     scheduledTime,
     preorderSpecial,
+    orderingRules,
+    totalItemCount,
   } = useCart();
   const { user, isAuthenticated, openAuthModal, addAddress } = useAuth();
   const { placeOrder, apiEnabled, apiError, clearApiError } = useOrders();
@@ -119,7 +122,7 @@ export default function CheckoutPage() {
         : 'Estimated delivery time: 25–35 minutes after kitchen preparation'
       : orderType === 'preorder' && preorderSpecial
         ? `${preorderSpecial.text} — ${isPickup ? 'ready to collect' : 'arrives'} by ${formatScheduledFor(scheduledFor)}`
-        : `${isPickup ? 'Ready to collect' : 'Scheduled to arrive'}: ${scheduledDate} at ${scheduledTime}`;
+        : `${isPickup ? 'Ready to collect' : 'Scheduled to arrive'}: ${scheduleDayLabel(scheduledDate)} at ${scheduledTime}`;
 
   // Selected address state
   const [selectedAddressId, setSelectedAddressId] = useState(() => {
@@ -238,6 +241,13 @@ export default function CheckoutPage() {
     }
     if (!isPickup && deliveryFee == null) {
       setErrorMsg("We couldn't calculate the delivery fee for your location. Please check your location and try again.");
+      return;
+    }
+
+    // The kitchen type's minimum order / dishes-per-order rules.
+    const ruleProblem = basketRuleProblem(orderingRules, { subtotal, itemCount: totalItemCount });
+    if (ruleProblem) {
+      setErrorMsg(ruleProblem);
       return;
     }
 

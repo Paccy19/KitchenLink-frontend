@@ -138,6 +138,8 @@ export function mapVendorAccount(raw = {}) {
     name: raw.name || 'Your Kitchen',
     type: raw.vendor_type_label || vendorTypeLabel(raw.vendor_type),
     typeCode: toVendorTypeCode(raw.vendor_type),
+    // Ordering rules of the kitchen type (raw API shape; see orderingRulesFor).
+    ordering: raw.ordering || null,
     // A type change the vendor asked for, waiting for an admin (null when none).
     typeRequest: raw.vendor_type_request
       ? {
@@ -364,6 +366,11 @@ export const vendorApi = {
   requestTypeChange: (payload) =>
     vendorRequest('/vendor/profile/type-request', { method: 'POST', body: payload }),
   cancelTypeChange: () => vendorRequest('/vendor/profile/type-request', { method: 'DELETE' }),
+  // The kitchen type's ordering rules with today's bookings; the kitchen may
+  // change its daily order limit / minimum order (null = type default).
+  ordering: async () => (await vendorRequest('/vendor/ordering'))?.ordering,
+  saveOrdering: async (payload) =>
+    (await vendorRequest('/vendor/ordering', { method: 'PUT', body: payload }))?.ordering,
   // Open (with live GPS position) / close the store, or refresh the position.
   setAvailability: (payload) =>
     vendorRequest('/vendor/availability', { method: 'PATCH', body: payload }),

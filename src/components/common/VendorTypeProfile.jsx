@@ -1,12 +1,12 @@
 import React from 'react';
 import clsx from 'clsx';
-import { CheckCircle2, Info, MinusCircle } from 'lucide-react';
-import { getVendorType } from '../../data/vendorTypes';
+import { CalendarClock, CheckCircle2, Info, MinusCircle } from 'lucide-react';
+import { getVendorType, orderingRuleLines, orderingRulesFor } from '../../data/vendorTypes';
 
 /**
- * A kitchen type's profile: what it does well, what it's less suited for
- * (soft guidance — nothing is blocked) and a short note. Used at sign-up and
- * in the kitchen's profile.
+ * A kitchen type's profile: what it does well, what it's less suited for, a
+ * short note and the type's ordering rules (enforced at checkout). Used at
+ * sign-up and in the kitchen's profile.
  */
 export default function VendorTypeProfile({ type, compact = false, className }) {
   const profile = getVendorType(type);
@@ -38,10 +38,25 @@ export default function VendorTypeProfile({ type, compact = false, className }) 
           <p className="text-xs text-stone-500">Nothing — fully open.</p>
         )}
       </div>
+      <div className="sm:col-span-2">
+        <p className="text-[11px] font-black uppercase tracking-wider text-stone-600 mb-1">How you take orders</p>
+        <div className="flex flex-wrap gap-1.5">
+          {orderingRuleLines(orderingRulesFor(null, profile.code)).map((line) => (
+            <span
+              key={line}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-stone-200 text-[11px] font-semibold text-stone-600"
+            >
+              <CalendarClock className="w-3 h-3" aria-hidden="true" />
+              {line}
+            </span>
+          ))}
+        </div>
+      </div>
       <p className="sm:col-span-2 flex items-start gap-1.5 text-[11px] text-stone-500">
         <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-stone-400" />
         <span>
-          {profile.note} These are suggestions only — every kitchen can use every feature.
+          {profile.note} You can sell any kind of food. The order rules above apply at checkout; a daily limit and
+          minimum order can be adjusted later in your profile.
         </span>
       </p>
     </div>

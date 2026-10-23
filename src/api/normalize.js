@@ -5,7 +5,7 @@
  * @module api/normalize
  */
 
-import { toVendorTypeCode, vendorTypeLabel } from '../data/vendorTypes';
+import { orderingRulesFor, toVendorTypeCode, vendorTypeLabel } from '../data/vendorTypes';
 
 /** @param {any} value */
 export const toNumber = (value, fallback = 0) => {
@@ -93,6 +93,9 @@ export function normalizeVendor(raw = {}) {
     name,
     type: toText(raw.vendor_type_label, vendorTypeLabel(raw.vendor_type ?? raw.type ?? raw.kitchen_type)),
     typeCode: toVendorTypeCode(raw.vendor_type ?? raw.type ?? raw.kitchen_type),
+    // How this kitchen type takes orders (advance-only, notice, limits).
+    ordering: orderingRulesFor(raw.ordering, raw.vendor_type ?? raw.type ?? raw.kitchen_type),
+    advanceOnly: raw.advance_only != null ? Boolean(raw.advance_only) : !orderingRulesFor(raw.ordering, raw.vendor_type ?? raw.type ?? raw.kitchen_type).orderNow,
     rating: Number(toNumber(raw.rating ?? raw.average_rating, 0).toFixed(2)),
     reviewsCount: toNumber(raw.reviews_count ?? raw.reviewsCount ?? raw.rating_count, 0),
     distanceKm: Number(toNumber(raw.distance_km ?? raw.distance, 0).toFixed(1)),

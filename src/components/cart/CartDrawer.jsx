@@ -15,10 +15,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../../context/CartContext';
-import {
-  SCHEDULE_DAY_OPTIONS,
-  SCHEDULE_TIME_SLOTS,
-} from '../../utils/schedule';
+import { basketRuleProblem, formatLead, vendorTypeLabel } from '../../data/vendorTypes';
 
 export default function CartDrawer() {
   const navigate = useNavigate();
@@ -46,6 +43,9 @@ export default function CartDrawer() {
     setScheduledTime,
     preorderSpecial,
     setPreorderSpecial,
+    orderingRules,
+    scheduleDays,
+    scheduleSlots,
     vendorConflict,
     resolveConflictReplace,
     resolveConflictCancel
@@ -64,6 +64,9 @@ export default function CartDrawer() {
   if (!isCartOpen) return null;
 
   const closeDrawer = () => setIsCartOpen(false);
+  // Minimum order / most dishes per order for this kitchen type.
+  const ruleProblem = basketRuleProblem(orderingRules, { subtotal, itemCount: totalItemCount });
+  const advanceOnly = orderingRules && !orderingRules.orderNow;
 
   const handleCheckoutClick = () => {
     setIsCartOpen(false);
@@ -188,7 +191,14 @@ export default function CartDrawer() {
                   <span>Delivery Timing</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                {advanceOnly && (
+                  <p className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    {vendorTypeLabel(orderingRules.vendorType)} kitchens take advance orders only — order at least {formatLead(orderingRules.minLeadMinutes)} ahead.
+                  </p>
+                )}
+
+                <div className={`grid gap-2 ${advanceOnly ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  {!advanceOnly && (
                   <button
                     type="button"
                     onClick={() => setOrderType('immediate')}
@@ -201,6 +211,7 @@ export default function CartDrawer() {
                     <Zap className="w-3.5 h-3.5" />
                     <span>Order for Now</span>
                   </button>
+                  )}
 
                   <button
                     type="button"
@@ -225,9 +236,9 @@ export default function CartDrawer() {
                         onChange={(e) => setScheduledDate(e.target.value)}
                         className="w-full text-xs font-bold p-2 rounded-xl bg-white border border-stone-200 outline-none focus:border-[#542813]"
                       >
-                        {SCHEDULE_DAY_OPTIONS.map((day) => (
-                          <option key={day} value={day}>
-                            {day}
+                        {scheduleDays.map((day) => (
+                          <option key={day.value} value={day.value}>
+                            {day.label}
                           </option>
                         ))}
                       </select>
@@ -240,7 +251,7 @@ export default function CartDrawer() {
                         onChange={(e) => setScheduledTime(e.target.value)}
                         className="w-full text-xs font-bold p-2 rounded-xl bg-white border border-stone-200 outline-none focus:border-[#542813]"
                       >
-                        {SCHEDULE_TIME_SLOTS.map((slot) => (
+                        {scheduleSlots.map((slot) => (
                           <option key={slot} value={slot}>
                             {slot}
                           </option>
@@ -358,9 +369,14 @@ export default function CartDrawer() {
               </div>
             </div>
 
+            {ruleProblem && (
+              <p role="alert" className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                {ruleProblem}
+              </p>
+            )}
             <button
               onClick={handleCheckoutClick}
-              disabled={isSyncing}
+              disabled={isSyncing || Boolean(ruleProblem)}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-extrabold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95"
             >
               <span>Proceed to Checkout</span>

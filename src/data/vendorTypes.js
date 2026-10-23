@@ -166,3 +166,77 @@ export function getVendorType(value) {
 export function vendorTypeLabel(value) {
   return getVendorType(value).label;
 }
+
+/**
+ * How each type takes orders — the same rules the server enforces at
+ * checkout (keep in sync with backend config/vendorTypes.js RULES).
+ */
+const RULES = {
+  home_cook: { orderNow: true, minLeadMinutes: 45, maxDaysAhead: 3, dailyOrderLimit: 20, limitRange: [1, 60], minOrderRwf: 0, minOrderRange: [0, 20000], maxItemsPerOrder: 10 },
+  restaurant: { orderNow: true, minLeadMinutes: 45, maxDaysAhead: 7, dailyOrderLimit: null, limitRange: null, minOrderRwf: 0, minOrderRange: [0, 20000], maxItemsPerOrder: null },
+  cafe: { orderNow: true, minLeadMinutes: 30, maxDaysAhead: 2, dailyOrderLimit: null, limitRange: null, minOrderRwf: 0, minOrderRange: [0, 10000], maxItemsPerOrder: 15 },
+  bakery: { orderNow: true, minLeadMinutes: 45, maxDaysAhead: 14, dailyOrderLimit: null, limitRange: null, minOrderRwf: 0, minOrderRange: [0, 20000], maxItemsPerOrder: null },
+  caterer: { orderNow: false, minLeadMinutes: 1440, maxDaysAhead: 30, dailyOrderLimit: null, limitRange: null, minOrderRwf: 20000, minOrderRange: [5000, 500000], maxItemsPerOrder: null },
+  food_truck: { orderNow: true, minLeadMinutes: 30, maxDaysAhead: 1, dailyOrderLimit: null, limitRange: null, minOrderRwf: 0, minOrderRange: [0, 10000], maxItemsPerOrder: 15 },
+  chef: { orderNow: false, minLeadMinutes: 240, maxDaysAhead: 14, dailyOrderLimit: 8, limitRange: [1, 30], minOrderRwf: 10000, minOrderRange: [0, 200000], maxItemsPerOrder: null },
+  meal_prep: { orderNow: false, minLeadMinutes: 720, maxDaysAhead: 14, dailyOrderLimit: null, limitRange: null, minOrderRwf: 0, minOrderRange: [0, 50000], maxItemsPerOrder: null },
+  juice_drinks: { orderNow: true, minLeadMinutes: 30, maxDaysAhead: 2, dailyOrderLimit: null, limitRange: null, minOrderRwf: 0, minOrderRange: [0, 10000], maxItemsPerOrder: null },
+  other: { orderNow: true, minLeadMinutes: 45, maxDaysAhead: 7, dailyOrderLimit: null, limitRange: null, minOrderRwf: 0, minOrderRange: [0, 50000], maxItemsPerOrder: null },
+};
+
+/**
+ * A kitchen's ordering rules: the API's `ordering` object when present
+ * (it includes the kitchen's own limits and today's bookings), otherwise
+ * its type's defaults.
+ */
+export function orderingRulesFor(rawOrdering, typeValue) {
+  const code = toVendorTypeCode(rawOrdering?.vendor_type ?? rawOrdering?.vendorType ?? typeValue);
+  const base = RULES[code];
+  if (!rawOrdering) return { vendorType: code, ...base, ordersToday: null, fullyBookedToday: false };
+  if (rawOrdering.orderNow !== undefined) return rawOrdering; // already normalised
+  const pick = (value, fallback) => (value === undefined ? fallback : value);
+  return {
+    vendorType: code,
+    orderNow: pick(rawOrdering.order_now, base.orderNow),
+    minLeadMinutes: pick(rawOrdering.min_lead_minutes, base.minLeadMinutes),
+    maxDaysAhead: pick(rawOrdering.max_days_ahead, base.maxDaysAhead),
+    dailyOrderLimit: pick(rawOrdering.daily_order_limit, base.dailyOrderLimit),
+    limitRange: pick(rawOrdering.limit_range, base.limitRange),
+    minOrderRwf: pick(rawOrdering.min_order_rwf, base.minOrderRwf),
+    minOrderRange: pick(rawOrdering.min_order_range, base.minOrderRange),
+    maxItemsPerOrder: pick(rawOrdering.max_items_per_order, base.maxItemsPerOrder),
+    ordersToday: rawOrdering.orders_today ?? null,
+    fullyBookedToday: Boolean(rawOrdering.fully_booked_today),
+  };
+}
+
+/** "45 minutes", "4 hours", "1 day". */
+export function formatLead(minutes) {
+  if (minutes >= 1440 && minutes % 1440 === 0) return `${minutes / 1440} day${minutes === 1440 ? '' : 's'}`;
+  if (minutes >= 60 && minutes % 60 === 0) return `${minutes / 60} hour${minutes === 60 ? '' : 's'}`;
+  return `${minutes} minutes`;
+}
+
+/** Short customer-facing lines describing how a kitchen takes orders. */
+export function orderingRuleLines(rules) {
+  if (!rules) return [];
+  const lines = [];
+  lines.push(rules.orderNow ? 'Orders for now or later' : `Advance orders only · at least ${formatLead(rules.minLeadMinutes)} ahead`);
+  lines.push(rules.maxDaysAhead === 1 ? 'Book for today or tomorrow' : `Book up to ${rules.maxDaysAhead} days ahead`);
+  if (rules.minOrderRwf) lines.push(`Minimum order ${rules.minOrderRwf.toLocaleString()} RWF`);
+  if (rules.maxItemsPerOrder) lines.push(`Up to ${rules.maxItemsPerOrder} dishes per order`);
+  if (rules.dailyOrderLimit) lines.push(`Only ${rules.dailyOrderLimit} orders a day`);
+  return lines;
+}
+
+/** Why a basket can't be checked out under the kitchen's rules ('' when fine). */
+export function basketRuleProblem(rules, { subtotal, itemCount }) {
+  if (!rules) return '';
+  if (rules.minOrderRwf && subtotal < rules.minOrderRwf) {
+    return `This kitchen takes orders from ${rules.minOrderRwf.toLocaleString()} RWF — add ${(rules.minOrderRwf - subtotal).toLocaleString()} RWF more.`;
+  }
+  if (rules.maxItemsPerOrder && itemCount > rules.maxItemsPerOrder) {
+    return `This kitchen takes up to ${rules.maxItemsPerOrder} dishes per order — remove ${itemCount - rules.maxItemsPerOrder}.`;
+  }
+  return '';
+}
