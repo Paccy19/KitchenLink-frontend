@@ -115,7 +115,7 @@ export default function CheckoutPage() {
   const scheduleDescription =
     orderType === 'immediate'
       ? isPickup
-        ? "We'll send you a pickup code the moment the kitchen marks your food ready."
+        ? "You get a pickup code right after ordering — it shows on your order page. Give it to the kitchen when you collect."
         : 'Estimated delivery time: 25–35 minutes after kitchen preparation'
       : orderType === 'preorder' && preorderSpecial
         ? `${preorderSpecial.text} — ${isPickup ? 'ready to collect' : 'arrives'} by ${formatScheduledFor(scheduledFor)}`

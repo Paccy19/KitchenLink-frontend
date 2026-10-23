@@ -403,7 +403,7 @@ function PickupSection({ pickup, status }) {
     <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4 space-y-2">
       <p className="text-xs font-black uppercase tracking-wider text-violet-700">Customer pickup</p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Info label="Pickup code sent" value={pickup.code_sent_at ? formatDate(pickup.code_sent_at) : 'Not yet (sent when ready)'} />
+        <Info label="Pickup code sent" value={pickup.code_sent_at ? formatDate(pickup.code_sent_at) : 'Not yet'} />
         <Info label="Wrong codes" value={`${pickup.wrong_attempts} of ${pickup.max_attempts}`} />
         <Info
           label="Collected"

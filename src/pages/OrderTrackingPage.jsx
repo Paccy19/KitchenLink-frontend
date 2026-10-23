@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
+import SwitchToDeliveryModal from '../components/orders/SwitchToDeliveryModal';
 import MessageKitchenButton from '../components/chat/MessageKitchenButton';
 import LiveDeliveryTracker from '../components/tracking/LiveDeliveryTracker';
 import { formatScheduledFor } from '../utils/schedule';
@@ -48,6 +49,9 @@ export default function OrderTrackingPage() {
     apiError,
     refreshOrder,
   } = useOrders();
+
+  const [switchOpen, setSwitchOpen] = useState(false);
+  const [switchedNotice, setSwitchedNotice] = useState(false);
 
   const targetOrderId = orderId || activeTrackingOrderId;
   const order = targetOrderId
@@ -118,14 +122,42 @@ export default function OrderTrackingPage() {
         </div>
       )}
 
-      {apiEnabled && canCancel && (
-        <button
-          type="button"
-          onClick={() => cancelOrder(order.id, 'Cancelled by customer')}
-          className="mb-6 px-4 py-2 rounded-xl border border-red-200 bg-white text-red-700 hover:bg-red-50 font-bold text-xs transition"
-        >
-          Cancel order
-        </button>
+      <div className="flex flex-wrap gap-2 mb-6">
+        {/* Pickup customer who can't collect: switch to delivery (pays the delivery fee). */}
+        {apiEnabled && isPickup && !isDeliveredOrDone && !isCancelled && (
+          <button
+            type="button"
+            onClick={() => setSwitchOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#ebd7c5] bg-[#faf6f2] text-[#542813] hover:bg-[#f5ebe1] font-bold text-xs transition"
+          >
+            <Bike className="w-4 h-4" />
+            Can't collect? Get it delivered
+          </button>
+        )}
+        {apiEnabled && canCancel && (
+          <button
+            type="button"
+            onClick={() => cancelOrder(order.id, 'Cancelled by customer')}
+            className="px-4 py-2 rounded-xl border border-red-200 bg-white text-red-700 hover:bg-red-50 font-bold text-xs transition"
+          >
+            Cancel order
+          </button>
+        )}
+      </div>
+
+      <SwitchToDeliveryModal
+        order={order}
+        open={switchOpen}
+        onClose={() => setSwitchOpen(false)}
+        onSwitched={() => {
+          refreshOrder(order.id);
+          setSwitchedNotice(true);
+        }}
+      />
+      {switchedNotice && !isPickup && (
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Done — your order will be delivered. Give your new delivery code to the delivery worker when they arrive.
+        </div>
       )}
 
       {/* Main Status Header Card */}
@@ -240,8 +272,8 @@ export default function OrderTrackingPage() {
 
       </div>
 
-      {/* Pickup code: shown while the food waits at the kitchen */}
-      {isPickup && order.pickup?.code && (
+      {/* Pickup code: shown from placement until collected, like the delivery code */}
+      {isPickup && order.pickup?.code && !isDeliveredOrDone && (
         <div className="mb-8 rounded-3xl border-2 border-dashed border-[#6d391d]/40 bg-gradient-to-br from-[#fff7ee] to-[#faf6f2] p-6 sm:p-8 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#2b1206] via-[#8a5332] to-[#2b1206]" />
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#6d391d]">
@@ -254,11 +286,13 @@ export default function OrderTrackingPage() {
                 {order.pickup.code}
               </div>
               <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-[240px] leading-relaxed">
-                Your food is ready. Give this code to the kitchen when you collect your order.
+                {order.pickup.readyForCollection
+                  ? 'Your food is ready. Give this code to the kitchen when you collect your order.'
+                  : "Give this code to the kitchen when you collect your order. We'll tell you when the food is ready."}
               </p>
             </div>
             <span className="text-[11px] font-bold text-stone-400 self-start sm:self-center">
-              Also sent to your phone
+              Sent to your phone and stored here in your account
             </span>
           </div>
         </div>

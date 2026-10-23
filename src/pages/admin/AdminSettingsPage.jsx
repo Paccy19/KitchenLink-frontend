@@ -210,7 +210,7 @@ function OperationsRulesCard() {
           <div>
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-1">Customer pickup</p>
             <RuleRow label="Delivery fee" value="None" />
-            <RuleRow label="Pickup code" value={`${rules.customer_pickup.code_digits} digits, sent when ready`} />
+            <RuleRow label="Pickup code" value={`${rules.customer_pickup.code_digits} digits, given when the order is placed`} />
             <RuleRow label="Wrong codes before the order locks" value={rules.customer_pickup.max_wrong_codes} />
 
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Delivery fee</p>

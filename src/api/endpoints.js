@@ -176,6 +176,11 @@ export const cancelRemoteOrder = (orderId, reason = '') =>
 export const payRemoteOrder = (orderId, payload = {}) =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/pay`, payload);
 export const fetchPaymentMethods = () => apiJson('GET', '/orders/payment-methods');
+// A pickup order the customer now wants delivered: price it, then pay the fee and switch.
+export const quoteSwitchToDelivery = (orderId, deliveryLocation) =>
+  apiJson('POST', `/orders/${encodeURIComponent(orderId)}/switch-to-delivery/quote`, { delivery_location: deliveryLocation });
+export const switchOrderToDelivery = (orderId, payload) =>
+  apiJson('POST', `/orders/${encodeURIComponent(orderId)}/switch-to-delivery`, payload);
 export const fetchRefunds = () => apiJson('GET', '/orders/refunds');
 export const changeRefundDestination = (orderId, phone) =>
   apiJson('PUT', `/orders/${encodeURIComponent(orderId)}/refund-destination`, { phone });
