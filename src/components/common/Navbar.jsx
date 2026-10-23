@@ -48,7 +48,6 @@ export default function Navbar() {
   const {
     isAuthenticated: isVendorSignedIn,
     hasToken,
-    marketplaceMode,
     exitMarketplace,
     enterMarketplace,
     logout: vendorLogout,
@@ -79,7 +78,9 @@ export default function Navbar() {
     pathname === '/vendors' ||
     pathname === '/vendors/map' ||
     /^\/vendor\/[^/]+$/.test(pathname);
-  const showBackToVendor = vendorSignedIn && marketplaceMode && isMarketplacePath;
+  // This header only shows outside the Vendor Dashboard, so a signed-in vendor
+  // seeing it is visiting the marketplace: always offer the way back (also after a refresh).
+  const showBackToVendor = vendorSignedIn;
   const showBackToDriver = driverSignedIn && driverMarketplaceMode && isMarketplacePath;
   const showBackToAdmin = adminSignedIn && isMarketplacePath;
 
