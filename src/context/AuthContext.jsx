@@ -40,6 +40,7 @@ const customerUser = (customer, existing = guestUser) => ({
   id: customer.id,
   name: customer.name,
   phone: customer.phone_number,
+  email: customer.email || '',
   avatar: customer.profile_image_url || existing.avatar || '',
 });
 
@@ -163,6 +164,7 @@ export const AuthProvider = ({ children }) => {
     const payload = {};
     if (profileData.name !== undefined) payload.name = profileData.name;
     if (profileData.phone !== undefined) payload.phone_number = profileData.phone;
+    if (profileData.email !== undefined) payload.email = String(profileData.email).trim();
     if (profileData.avatar !== undefined && profileData.avatar !== '') {
       if (String(profileData.avatar).startsWith('data:')) {
         payload.profile_image_base64 = profileData.avatar;
@@ -172,6 +174,7 @@ export const AuthProvider = ({ children }) => {
     }
     if (Object.keys(payload).length === 0) return user;
 
+    const previous = user;
     setUser((prev) => ({ ...prev, ...profileData }));
     if (!accessToken) return user;
 
@@ -180,6 +183,8 @@ export const AuthProvider = ({ children }) => {
       setUser((prev) => customerUser(customer, prev));
       return customer;
     } catch (error) {
+      // e.g. the phone or email is already used by another customer: undo the change.
+      setUser(previous);
       setAuthError(error.message);
       throw error;
     }

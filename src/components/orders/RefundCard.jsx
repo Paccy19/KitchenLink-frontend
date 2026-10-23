@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RotateCcw, CheckCircle2, AlertTriangle, Clock, Smartphone, CreditCard } from 'lucide-react';
 import { changeRefundDestination } from '../../api/endpoints';
+import { PHONE_ERROR, PHONE_MAX_LENGTH, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 const formatRwf = (amount) => `${Number(amount || 0).toLocaleString('en-US')} RWF`;
 
@@ -28,6 +29,10 @@ export default function RefundCard({ orderId, refund, onChanged }) {
 
   const save = async (event) => {
     event.preventDefault();
+    if (!isValidRwandaPhone(phone)) {
+      setError(PHONE_ERROR);
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -86,9 +91,11 @@ export default function RefundCard({ orderId, refund, onChanged }) {
           {editing && (
             <form onSubmit={save} className="mt-3 flex flex-col sm:flex-row gap-2">
               <input
+                type="tel"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
                 inputMode="tel"
+                maxLength={PHONE_MAX_LENGTH}
                 placeholder="MTN or Airtel number, e.g. 0788123456"
                 required
                 className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-gray-900"

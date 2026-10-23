@@ -3,6 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bike, Phone, ArrowRight, User, Truck, ShieldCheck } from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
 import { DRIVER_VEHICLES } from '../../api/driverApi';
+import {
+  NAME_MAX_LENGTH,
+  EMAIL_ERROR,
+  EMAIL_MAX_LENGTH,
+  PHONE_ERROR,
+  PHONE_MAX_LENGTH,
+  PHONE_PLACEHOLDER,
+  isValidEmail,
+  isValidRwandaPhone,
+  sanitizeEmailInput,
+  sanitizePhoneInput,
+} from '../../utils/validation';
 
 export default function DriverRegisterPage() {
   const navigate = useNavigate();
@@ -26,8 +38,12 @@ export default function DriverRegisterPage() {
       setError('Enter your full name.');
       return;
     }
-    if (form.phone.replace(/\D/g, '').length < 9) {
-      setError('Enter a valid phone number.');
+    if (!isValidRwandaPhone(form.phone)) {
+      setError(PHONE_ERROR);
+      return;
+    }
+    if (form.email.trim() && !isValidEmail(form.email)) {
+      setError(EMAIL_ERROR);
       return;
     }
     setError('');
@@ -64,6 +80,7 @@ export default function DriverRegisterPage() {
             <input
               type="text"
               value={form.name}
+              maxLength={NAME_MAX_LENGTH}
               onChange={set('name')}
               placeholder="e.g. Eric Uwimana"
               autoComplete="name"
@@ -78,9 +95,11 @@ export default function DriverRegisterPage() {
               <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
               <input
                 type="tel"
+                inputMode="tel"
+                maxLength={PHONE_MAX_LENGTH}
                 value={form.phone}
-                onChange={set('phone')}
-                placeholder="+250 788 000 000"
+                onChange={(event) => setForm((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))}
+                placeholder={PHONE_PLACEHOLDER}
                 autoComplete="tel"
                 required
                 className="w-full pl-9 pr-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#3b5327] focus:ring-2 focus:ring-[#3b5327]/10 outline-none"
@@ -124,8 +143,9 @@ export default function DriverRegisterPage() {
             </label>
             <input
               type="email"
+              maxLength={EMAIL_MAX_LENGTH}
               value={form.email}
-              onChange={set('email')}
+              onChange={(event) => setForm((prev) => ({ ...prev, email: sanitizeEmailInput(event.target.value) }))}
               placeholder="you@example.com"
               autoComplete="email"
               className="w-full px-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#3b5327] focus:ring-2 focus:ring-[#3b5327]/10 outline-none"

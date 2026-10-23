@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Phone, ShieldCheck, ArrowRight, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { NAME_MAX_LENGTH, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function AuthModal() {
   const {
@@ -24,8 +25,8 @@ export default function AuthModal() {
 
   const handlePhoneSubmit = (e) => {
     e.preventDefault();
-    if (!phone || phone.length < 8) {
-      setError('Please provide a valid phone number');
+    if (!isValidRwandaPhone(phone)) {
+      setError(PHONE_ERROR);
       return;
     }
     setError('');
@@ -86,6 +87,7 @@ export default function AuthModal() {
                 <input
                   type="text"
                   value={name}
+                  maxLength={NAME_MAX_LENGTH}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your Full Name"
                   required
@@ -99,9 +101,12 @@ export default function AuthModal() {
                 </label>
                 <input
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={PHONE_MAX_LENGTH}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+250 788 000 000"
+                  onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+                  placeholder={PHONE_PLACEHOLDER}
                   required
                   className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 text-sm font-semibold outline-none transition"
                 />

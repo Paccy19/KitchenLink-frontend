@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
 import { buildScheduledFor, formatScheduledFor } from '../utils/schedule';
+import { PHONE_MAX_LENGTH, sanitizePhoneInput } from '../utils/validation';
 
 const PAYMENT_METHODS = [
   {
@@ -607,8 +608,10 @@ export default function CheckoutPage() {
                             <input
                               type="tel"
                               inputMode="tel"
+                              autoComplete="tel"
+                              maxLength={PHONE_MAX_LENGTH}
                               value={paymentInputs[method.code].phone}
-                              onChange={(e) => setPaymentInput(method.code, 'phone', e.target.value)}
+                              onChange={(e) => setPaymentInput(method.code, 'phone', sanitizePhoneInput(e.target.value))}
                               placeholder={
                                 method.code === 'mobile_money'
                                   ? 'Phone number e.g. +250788123456'

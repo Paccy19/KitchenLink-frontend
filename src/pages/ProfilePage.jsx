@@ -14,6 +14,18 @@ import {
   Camera
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import {
+  NAME_MAX_LENGTH,
+  EMAIL_ERROR,
+  EMAIL_MAX_LENGTH,
+  PHONE_ERROR,
+  PHONE_MAX_LENGTH,
+  PHONE_PLACEHOLDER,
+  isValidEmail,
+  isValidRwandaPhone,
+  sanitizeEmailInput,
+  sanitizePhoneInput,
+} from '../utils/validation';
 
 const initialsOf = (name) => {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -45,10 +57,23 @@ export default function ProfilePage() {
   const [district, setDistrict] = useState('Kimironko, Gasabo');
   const [instructions, setInstructions] = useState('');
 
+  const [profileError, setProfileError] = useState('');
+
   const handleSaveProfile = (e) => {
     e.preventDefault();
-    updateProfile({ name, phone, email }).catch(() => {});
-    setIsEditing(false);
+    if (!isValidRwandaPhone(phone)) {
+      setProfileError(PHONE_ERROR);
+      return;
+    }
+    if (email.trim() && !isValidEmail(email)) {
+      setProfileError(EMAIL_ERROR);
+      return;
+    }
+    setProfileError('');
+    // Keep the form open if the server refuses (e.g. phone/email already used by another customer).
+    updateProfile({ name, phone, email })
+      .then(() => setIsEditing(false))
+      .catch((error) => setProfileError(error?.message || 'Could not save your profile.'));
   };
 
   const handleAvatarChange = (e) => {
@@ -145,6 +170,7 @@ export default function ProfilePage() {
               <input
                 type="text"
                 value={name}
+                maxLength={NAME_MAX_LENGTH}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] transition"
               />
@@ -152,9 +178,12 @@ export default function ProfilePage() {
             <div>
               <label className="text-xs font-bold text-stone-500 block mb-1">Phone Number</label>
               <input
-                type="text"
+                type="tel"
+                inputMode="tel"
+                maxLength={PHONE_MAX_LENGTH}
+                placeholder={PHONE_PLACEHOLDER}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
                 className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] transition"
               />
             </div>
@@ -162,12 +191,15 @@ export default function ProfilePage() {
               <label className="text-xs font-bold text-stone-500 block mb-1">Email</label>
               <input
                 type="email"
+                maxLength={EMAIL_MAX_LENGTH}
+                placeholder="name@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(sanitizeEmailInput(e.target.value))}
                 className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] transition"
               />
             </div>
           </div>
+          {profileError && <p className="text-xs font-semibold text-red-600">{profileError}</p>}
           <button type="submit" className="px-5 py-2.5 bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95">
             Save Changes
           </button>

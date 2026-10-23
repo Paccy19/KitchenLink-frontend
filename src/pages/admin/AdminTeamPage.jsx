@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
+import { NAME_MAX_LENGTH, EMAIL_ERROR, EMAIL_MAX_LENGTH, isValidEmail, sanitizeEmailInput } from '../../utils/validation';
 import {
   Badge,
   Button,
@@ -228,6 +229,7 @@ function InviteModal({ open, roles, onClose, onDone }) {
   }, [open, roles]);
 
   const selected = roles.find((role) => role.id === form.role);
+  const emailInvalid = form.email.includes('@') && form.email.length > 3 && !isValidEmail(form.email);
   const set = (key) => (event) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
 
   const mutation = useMutation({
@@ -250,7 +252,7 @@ function InviteModal({ open, roles, onClose, onDone }) {
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button
             onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !form.email.trim() || !form.role}
+            disabled={mutation.isPending || !isValidEmail(form.email) || !form.role}
           >
             {mutation.isPending ? 'Sending…' : 'Send invitation'}
           </Button>
@@ -261,11 +263,20 @@ function InviteModal({ open, roles, onClose, onDone }) {
         <p className="text-sm text-stone-600">
           We email them a link to set their own password. They then sign in at the admin sign-in page with that email and password.
         </p>
-        <Field label="Email address">
-          <Input type="email" value={form.email} onChange={set('email')} placeholder="name@example.com" />
+        <Field
+          label="Email address"
+          hint={emailInvalid ? <span className="text-red-500 font-semibold">{EMAIL_ERROR}</span> : null}
+        >
+          <Input
+            type="email"
+            maxLength={EMAIL_MAX_LENGTH}
+            value={form.email}
+            onChange={(event) => setForm((prev) => ({ ...prev, email: sanitizeEmailInput(event.target.value) }))}
+            placeholder="name@example.com"
+          />
         </Field>
         <Field label="Name (optional)">
-          <Input value={form.name} onChange={set('name')} placeholder="e.g. Aline Uwase" />
+          <Input value={form.name} maxLength={NAME_MAX_LENGTH} onChange={set('name')} placeholder="e.g. Aline Uwase" />
         </Field>
         <Field label="Role">
           <Select value={form.role} onChange={set('role')}>

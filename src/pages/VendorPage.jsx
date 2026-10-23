@@ -65,18 +65,12 @@ export default function VendorPage() {
     [vendor],
   );
 
-  const groupedMenu = useMemo(() => {
+  // "All" is one flat grid; a category heading only appears once the customer picks a category.
+  const visibleMenu = useMemo(() => {
     if (!vendor?.menu) return [];
-    const filtered =
-      activeCategory === 'All'
-        ? vendor.menu
-        : vendor.menu.filter((dish) => dish.category === activeCategory);
-    const groups = new Map();
-    filtered.forEach((dish) => {
-      if (!groups.has(dish.category)) groups.set(dish.category, []);
-      groups.get(dish.category).push(dish);
-    });
-    return [...groups.entries()];
+    return activeCategory === 'All'
+      ? vendor.menu
+      : vendor.menu.filter((dish) => dish.category === activeCategory);
   }, [vendor, activeCategory]);
 
   const handleQuickAdd = async (dish) => {
@@ -218,7 +212,7 @@ export default function VendorPage() {
       </div>
 
       {/* ── Info card ─────────────────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
         <div className="bg-white rounded-3xl p-5 sm:p-7 shadow-xl border border-stone-200/80 mb-7">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
             <div className="flex items-center gap-1.5 text-sm font-extrabold text-gray-900">
@@ -298,7 +292,8 @@ export default function VendorPage() {
           </div>
         )}
 
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start">
+        {/* The order panel only takes space once something from this kitchen is in the basket. */}
+        <div className={cartVendorItems.length > 0 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start' : ''}>
         <div className="min-w-0">
         {/* ── Menu category tabs ──────────────────────────────── */}
         <div
@@ -324,24 +319,55 @@ export default function VendorPage() {
           ))}
         </div>
 
-        {/* ── Menu grouped by category ────────────────────────── */}
-        <div className="space-y-8 pb-8">
-          {groupedMenu.map(([category, dishes]) => (
-            <section key={category} aria-label={category}>
-              <h2 className="text-lg font-black text-gray-900 mb-3 flex items-baseline gap-2">
-                {category}
-                <span className="text-xs font-bold text-stone-400">
-                  {dishes.length} {dishes.length === 1 ? 'item' : 'items'}
-                </span>
-              </h2>
+        {/* ── Menu: flat grid for "All", headed grid for one category ── */}
+        <div className="pb-8">
+          {visibleMenu.length > 0 && (
+            <section aria-label={activeCategory === 'All' ? 'Full menu' : activeCategory}>
+              {activeCategory !== 'All' && (
+                <h2 className="text-lg font-black text-gray-900 mb-3 flex items-baseline gap-2">
+                  {activeCategory}
+                  <span className="text-xs font-bold text-stone-400">
+                    {visibleMenu.length} {visibleMenu.length === 1 ? 'item' : 'items'}
+                  </span>
+                </h2>
+              )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {dishes.map((dish) => (
+              <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-4">
+                {visibleMenu.map((dish) => (
                   <article
                     key={dish.id}
-                    className="bg-white rounded-3xl p-3.5 sm:p-4 border border-stone-200/80 shadow-sm hover:shadow-lg hover:border-[#ebd7c5] transition-all duration-300 flex gap-3.5 group/card"
+                    className="bg-white rounded-3xl p-3 border border-stone-200/80 shadow-sm hover:shadow-lg hover:border-[#ebd7c5] transition-all duration-300 flex flex-col group/card"
                   >
-                    <DishHoverPreview dish={dish} className="flex-1 min-w-0">
+                    <div className="relative">
+                      <LazyImage
+                        src={dish.image}
+                        alt={dish.name}
+                        aspect="aspect-square"
+                        className="w-full rounded-2xl overflow-hidden"
+                        imgClassName="group-hover/card:scale-105 transition-transform duration-500 ease-out"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleWishlistToggle(dish)}
+                        aria-label={isInWishlist(dish.id) ? `Remove ${dish.name} from wishlist` : `Save ${dish.name} to wishlist`}
+                        aria-pressed={isInWishlist(dish.id)}
+                        className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-white/95 shadow-md flex items-center justify-center text-rose-500 transition hover:scale-110 active:scale-95"
+                      >
+                        <Heart className={`w-4 h-4 ${isInWishlist(dish.id) ? 'fill-rose-500' : ''}`} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(dish)}
+                        disabled={!dish.isAvailable}
+                        aria-label={`Add ${dish.name} to cart`}
+                        className="absolute -bottom-2 right-2 inline-flex items-center gap-1 pl-2.5 pr-3 h-9 rounded-full bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-xs shadow-lg shadow-[#2b1206]/30 border-2 border-white transition-all hover:scale-105 active:scale-95 disabled:from-stone-400 disabled:via-stone-400 disabled:to-stone-400 disabled:hover:scale-100 whitespace-nowrap"
+                      >
+                        <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>{!dish.isAvailable ? 'Sold out' : dish.options?.length ? 'Select' : 'Add'}</span>
+                      </button>
+                    </div>
+
+                    <DishHoverPreview dish={dish} className="flex-1 min-w-0 mt-3">
                       <button
                         type="button"
                         onClick={() => setModalDish(dish)}
@@ -392,42 +418,13 @@ export default function VendorPage() {
                         </div>
                       </button>
                     </DishHoverPreview>
-
-                    <div className="relative flex-shrink-0 self-start">
-                      <LazyImage
-                        src={dish.image}
-                        alt={dish.name}
-                        aspect="aspect-square"
-                        className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden"
-                        imgClassName="group-hover/card:scale-105 transition-transform duration-500 ease-out"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleWishlistToggle(dish)}
-                        aria-label={isInWishlist(dish.id) ? `Remove ${dish.name} from wishlist` : `Save ${dish.name} to wishlist`}
-                        aria-pressed={isInWishlist(dish.id)}
-                        className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-white/95 shadow-md flex items-center justify-center text-rose-500 transition hover:scale-110 active:scale-95"
-                      >
-                        <Heart className={`w-4 h-4 ${isInWishlist(dish.id) ? 'fill-rose-500' : ''}`} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleQuickAdd(dish)}
-                        disabled={!dish.isAvailable}
-                        aria-label={`Add ${dish.name} to cart`}
-                        className="absolute -bottom-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 pl-2.5 pr-3 h-9 rounded-full bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-xs shadow-lg shadow-[#2b1206]/30 border-2 border-white transition-all hover:scale-105 active:scale-95 disabled:from-stone-400 disabled:via-stone-400 disabled:to-stone-400 disabled:hover:scale-100 whitespace-nowrap"
-                      >
-                        <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>{!dish.isAvailable ? 'Sold out' : dish.options?.length ? 'Select' : 'Add'}</span>
-                      </button>
-                    </div>
                   </article>
                 ))}
               </div>
             </section>
-          ))}
+          )}
 
-          {groupedMenu.length === 0 && (
+          {visibleMenu.length === 0 && (
             <EmptyState
               icon={<UtensilsCrossed className="w-8 h-8 text-[#542813]" />}
               title={`No ${activeCategory} dishes right now`}
@@ -440,6 +437,7 @@ export default function VendorPage() {
         </div>
 
         {/* ── Desktop: your order, always in view ─────────────── */}
+        {cartVendorItems.length > 0 && (
         <aside className="hidden lg:block sticky top-[calc(var(--app-header-h,132px)+1rem)]" aria-label="Your order">
           <OrderPanel
             vendorName={vendor.name}
@@ -450,6 +448,7 @@ export default function VendorPage() {
             onCheckout={() => navigate('/checkout')}
           />
         </aside>
+        )}
         </div>
       </div>
 

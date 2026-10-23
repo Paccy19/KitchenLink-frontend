@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import KitchenLocationCard from '../../components/vendor-dashboard/KitchenLocationCard';
+import { NAME_MAX_LENGTH, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function VendorProfilePage() {
   const navigate = useNavigate();
@@ -58,6 +59,10 @@ export default function VendorProfilePage() {
 
   const handleSave = async (event) => {
     event.preventDefault();
+    if (!isValidRwandaPhone(form.phone)) {
+      setError(PHONE_ERROR);
+      return;
+    }
     setError('');
     setSaving(true);
     try {
@@ -151,6 +156,7 @@ export default function VendorProfilePage() {
             <input
               type="text"
               value={form.name}
+              maxLength={NAME_MAX_LENGTH}
               onChange={(e) => update({ name: e.target.value })}
               className={inputClass}
             />
@@ -162,6 +168,7 @@ export default function VendorProfilePage() {
             <input
               type="text"
               value={form.ownerName}
+              maxLength={NAME_MAX_LENGTH}
               onChange={(e) => update({ ownerName: e.target.value })}
               className={inputClass}
             />
@@ -172,8 +179,11 @@ export default function VendorProfilePage() {
             </label>
             <input
               type="tel"
+              inputMode="tel"
+              maxLength={PHONE_MAX_LENGTH}
+              placeholder={PHONE_PLACEHOLDER}
               value={form.phone}
-              onChange={(e) => update({ phone: e.target.value })}
+              onChange={(e) => update({ phone: sanitizePhoneInput(e.target.value) })}
               className={inputClass}
             />
           </div>

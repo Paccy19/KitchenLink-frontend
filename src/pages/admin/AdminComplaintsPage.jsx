@@ -5,6 +5,7 @@ import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import { useAdmin } from '../../context/AdminContext';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
+import { NAME_MAX_LENGTH, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
   Badge,
   Button,
@@ -247,7 +248,7 @@ export default function AdminComplaintsPage() {
                 if (createForm.subject.trim().length < 3) return;
                 createMutation.mutate();
               }}
-              disabled={createMutation.isPending || createForm.subject.trim().length < 3}
+              disabled={createMutation.isPending || createForm.subject.trim().length < 3 || (Boolean(createForm.phone) && !isValidRwandaPhone(createForm.phone))}
             >
               {createMutation.isPending ? 'Saving…' : 'Create'}
             </Button>
@@ -298,13 +299,18 @@ export default function AdminComplaintsPage() {
             <Field label="Reporter name (optional)">
               <Input
                 value={createForm.name}
+                maxLength={NAME_MAX_LENGTH}
                 onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
               />
             </Field>
             <Field label="Reporter phone (optional)">
               <Input
                 value={createForm.phone}
-                onChange={(event) => setCreateForm((prev) => ({ ...prev, phone: event.target.value }))}
+                type="tel"
+                inputMode="tel"
+                maxLength={PHONE_MAX_LENGTH}
+                placeholder={PHONE_PLACEHOLDER}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))}
               />
             </Field>
           </div>

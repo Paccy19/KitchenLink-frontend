@@ -16,6 +16,7 @@ import { deliveryStatusLabel } from '../../api/driverApi';
 import { useToast } from '../../components/common/Toast';
 import StatCard from '../../components/vendor-dashboard/StatCard';
 import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
+import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 const money = (value) => `${Number(value || 0).toLocaleString()} RWF`;
 
@@ -73,7 +74,7 @@ export default function DriverEarningsPage() {
   const numericAmount = Number(amount);
   const invalid = !amount || !Number.isInteger(numericAmount) || numericAmount <= 0;
   const exceeds = !invalid && numericAmount > available;
-  const phoneInvalid = !/^(\+?250)?0?7[2389]\d{7}$/.test(phone.replace(/[\s-]/g, ''));
+  const phoneInvalid = !isValidRwandaPhone(phone);
 
   const submit = () => {
     if (invalid || exceeds || phoneInvalid) return;
@@ -231,9 +232,11 @@ export default function DriverEarningsPage() {
             <input
               id="withdraw-phone"
               type="tel"
+              inputMode="tel"
+              maxLength={PHONE_MAX_LENGTH}
               value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="07XXXXXXXX"
+              onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
+              placeholder={PHONE_PLACEHOLDER}
               className={`w-full text-sm p-3 rounded-xl border outline-none transition ${
                 phone && phoneInvalid ? 'border-red-300 focus:border-red-400' : 'border-stone-200 focus:border-[#3b5327]'
               }`}

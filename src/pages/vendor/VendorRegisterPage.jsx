@@ -22,6 +22,20 @@ import { useToast } from '../../components/common/Toast';
 import { VENDOR_TYPE_OPTIONS } from '../../data/vendorOptions';
 import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinatesPicker';
 import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
+import {
+  NAME_MAX_LENGTH,
+  EMAIL_ERROR,
+  EMAIL_MAX_LENGTH,
+  PHONE_ERROR,
+  PHONE_MAX_LENGTH,
+  PHONE_PLACEHOLDER,
+  isValidEmail,
+  isValidRwandaPhone,
+  sanitizeEmailInput,
+  sanitizePhoneInput,
+} from '../../utils/validation';
+
+const BANK_ACCOUNT_MAX_LENGTH = 20;
 
 const STEPS = [
   { id: 1, label: 'Business', icon: Store },
@@ -65,6 +79,7 @@ export default function VendorRegisterPage() {
   }, [categoryNames.length, loadCategories]);
 
   const update = (patch) => setForm((prev) => ({ ...prev, ...patch }));
+  const isBankPayout = form.payoutMethod === 'Bank Transfer';
 
   const toggleCategory = (category) => {
     update({
@@ -85,7 +100,8 @@ export default function VendorRegisterPage() {
       if (!form.name.trim()) next.name = 'Business name is required.';
       if (!form.ownerName.trim()) next.ownerName = 'Owner name is required.';
       if (!form.phone.trim()) next.phone = 'Phone number is required.';
-      else if (form.phone.replace(/\D/g, '').length < 9) next.phone = 'Enter a valid phone number.';
+      else if (!isValidRwandaPhone(form.phone)) next.phone = PHONE_ERROR;
+      if (form.email.trim() && !isValidEmail(form.email)) next.email = EMAIL_ERROR;
       if (form.description.trim().length < 10) {
         next.description = 'Please write at least 10 characters.';
       }
@@ -99,6 +115,8 @@ export default function VendorRegisterPage() {
     }
     if (current === 3) {
       if (!form.payoutNumber.trim()) next.payoutNumber = 'Payout number/account is required.';
+      else if (isBankPayout && form.payoutNumber.length < 6) next.payoutNumber = 'Enter a valid bank account number.';
+      else if (!isBankPayout && !isValidRwandaPhone(form.payoutNumber)) next.payoutNumber = PHONE_ERROR;
       if (form.documents.length === 0) next.documents = 'Upload at least one verification document.';
       if (!form.agree) next.agree = 'Please accept the vendor agreement.';
     }
@@ -236,6 +254,7 @@ export default function VendorRegisterPage() {
               <input
                 type="text"
                 value={form.name}
+                maxLength={NAME_MAX_LENGTH}
                 onChange={(event) => update({ name: event.target.value })}
                 placeholder="e.g. Your Kitchen Name"
                 className={inputClass(errors.name)}
@@ -257,6 +276,7 @@ export default function VendorRegisterPage() {
                 <input
                   type="text"
                   value={form.ownerName}
+                  maxLength={NAME_MAX_LENGTH}
                   onChange={(event) => update({ ownerName: event.target.value })}
                   placeholder="Full name"
                   className={inputClass(errors.ownerName)}
@@ -265,21 +285,26 @@ export default function VendorRegisterPage() {
               <Field label="Phone number" error={errors.phone} icon={Phone}>
                 <input
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={PHONE_MAX_LENGTH}
                   value={form.phone}
-                  onChange={(event) => update({ phone: event.target.value })}
-                  placeholder="+250 7XX XXX XXX"
+                  onChange={(event) => update({ phone: sanitizePhoneInput(event.target.value) })}
+                  placeholder={PHONE_PLACEHOLDER}
                   className={inputClass(errors.phone)}
                 />
               </Field>
             </div>
 
-            <Field label="Email (optional)">
+            <Field label="Email (optional)" error={errors.email}>
               <input
                 type="email"
+                autoComplete="email"
+                maxLength={EMAIL_MAX_LENGTH}
                 value={form.email}
-                onChange={(event) => update({ email: event.target.value })}
+                onChange={(event) => update({ email: sanitizeEmailInput(event.target.value) })}
                 placeholder="you@example.rw"
-                className={inputClass()}
+                className={inputClass(errors.email)}
               />
             </Field>
 
@@ -374,7 +399,7 @@ export default function VendorRegisterPage() {
               <Field label="Payout method" icon={CreditCard}>
                 <select
                   value={form.payoutMethod}
-                  onChange={(event) => update({ payoutMethod: event.target.value })}
+                  onChange={(event) => update({ payoutMethod: event.target.value, payoutNumber: '' })}
                   className={inputClass()}
                 >
                   <option>MTN Mobile Money</option>
@@ -384,10 +409,18 @@ export default function VendorRegisterPage() {
               </Field>
               <Field label="Payout number / account" error={errors.payoutNumber}>
                 <input
-                  type="text"
+                  type={isBankPayout ? 'text' : 'tel'}
+                  inputMode="numeric"
+                  maxLength={isBankPayout ? BANK_ACCOUNT_MAX_LENGTH : PHONE_MAX_LENGTH}
                   value={form.payoutNumber}
-                  onChange={(event) => update({ payoutNumber: event.target.value })}
-                  placeholder="e.g. 0788 123 456"
+                  onChange={(event) =>
+                    update({
+                      payoutNumber: isBankPayout
+                        ? event.target.value.replace(/\D/g, '').slice(0, BANK_ACCOUNT_MAX_LENGTH)
+                        : sanitizePhoneInput(event.target.value),
+                    })
+                  }
+                  placeholder={isBankPayout ? 'Bank account number' : PHONE_PLACEHOLDER}
                   className={inputClass(errors.payoutNumber)}
                 />
               </Field>

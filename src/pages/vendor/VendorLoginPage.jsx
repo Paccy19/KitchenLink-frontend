@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Phone, User, ArrowRight, ShieldCheck, ChefHat, Check, Ban, Mail } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { BLOCKED_VENDOR_CODES } from '../../api/vendorApi';
+import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 const formatDate = (value) => {
   const date = value ? new Date(value) : null;
@@ -104,8 +105,8 @@ export default function VendorLoginPage() {
 
   const submitPhone = async (event) => {
     event.preventDefault();
-    if (phone.replace(/\D/g, '').length < 9) {
-      setError('Enter a valid phone number.');
+    if (!isValidRwandaPhone(phone)) {
+      setError(PHONE_ERROR);
       return;
     }
     setError('');
@@ -177,9 +178,11 @@ export default function VendorLoginPage() {
                 <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
                 <input
                   type="tel"
+                  inputMode="tel"
+                  maxLength={PHONE_MAX_LENGTH}
                   value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  placeholder="+250 788 000 000"
+                  onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
+                  placeholder={PHONE_PLACEHOLDER}
                   autoComplete="tel"
                   required
                   className="w-full pl-9 pr-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/10 outline-none"

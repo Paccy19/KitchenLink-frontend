@@ -334,11 +334,19 @@ export function VendorProvider({ children }) {
     );
     form.append(
       'payment_information',
-      JSON.stringify({
-        payout_method: 'mobile_money',
-        account_name: data.ownerName,
-        mobile_money_number: data.payoutNumber || data.phone,
-      }),
+      JSON.stringify(
+        data.payoutMethod === 'Bank Transfer'
+          ? {
+              payout_method: 'bank_transfer',
+              account_name: data.ownerName,
+              account_number: data.payoutNumber,
+            }
+          : {
+              payout_method: 'mobile_money',
+              account_name: data.ownerName,
+              mobile_money_number: data.payoutNumber || data.phone,
+            },
+      ),
     );
     (files || []).forEach((file) => form.append('documents', file));
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, ShieldCheck, Store, Smartphone } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
+import { EMAIL_ERROR, EMAIL_MAX_LENGTH, isValidEmail, sanitizeEmailInput } from '../../utils/validation';
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
@@ -18,6 +19,10 @@ export default function AdminLoginPage() {
     event.preventDefault();
     if (!email.trim() || !password) {
       setError('Enter your email and password.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError(EMAIL_ERROR);
       return;
     }
     setError('');
@@ -125,8 +130,9 @@ export default function AdminLoginPage() {
               <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
               <input
                 type="email"
+                maxLength={EMAIL_MAX_LENGTH}
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => setEmail(sanitizeEmailInput(event.target.value))}
                 placeholder="admin@foodkitchen.rw"
                 autoComplete="username"
                 required

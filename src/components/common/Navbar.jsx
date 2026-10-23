@@ -88,6 +88,33 @@ export default function Navbar() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isRoleSelectOpen, setIsRoleSelectOpen] = useState(false);
 
+  // Clicking anywhere outside the notifications or account dropdown (or pressing Esc) closes it.
+  const notificationsRef = useRef(null);
+  const userMenuRef = useRef(null);
+  useEffect(() => {
+    if (!isNotificationsOpen && !isUserMenuOpen) return undefined;
+    const onPointerDown = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setIsNotificationsOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsNotificationsOpen(false);
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isNotificationsOpen, isUserMenuOpen]);
+
   // Expose the live header height so sticky sub-headers (vendor tabs, checkout
   // summary) can offset themselves regardless of breakpoint/banner wrapping.
   const headerRef = useRef(null);
@@ -255,7 +282,7 @@ export default function Navbar() {
 
             {/* Notifications bell */}
             {isAuthenticated && (
-              <div className="relative">
+              <div className="relative" ref={notificationsRef}>
                 <button
                   onClick={() => {
                     setIsNotificationsOpen(!isNotificationsOpen);
@@ -330,9 +357,12 @@ export default function Navbar() {
 
             {/* User Account / Login (role aware: customer, vendor, driver) */}
             {accountRole ? (
-              <div className="relative">
+              <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  onClick={() => {
+                    setIsUserMenuOpen(!isUserMenuOpen);
+                    setIsNotificationsOpen(false);
+                  }}
                   className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 text-sm font-medium transition"
                 >
                   {accountAvatar ? (

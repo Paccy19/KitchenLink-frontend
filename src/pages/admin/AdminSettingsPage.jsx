@@ -6,6 +6,7 @@ import { useAdmin } from '../../context/AdminContext';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
 import Can from '../../components/admin-dashboard/Can';
 import DeliveryTimingCard from '../../components/admin-dashboard/DeliveryTimingCard';
+import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
   Badge,
   Button,
@@ -266,8 +267,18 @@ function TwoFactorCard({ admin, onChanged }) {
 
         {!enabled ? (
           <>
-            <Field label="Your phone number">
-              <Input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="0788123456" />
+            <Field
+              label="Your phone number"
+              hint={phone && !isValidRwandaPhone(phone) ? <span className="text-red-500 font-semibold">{PHONE_ERROR}</span> : null}
+            >
+              <Input
+                type="tel"
+                inputMode="tel"
+                maxLength={PHONE_MAX_LENGTH}
+                value={phone}
+                onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
+                placeholder={PHONE_PLACEHOLDER}
+              />
             </Field>
             <ActionCodeField
               label="Code sent to that phone"
@@ -275,6 +286,7 @@ function TwoFactorCard({ admin, onChanged }) {
               onChange={setCode}
               send={() => {
                 if (!phone.trim()) throw new Error('Enter your phone number first.');
+                if (!isValidRwandaPhone(phone)) throw new Error(PHONE_ERROR);
                 return adminApi.startTwoFactor(phone.trim());
               }}
             />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   X, 
@@ -11,7 +11,8 @@ import {
   Calendar, 
   ChefHat, 
   AlertTriangle,
-  Zap
+  Zap,
+  ArrowLeft
 } from 'lucide-react';
 import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../../context/CartContext';
 import {
@@ -50,7 +51,19 @@ export default function CartDrawer() {
     resolveConflictCancel
   } = useCart();
 
+  // Esc closes the basket so customers can always get back to the menu.
+  useEffect(() => {
+    if (!isCartOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape' && !vendorConflict) setIsCartOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isCartOpen, vendorConflict, setIsCartOpen]);
+
   if (!isCartOpen) return null;
+
+  const closeDrawer = () => setIsCartOpen(false);
 
   const handleCheckoutClick = () => {
     setIsCartOpen(false);
@@ -58,14 +71,34 @@ export default function CartDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end">
-      
+    <div
+      className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end"
+      onClick={(event) => {
+        // Clicking the dimmed page beside the drawer takes the customer back.
+        if (event.target === event.currentTarget && !vendorConflict) closeDrawer();
+      }}
+    >
+
       {/* Slide-out Drawer */}
-      <div className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
-        
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Your basket"
+        className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300"
+      >
+
         {/* Drawer Header */}
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={closeDrawer}
+              aria-label="Back to menu"
+              title="Back to menu"
+              className="w-9 h-9 -ml-1 rounded-xl flex items-center justify-center text-stone-600 hover:bg-stone-100 hover:text-gray-900 transition"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             <div className="w-9 h-9 rounded-xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center">
               <ShoppingBag className="w-5 h-5 text-[#6d391d]" />
             </div>
@@ -90,8 +123,11 @@ export default function CartDrawer() {
               </button>
             )}
             <button
-              onClick={() => setIsCartOpen(false)}
-              className="p-2 text-stone-400 hover:text-stone-700 transition"
+              type="button"
+              onClick={closeDrawer}
+              aria-label="Close basket"
+              title="Close"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-stone-600 bg-stone-100 hover:bg-stone-200 hover:text-gray-900 transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -329,6 +365,14 @@ export default function CartDrawer() {
             >
               <span>Proceed to Checkout</span>
               <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={closeDrawer}
+              className="w-full py-2.5 rounded-2xl border border-stone-300 bg-white text-stone-700 font-bold text-sm hover:bg-stone-100 transition flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Continue shopping</span>
             </button>
           </div>
         )}

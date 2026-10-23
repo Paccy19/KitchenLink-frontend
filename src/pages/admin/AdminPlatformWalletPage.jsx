@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertTriangle, Landmark, CalendarClock, Scale, Plus, Lock } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
+import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
   Badge,
   Button,
@@ -357,7 +358,8 @@ function AddDestinationModal({ open, onClose, onDone }) {
     mutationFn: () => adminApi.ownerAddDestination({ ...form, otp_code: code }),
     onSuccess: () => { onDone(); onClose(); },
   });
-  const complete = form.label && form.provider && form.account_name && form.account_number && code.length === 6;
+  const accountNumberInvalid = form.type === 'mobile_money' && Boolean(form.account_number) && !isValidRwandaPhone(form.account_number);
+  const complete = form.label && form.provider && form.account_name && form.account_number && !accountNumberInvalid && code.length === 6;
   return (
     <Modal
       open={open}
@@ -375,7 +377,7 @@ function AddDestinationModal({ open, onClose, onDone }) {
           Use a <strong>company</strong> account, not a personal one. For your security it can receive withdrawals only after the waiting period, and you get an SMS alert.
         </p>
         <Field label="Type">
-          <Select value={form.type} onChange={set('type')}>
+          <Select value={form.type} onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value, account_number: '' }))}>
             <option value="bank">Bank account</option>
             <option value="mobile_money">Business mobile money</option>
           </Select>
@@ -383,7 +385,24 @@ function AddDestinationModal({ open, onClose, onDone }) {
         <Field label="Name for this account"><Input value={form.label} onChange={set('label')} placeholder="e.g. Company BK account" /></Field>
         <Field label={form.type === 'bank' ? 'Bank' : 'Network'}><Input value={form.provider} onChange={set('provider')} placeholder={form.type === 'bank' ? 'e.g. Bank of Kigali' : 'e.g. MTN Mobile Money'} /></Field>
         <Field label="Account holder name"><Input value={form.account_name} onChange={set('account_name')} placeholder="e.g. Food Kitchen Ltd" /></Field>
-        <Field label="Account number"><Input value={form.account_number} onChange={set('account_number')} /></Field>
+        <Field
+          label={form.type === 'bank' ? 'Account number' : 'Phone number'}
+          hint={accountNumberInvalid ? <span className="text-red-500 font-semibold">{PHONE_ERROR}</span> : null}
+        >
+          <Input
+            inputMode={form.type === 'bank' ? 'numeric' : 'tel'}
+            maxLength={form.type === 'bank' ? 20 : PHONE_MAX_LENGTH}
+            value={form.account_number}
+            onChange={(event) => {
+              const value = event.target.value;
+              setForm((prev) => ({
+                ...prev,
+                account_number: prev.type === 'bank' ? value.replace(/\D/g, '').slice(0, 20) : sanitizePhoneInput(value),
+              }));
+            }}
+            placeholder={form.type === 'bank' ? 'Digits only' : PHONE_PLACEHOLDER}
+          />
+        </Field>
         <ActionCodeField purpose="payout_destination" value={code} onChange={setCode} />
         {mutation.isError && <ErrorNote error={mutation.error} />}
       </div>
@@ -482,7 +501,7 @@ function PayoutSettingsCard({ settings, sweep, onChanged }) {
   const provider = settings?.provider;
   const accountComplete = isBank
     ? form.bank_name.trim() && form.account_name.trim() && /^[\d\s-]{6,}$/.test(form.account_number)
-    : form.account_name.trim() && form.phone.trim();
+    : form.account_name.trim() && isValidRwandaPhone(form.phone);
 
   return (
     <Card
@@ -523,7 +542,7 @@ function PayoutSettingsCard({ settings, sweep, onChanged }) {
           <>
             <Field label="Bank"><Input value={form.bank_name} onChange={set('bank_name')} placeholder="e.g. Bank of Kigali" /></Field>
             <Field label="Account holder name"><Input value={form.account_name} onChange={set('account_name')} placeholder="e.g. Food Kitchen Ltd" /></Field>
-            <Field label="Bank account number"><Input inputMode="numeric" value={form.account_number} onChange={set('account_number')} placeholder="Digits only" /></Field>
+            <Field label="Bank account number"><Input inputMode="numeric" maxLength={20} value={form.account_number} onChange={(event) => setForm((prev) => ({ ...prev, account_number: event.target.value.replace(/\D/g, '').slice(0, 20) }))} placeholder="Digits only" /></Field>
           </>
         ) : (
           <>
@@ -534,7 +553,19 @@ function PayoutSettingsCard({ settings, sweep, onChanged }) {
               </Select>
             </Field>
             <Field label="Registered name"><Input value={form.account_name} onChange={set('account_name')} placeholder="Name on the MoMo account" /></Field>
-            <Field label="Phone number"><Input type="tel" value={form.phone} onChange={set('phone')} placeholder="07XXXXXXXX" /></Field>
+            <Field
+              label="Phone number"
+              hint={form.phone && !isValidRwandaPhone(form.phone) ? <span className="text-red-500 font-semibold">{PHONE_ERROR}</span> : null}
+            >
+              <Input
+                type="tel"
+                inputMode="tel"
+                maxLength={PHONE_MAX_LENGTH}
+                value={form.phone}
+                onChange={(event) => setForm((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))}
+                placeholder={PHONE_PLACEHOLDER}
+              />
+            </Field>
           </>
         )}
 
