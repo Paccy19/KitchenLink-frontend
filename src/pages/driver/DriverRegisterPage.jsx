@@ -5,6 +5,7 @@ import { useDriver } from '../../context/DriverContext';
 import { DRIVER_VEHICLES } from '../../api/driverApi';
 import {
   NAME_MAX_LENGTH,
+  formatNameInput,
   EMAIL_ERROR,
   EMAIL_MAX_LENGTH,
   PHONE_ERROR,
@@ -81,7 +82,7 @@ export default function DriverRegisterPage() {
               type="text"
               value={form.name}
               maxLength={NAME_MAX_LENGTH}
-              onChange={set('name')}
+              onChange={(event) => setForm((prev) => ({ ...prev, name: formatNameInput(event.target.value) }))}
               placeholder="e.g. Eric Uwimana"
               autoComplete="name"
               required

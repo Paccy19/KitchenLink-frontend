@@ -5,7 +5,7 @@ import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import { useAdmin } from '../../context/AdminContext';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
-import { NAME_MAX_LENGTH, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
+import { NAME_MAX_LENGTH, formatNameInput, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
   Badge,
   Button,
@@ -300,7 +300,7 @@ export default function AdminComplaintsPage() {
               <Input
                 value={createForm.name}
                 maxLength={NAME_MAX_LENGTH}
-                onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, name: formatNameInput(event.target.value) }))}
               />
             </Field>
             <Field label="Reporter phone (optional)">

@@ -24,6 +24,7 @@ import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinate
 import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
 import {
   NAME_MAX_LENGTH,
+  formatNameInput,
   EMAIL_ERROR,
   EMAIL_MAX_LENGTH,
   PHONE_ERROR,
@@ -277,7 +278,7 @@ export default function VendorRegisterPage() {
                   type="text"
                   value={form.ownerName}
                   maxLength={NAME_MAX_LENGTH}
-                  onChange={(event) => update({ ownerName: event.target.value })}
+                  onChange={(event) => update({ ownerName: formatNameInput(event.target.value) })}
                   placeholder="Full name"
                   className={inputClass(errors.ownerName)}
                 />

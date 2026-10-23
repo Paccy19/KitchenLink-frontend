@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Phone, ShieldCheck, ArrowRight, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { NAME_MAX_LENGTH, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
+import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function AuthModal() {
   const {
@@ -88,7 +88,7 @@ export default function AuthModal() {
                   type="text"
                   value={name}
                   maxLength={NAME_MAX_LENGTH}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(formatNameInput(e.target.value))}
                   placeholder="Your Full Name"
                   required
                   className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 text-sm font-semibold outline-none transition"

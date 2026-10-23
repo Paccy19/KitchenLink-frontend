@@ -63,3 +63,16 @@ export function isValidEmail(value) {
 
 /** Longest name for any account (customer, kitchen, owner, delivery worker, admin). Matches the backend. */
 export const NAME_MAX_LENGTH = 50;
+
+/**
+ * Person names start every word with a capital letter, as the user types:
+ * "jean paul" → "Jean Paul", "jean-pierre o'neil" → "Jean-Pierre O'Neil".
+ * Also drops leading/double spaces and stops at NAME_MAX_LENGTH. Kitchen names are not changed.
+ */
+export function formatNameInput(value) {
+  return String(value ?? '')
+    .replace(/^\s+/, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/(^|[\s'-])(\p{Ll})/gu, (_, separator, letter) => separator + letter.toUpperCase())
+    .slice(0, NAME_MAX_LENGTH);
+}

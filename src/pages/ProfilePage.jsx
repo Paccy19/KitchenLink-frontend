@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import {
   NAME_MAX_LENGTH,
+  formatNameInput,
   EMAIL_ERROR,
   EMAIL_MAX_LENGTH,
   PHONE_ERROR,
@@ -171,7 +172,7 @@ export default function ProfilePage() {
                 type="text"
                 value={name}
                 maxLength={NAME_MAX_LENGTH}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(formatNameInput(e.target.value))}
                 className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] transition"
               />
             </div>

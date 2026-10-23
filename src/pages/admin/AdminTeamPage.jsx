@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
-import { NAME_MAX_LENGTH, EMAIL_ERROR, EMAIL_MAX_LENGTH, isValidEmail, sanitizeEmailInput } from '../../utils/validation';
+import { NAME_MAX_LENGTH, formatNameInput, EMAIL_ERROR, EMAIL_MAX_LENGTH, isValidEmail, sanitizeEmailInput } from '../../utils/validation';
 import {
   Badge,
   Button,
@@ -276,7 +276,7 @@ function InviteModal({ open, roles, onClose, onDone }) {
           />
         </Field>
         <Field label="Name (optional)">
-          <Input value={form.name} maxLength={NAME_MAX_LENGTH} onChange={set('name')} placeholder="e.g. Aline Uwase" />
+          <Input value={form.name} maxLength={NAME_MAX_LENGTH} onChange={(event) => setForm((prev) => ({ ...prev, name: formatNameInput(event.target.value) }))} placeholder="e.g. Aline Uwase" />
         </Field>
         <Field label="Role">
           <Select value={form.role} onChange={set('role')}>

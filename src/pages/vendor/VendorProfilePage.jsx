@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import KitchenLocationCard from '../../components/vendor-dashboard/KitchenLocationCard';
-import { NAME_MAX_LENGTH, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
+import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function VendorProfilePage() {
   const navigate = useNavigate();
@@ -169,7 +169,7 @@ export default function VendorProfilePage() {
               type="text"
               value={form.ownerName}
               maxLength={NAME_MAX_LENGTH}
-              onChange={(e) => update({ ownerName: e.target.value })}
+              onChange={(e) => update({ ownerName: formatNameInput(e.target.value) })}
               className={inputClass}
             />
           </div>
