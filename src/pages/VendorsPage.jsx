@@ -12,6 +12,9 @@ import useVendorSpecials from '../hooks/useVendorSpecials';
 import useVendorOffers from '../hooks/useVendorOffers';
 import OfferDayCard from '../components/home/OfferDayCard';
 import useCategories from '../hooks/useCategories';
+import useVendorTypeParam from '../hooks/useVendorTypeParam';
+import VendorTypeFilter from '../components/common/VendorTypeFilter';
+import { vendorTypeLabel } from '../data/vendorTypes';
 import { useLocation } from '../context/LocationContext';
 
 function Chip({ active, onClick, children, label }) {
@@ -57,8 +60,9 @@ export default function VendorsPage() {
     ? searchParams.get('sort')
     : 'distance';
 
+  const [vendorTypes, setVendorTypes] = useVendorTypeParam();
   const categories = useCategories({ enabled: !preorderMode });
-  const query = useAllVendors({ categoryId, sort, perPage: 9, enabled: !preorderMode });
+  const query = useAllVendors({ categoryId, vendorTypes, sort, perPage: 9, enabled: !preorderMode });
   const specials = useVendorSpecials({ enabled: preorderMode });
   const offers = useVendorOffers({ enabled: preorderMode });
   const sentinelRef = useRef(null);
@@ -201,7 +205,11 @@ export default function VendorsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-            {activeCategory ? activeCategory.name : 'All Kitchens'}
+            {activeCategory
+              ? activeCategory.name
+              : vendorTypes.length === 1
+                ? `${vendorTypeLabel(vendorTypes[0])} kitchens`
+                : 'All Kitchens'}
           </h1>
           <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
             <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
@@ -254,6 +262,9 @@ export default function VendorsPage() {
         </button>
       )}
 
+      {/* Kitchen type (Home Cook, Restaurant, Food Truck …) */}
+      <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="mb-4" />
+
       {/* Categories */}
       <div className="mb-7">
         <CategoryBar
@@ -285,7 +296,9 @@ export default function VendorsPage() {
           message={
             activeCategory
               ? `No kitchen serves ${activeCategory.name.toLowerCase()} yet. Try another category.`
-              : 'No kitchens have joined yet. Check back soon.'
+              : vendorTypes.length
+                ? 'No kitchen of the selected type has joined yet. Try another type.'
+                : 'No kitchens have joined yet. Check back soon.'
           }
         >
           {categoryId && (
@@ -295,6 +308,15 @@ export default function VendorsPage() {
               className="text-xs font-bold text-[#542813] hover:underline"
             >
               Clear category filter
+            </button>
+          )}
+          {vendorTypes.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setVendorTypes([])}
+              className="text-xs font-bold text-[#542813] hover:underline"
+            >
+              Show every kitchen type
             </button>
           )}
         </EmptyState>

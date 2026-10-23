@@ -17,22 +17,24 @@ export const SORT_OPTIONS = [
  * GET /home/vendors/nearby — paginated list of active kitchens around the
  * user with a configurable radius and sort order (distance by default).
  *
- * @param {{radius?:number, categoryId?:string|null, sort?:string, perPage?:number}} options
+ * @param {{radius?:number, categoryId?:string|null, vendorTypes?:string[], sort?:string, perPage?:number}} options
  */
 export default function useNearbyVendors({
   radius = DEFAULT_RADIUS_KM,
   categoryId = null,
+  vendorTypes = [],
   sort = 'distance',
   perPage = 6,
   enabled = true,
 } = {}) {
   const { coords, isTracking } = useLocation();
+  const typeParam = vendorTypes.length ? vendorTypes.join(',') : undefined;
 
   return useInfiniteQuery({
     queryKey: [
       'home', 'vendors', 'nearby',
       round(coords.lat), round(coords.lng),
-      radius, categoryId ?? 'all', sort, perPage,
+      radius, categoryId ?? 'all', typeParam ?? 'all-types', sort, perPage,
     ],
     enabled,
     queryFn: ({ pageParam = 1 }) =>
@@ -41,6 +43,7 @@ export default function useNearbyVendors({
         lng: coords.lng,
         radius,
         category_id: categoryId ?? undefined,
+        vendor_type: typeParam,
         sort,
         page: pageParam,
         limit: perPage,

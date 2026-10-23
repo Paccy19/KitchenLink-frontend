@@ -18,8 +18,13 @@ import { apiJson, apiRequest } from './client';
  * @param {{lat:number|string, lng:number|string, label?:string}} location
  * @returns {Promise<import('./types').RawHomeFeed>}
  */
-export function fetchHomeFeed({ lat, lng, label } = {}) {
-  return apiRequest('/home/feed', { lat, lng, label });
+export function fetchHomeFeed({ lat, lng, label, vendor_type } = {}) {
+  return apiRequest('/home/feed', { lat, lng, label, vendor_type });
+}
+
+/** GET /vendors/types — every kitchen type with its label and description. */
+export function fetchVendorTypes() {
+  return apiRequest('/vendors/types');
 }
 
 /**

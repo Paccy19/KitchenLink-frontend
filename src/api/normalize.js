@@ -5,6 +5,8 @@
  * @module api/normalize
  */
 
+import { toVendorTypeCode, vendorTypeLabel } from '../data/vendorTypes';
+
 /** @param {any} value */
 export const toNumber = (value, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -89,7 +91,8 @@ export function normalizeVendor(raw = {}) {
   return {
     id: toText(raw.id, raw.vendor_id, raw.slug),
     name,
-    type: toText(raw.vendor_type, raw.type, raw.kitchen_type, 'Food Vendor'),
+    type: toText(raw.vendor_type_label, vendorTypeLabel(raw.vendor_type ?? raw.type ?? raw.kitchen_type)),
+    typeCode: toVendorTypeCode(raw.vendor_type ?? raw.type ?? raw.kitchen_type),
     rating: Number(toNumber(raw.rating ?? raw.average_rating, 0).toFixed(2)),
     reviewsCount: toNumber(raw.reviews_count ?? raw.reviewsCount ?? raw.rating_count, 0),
     distanceKm: Number(toNumber(raw.distance_km ?? raw.distance, 0).toFixed(1)),
@@ -139,7 +142,8 @@ export function normalizeDish(raw = {}, vendorRef = null) {
       ? {
           id: toText(rawVendor.id, rawVendor.vendor_id),
           name: toText(rawVendor.name, rawVendor.vendor_name),
-          type: toText(rawVendor.vendor_type, rawVendor.type, 'Food Vendor'),
+          type: toText(rawVendor.vendor_type_label, vendorTypeLabel(rawVendor.vendor_type ?? rawVendor.type)),
+          typeCode: toVendorTypeCode(rawVendor.vendor_type ?? rawVendor.type),
         }
       : {
           id: toText(
@@ -147,7 +151,8 @@ export function normalizeDish(raw = {}, vendorRef = null) {
             raw.vendor_id,
           ),
           name: toText(typeof rawVendor === 'string' ? '' : vendorRef?.name, raw.vendor_name),
-          type: toText(vendorRef?.type, raw.vendor_type, 'Food Vendor'),
+          type: toText(vendorRef?.type, raw.vendor_type_label, vendorTypeLabel(raw.vendor_type)),
+          typeCode: vendorRef?.typeCode || toVendorTypeCode(raw.vendor_type),
         };
 
   return {
@@ -236,7 +241,8 @@ export function normalizeOrder(raw = {}) {
     specialText: toText(raw.special_text),
     vendorId: toText(vendor.id),
     vendorName: toText(vendor.name, 'Kitchen'),
-    vendorType: toText(vendor.vendor_type, 'Food Vendor'),
+    vendorType: toText(vendor.vendor_type_label, vendorTypeLabel(vendor.vendor_type)),
+    vendorTypeCode: toVendorTypeCode(vendor.vendor_type),
     vendorLocation: toText(deliveryLocation.neighborhood, vendor.neighborhood),
     status: toText(raw.status, 'placed'),
     items: (Array.isArray(raw.items) ? raw.items : []).map((item) => ({

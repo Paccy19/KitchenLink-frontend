@@ -24,6 +24,8 @@ import { fetchMapVendors } from '../api/endpoints';
 import { normalizeVendor, pickList } from '../api/normalize';
 import { useLocation } from '../context/LocationContext';
 import useCategories from '../hooks/useCategories';
+import useVendorTypeParam from '../hooks/useVendorTypeParam';
+import VendorTypeFilter from '../components/common/VendorTypeFilter';
 import { ErrorState } from '../components/common/EmptyState';
 
 // Stores open and close during the day; keep the map current.
@@ -107,6 +109,8 @@ export default function VendorsMapPage() {
   const categories = useCategories();
 
   const categoryId = searchParams.get('category');
+  const [vendorTypes, setVendorTypes] = useVendorTypeParam();
+  const typeParam = vendorTypes.length ? vendorTypes.join(',') : undefined;
 
   const setParam = (key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -122,11 +126,13 @@ export default function VendorsMapPage() {
       located ? round(coords.lat) : null,
       located ? round(coords.lng) : null,
       categoryId ?? 'all',
+      typeParam ?? 'all-types',
     ],
     queryFn: () =>
       fetchMapVendors({
         ...(located ? { lat: coords.lat, lng: coords.lng } : {}),
         category_id: categoryId ?? undefined,
+        vendor_type: typeParam,
       }),
     staleTime: 30_000,
     refetchInterval: MAP_REFRESH_MS,
@@ -320,6 +326,8 @@ export default function VendorsMapPage() {
           )}
         </p>
       </div>
+
+      <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="mb-3" />
 
       {categories.data?.length > 0 && (
         <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">

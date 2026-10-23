@@ -5,6 +5,8 @@ import DishCard from './DishCard';
 import VendorCard from './VendorCard';
 import EmptyState, { ErrorState } from '../common/EmptyState';
 import { ResultRowSkeleton } from '../common/Skeleton';
+import VendorTypeFilter from '../common/VendorTypeFilter';
+import VendorTypeBadge from '../common/VendorTypeBadge';
 
 function TabButton({ active, onClick, count, children }) {
   return (
@@ -35,10 +37,13 @@ function TabButton({ active, onClick, count, children }) {
  * Tabbed global-search results: Dishes / Kitchens.
  * Fuzzy matching happens on the backend; highlights are rendered client-side.
  *
- * @param {{query:string, onSuggest?: (q:string)=>void}} props
+ * @param {{query:string, onSuggest?: (q:string)=>void, vendorTypes?:string[], onVendorTypesChange?: (codes:string[])=>void}} props
  */
-export default function SearchResults({ query, onSuggest }) {
-  const { data, isPending, isError, error, refetch, isFetching, debouncedQuery } = useSearch(query);
+export default function SearchResults({ query, onSuggest, vendorTypes = [], onVendorTypesChange }) {
+  const { data, isPending, isError, error, refetch, isFetching, debouncedQuery } = useSearch(query, { vendorTypes });
+  const typeFilter = onVendorTypesChange ? (
+    <VendorTypeFilter value={vendorTypes} onChange={onVendorTypesChange} />
+  ) : null;
   const [tab, setTab] = useState('dishes');
 
   const dishes = data?.dishes ?? [];
@@ -83,6 +88,8 @@ export default function SearchResults({ query, onSuggest }) {
 
   if (!hasResults) {
     return (
+      <div className="space-y-4">
+      {typeFilter}
       <EmptyState
         icon={<SearchX className="w-8 h-8 text-[#542813]" />}
         title={`No matches for “${debouncedQuery || query}”`}
@@ -100,13 +107,36 @@ export default function SearchResults({ query, onSuggest }) {
             </button>
           ))}
         </div>
+        {vendorTypes.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onVendorTypesChange?.([])}
+            className="mt-3 text-xs font-bold text-[#542813] hover:underline"
+          >
+            Search all kitchen types
+          </button>
+        )}
       </EmptyState>
+      </div>
     );
   }
 
   return (
     <div className="space-y-5">
       <SkeletonHeading query={debouncedQuery || query} />
+
+      {typeFilter}
+
+      {/* Searched a type ("bakery"): say which kitchen types matched. */}
+      {(data?.matchedTypes ?? []).length > 0 && vendorTypes.length === 0 && (
+        <p className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500">
+          Kitchens of type
+          {data.matchedTypes.map((type) => (
+            <VendorTypeBadge key={type.code} type={type.code} size="xs" />
+          ))}
+          are included.
+        </p>
+      )}
 
       <div className="flex items-center gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Search result types">
         <TabButton active={tab === 'dishes'} onClick={() => setTab('dishes')} count={dishes.length}>

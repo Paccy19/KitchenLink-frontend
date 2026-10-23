@@ -13,7 +13,9 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
+import VendorTypeBadge from '../../components/common/VendorTypeBadge';
 import KitchenLocationCard from '../../components/vendor-dashboard/KitchenLocationCard';
+import VendorTypeCard from '../../components/vendor-dashboard/VendorTypeCard';
 import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function VendorProfilePage() {
@@ -120,9 +122,9 @@ export default function VendorProfilePage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xl font-black truncate">{vendor.name}</p>
-            <p className="text-sm text-white/70 font-medium">
-              {vendor.type}
-              {vendor.ownerName ? ` · ${vendor.ownerName}` : ''}
+            <p className="text-sm text-white/70 font-medium flex flex-wrap items-center gap-2 mt-1">
+              <VendorTypeBadge type={vendor.typeCode || vendor.type} />
+              {vendor.ownerName ? <span>{vendor.ownerName}</span> : null}
             </p>
             <p className="text-xs text-white/60 mt-0.5 flex items-center gap-1.5">
               <BadgeCheck className="w-3.5 h-3.5" />
@@ -222,6 +224,8 @@ export default function VendorProfilePage() {
           )}
         </div>
       </form>
+
+      <VendorTypeCard />
 
       <KitchenLocationCard />
 

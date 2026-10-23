@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
-import { VENDOR_TYPE_OPTIONS } from '../../data/vendorOptions';
+import { VENDOR_TYPES, vendorTypeLabel } from '../../data/vendorTypes';
 import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinatesPicker';
 import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
 import {
@@ -46,7 +46,8 @@ const STEPS = [
 
 const INITIAL = {
   name: '',
-  type: VENDOR_TYPE_OPTIONS[0],
+  // Kitchen type code (home_cook, restaurant, …); the vendor must pick one.
+  type: '',
   ownerName: '',
   phone: '',
   email: '',
@@ -99,6 +100,7 @@ export default function VendorRegisterPage() {
     const next = {};
     if (current === 1) {
       if (!form.name.trim()) next.name = 'Business name is required.';
+      if (!form.type) next.type = 'Choose the type of food business you run.';
       if (!form.ownerName.trim()) next.ownerName = 'Owner name is required.';
       if (!form.phone.trim()) next.phone = 'Phone number is required.';
       else if (!isValidRwandaPhone(form.phone)) next.phone = PHONE_ERROR;
@@ -169,7 +171,7 @@ export default function VendorRegisterPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-            <Summary label="Vendor type" value={created.type} />
+            <Summary label="Vendor type" value={vendorTypeLabel(created.typeCode || created.type)} />
             <Summary label="Location" value={created.location} />
             <Summary label="Status" value={created.verificationStatus} />
           </div>
@@ -262,15 +264,44 @@ export default function VendorRegisterPage() {
               />
             </Field>
 
-            <Field label="Vendor type">
-              <select value={form.type} onChange={(event) => update({ type: event.target.value })} className={inputClass()}>
-                {VENDOR_TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            {/* Kitchen type: required. Menu categories are not limited by it. */}
+            <div>
+              <p className="text-xs font-bold text-stone-500 mb-1.5">What kind of food business are you?</p>
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5" role="radiogroup" aria-label="Vendor type">
+                {VENDOR_TYPES.map((type) => {
+                  const Icon = type.icon;
+                  const selected = form.type === type.code;
+                  return (
+                    <button
+                      key={type.code}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => update({ type: type.code })}
+                      className={`flex items-start gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] ${
+                        selected
+                          ? 'border-[#542813] bg-[#faf6f2] ring-2 ring-[#542813]/20'
+                          : 'border-stone-200 bg-white hover:bg-stone-50'
+                      }`}
+                    >
+                      <span className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center border ${type.badge}`}>
+                        <Icon className="w-4 h-4" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-extrabold text-gray-900">{type.label}</span>
+                        <span className="block text-[11px] text-stone-500 leading-snug mt-0.5">{type.description}</span>
+                      </span>
+                      {selected && <Check className="w-4 h-4 text-[#542813] flex-shrink-0 ml-auto" aria-hidden="true" />}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.type ? (
+                <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.type}</p>
+              ) : (
+                <p className="text-[11px] text-stone-400 mt-1">You can sell any kind of food whatever type you choose.</p>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Owner name" error={errors.ownerName} icon={User}>

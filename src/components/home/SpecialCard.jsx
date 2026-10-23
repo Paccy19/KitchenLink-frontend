@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CalendarClock, ChefHat, Clock } from 'lucide-react';
+import { CalendarClock, Clock } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
+import VendorTypeBadge from '../common/VendorTypeBadge';
 import { useCart } from '../../context/CartContext';
 import { buildPreorderSpecial, formatScheduledFor } from '../../utils/schedule';
 
@@ -46,10 +47,7 @@ export default function SpecialCard({ vendor, special }) {
         </span>
         <div className="absolute bottom-3 left-3 right-3">
           <p className="text-white font-extrabold text-sm line-clamp-1">{vendor.name}</p>
-          <p className="text-white/85 text-[11px] font-medium flex items-center gap-1">
-            <ChefHat className="w-3 h-3" aria-hidden="true" />
-            {vendor.type}
-          </p>
+          <VendorTypeBadge type={vendor.typeCode || vendor.type} size="xs" className="mt-1" />
         </div>
       </div>
 

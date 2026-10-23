@@ -11,18 +11,8 @@ export const MENU_CATEGORIES = [
   'Desserts',
 ];
 
-export const VENDOR_TYPE_OPTIONS = [
-  'Home Cook',
-  'Restaurant',
-  'Café',
-  'Bakery',
-  'Caterer',
-  'Food Truck',
-  'Chef',
-  'Meal-prep business',
-  'Juice/Drinks vendor',
-  'Other food business',
-];
+// Kitchen (vendor) types live in ./vendorTypes.js.
+
 
 export const FOOD_CATEGORY_OPTIONS = [...MENU_CATEGORIES];
 

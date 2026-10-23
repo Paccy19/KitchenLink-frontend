@@ -10,6 +10,8 @@ import SpecialCard from './SpecialCard';
 import LocationIndicator from './LocationIndicator';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
 import EmptyState, { ErrorState } from '../common/EmptyState';
+import VendorTypeFilter from '../common/VendorTypeFilter';
+import useVendorTypeParam from '../../hooks/useVendorTypeParam';
 import { HomeFeedSkeleton, VendorTileSkeleton, DishCardSkeleton } from '../common/Skeleton';
 import { useToast } from '../common/Toast';
 
@@ -63,11 +65,15 @@ export default function HomeFeed() {
   const [query, setQuery] = useState(urlQuery);
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
 
-  const feed = useHomeFeed();
+  // Kitchen type filter (?type=home_cook,cafe) — applies to the kitchen lists and search.
+  const [vendorTypes, setVendorTypes] = useVendorTypeParam();
+  const typeQuery = vendorTypes.length ? `?type=${vendorTypes.join(',')}` : '';
+
+  const feed = useHomeFeed({ vendorTypes });
   const categories = useCategories({ enabled: !urlQuery.trim() });
   const specials = useVendorSpecials();
   const offers = useVendorOffers();
-  const allVendors = useAllVendors({ perPage: 6, enabled: !urlQuery.trim() });
+  const allVendors = useAllVendors({ perPage: 6, vendorTypes, enabled: !urlQuery.trim() });
 
   // Keep the URL shareable: debounce input → `?q=` (replace, no history spam).
   useEffect(() => {
@@ -144,7 +150,7 @@ export default function HomeFeed() {
       {/* ── Search results view ───────────────────────────────── */}
       {isSearching ? (
         <Suspense fallback={<HomeFeedSkeleton />}>
-          <SearchResults query={urlQuery} onSuggest={setQuery} />
+          <SearchResults query={urlQuery} onSuggest={setQuery} vendorTypes={vendorTypes} onVendorTypesChange={setVendorTypes} />
         </Suspense>
       ) : feed.isPending ? (
         <HomeFeedSkeleton />
@@ -165,6 +171,9 @@ export default function HomeFeed() {
             loading={categories.isPending}
           />
 
+          {/* Kitchen type filter */}
+          <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="-mt-3" />
+
           {/* Featured / nearby kitchens */}
           <section aria-label="Featured kitchens">
             <SectionHeader
@@ -174,7 +183,7 @@ export default function HomeFeed() {
                   ? `Updated ${new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                   : 'Kitchens around you right now'
               }
-              to="/vendors"
+              to={`/vendors${typeQuery}`}
               linkLabel="See all kitchens"
             />
             {feed.isError && data ? (
@@ -197,8 +206,12 @@ export default function HomeFeed() {
             {!feed.isPending && (data?.featuredVendors?.length ?? 0) === 0 && !feed.isError && (
               <EmptyState
                 icon={<ChefHat className="w-8 h-8" />}
-                title="No kitchens nearby yet"
-                message="Widen your search radius or switch neighbourhood to discover more kitchens."
+                title={vendorTypes.length ? 'No kitchens of this type nearby' : 'No kitchens nearby yet'}
+                message={
+                  vendorTypes.length
+                    ? 'Try another kitchen type, or clear the filter to see every kitchen.'
+                    : 'Widen your search radius or switch neighbourhood to discover more kitchens.'
+                }
                 actionLabel="Browse nearby kitchens"
                 onAction={() => navigate('/vendors')}
               />
@@ -214,7 +227,7 @@ export default function HomeFeed() {
                   ? 'Every kitchen on the platform — nearest to you first'
                   : 'Every kitchen on the platform — use your location to see nearby ones first'
               }
-              to="/vendors"
+              to={`/vendors${typeQuery}`}
               linkLabel={
                 allVendors.data?.total ? `See all ${allVendors.data.total}` : 'See all'
               }

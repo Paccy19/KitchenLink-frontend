@@ -29,17 +29,23 @@ import {
   Table,
   formatDate,
   formatRwf,
-  toTitle,
 } from '../../components/admin-dashboard/ui';
 import StatusModal from '../../components/admin-dashboard/StatusModal';
 import LiveRouteMap from '../../components/tracking/LiveRouteMap';
 import { KIGALI_CENTER } from '../../lib/mapStyle';
+import VendorTypeBadge from '../../components/common/VendorTypeBadge';
+import VendorTypeFilter from '../../components/common/VendorTypeFilter';
+import { VENDOR_TYPES, getVendorType } from '../../data/vendorTypes';
 
 const EMPTY = { items: [], total: 0, page: 1, limit: 20 };
 
 export default function AdminVendorsPage() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({ status: '', search: '' });
+  // Vendor type filter (codes) and whether the table is grouped by type.
+  const [vendorTypes, setVendorTypes] = useState([]);
+  const [groupByType, setGroupByType] = useState(false);
+  const [newType, setNewType] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [target, setTarget] = useState(null);
@@ -54,11 +60,18 @@ export default function AdminVendorsPage() {
 
   useEffect(() => {
     setViewedDocs(new Set());
+    setNewType('');
   }, [detailId]);
 
   const listQuery = useQuery({
-    queryKey: ['admin', 'vendors', { ...filters, page }],
-    queryFn: () => adminApi.listVendors({ ...filters, page, limit: 20 }),
+    queryKey: ['admin', 'vendors', { ...filters, vendorTypes, page }],
+    queryFn: () =>
+      adminApi.listVendors({
+        ...filters,
+        vendor_type: vendorTypes.length ? vendorTypes.join(',') : undefined,
+        page,
+        limit: 20,
+      }),
   });
   const countsQuery = useQuery({
     queryKey: ['admin', 'vendors', 'counts'],
@@ -84,6 +97,22 @@ export default function AdminVendorsPage() {
     },
   });
 
+  const typeMutation = useMutation({
+    mutationFn: (body) => adminApi.setVendorType(detailId, body),
+    onSuccess: (_result, body) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendor'] });
+      setNewType('');
+      setToast(
+        body.decision === 'reject'
+          ? 'Type change request declined.'
+          : body.decision === 'approve'
+            ? 'Type change approved.'
+            : 'Vendor type updated.',
+      );
+    },
+  });
+
   const reviewMutation = useMutation({
     mutationFn: () => adminApi.reviewVendorDocuments(detailId),
     onSuccess: () => {
@@ -104,6 +133,15 @@ export default function AdminVendorsPage() {
 
   const data = listQuery.data || EMPTY;
   const counts = countsQuery.data;
+  // How many vendors of each type (within the chosen status), for the type chips.
+  const typeCounts = Object.fromEntries((data.type_counts || []).map((row) => [row.code, row.count]));
+  const rows = groupByType
+    ? [...data.items].sort(
+        (a, b) =>
+          VENDOR_TYPES.findIndex((t) => t.code === getVendorType(a.vendor_type).code) -
+          VENDOR_TYPES.findIndex((t) => t.code === getVendorType(b.vendor_type).code),
+      )
+    : data.items;
   const detailVendor = detailQuery.data?.vendor;
   const documents = detailVendor?.verification_documents || [];
   const allDocumentsViewed =
@@ -135,7 +173,7 @@ export default function AdminVendorsPage() {
         </div>
       )}
 
-      <Card title="Filters" bodyClassName="p-4">
+      <Card title="Filters" bodyClassName="p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <form
             onSubmit={(event) => {
@@ -160,6 +198,19 @@ export default function AdminVendorsPage() {
             <option value="suspended">Suspended</option>
           </Select>
         </div>
+        <VendorTypeFilter
+          value={vendorTypes}
+          onChange={(codes) => {
+            setVendorTypes(codes);
+            setPage(1);
+          }}
+          counts={typeCounts}
+          label="Vendor type"
+        />
+        <label className="inline-flex items-center gap-2 text-xs font-semibold text-stone-600">
+          <input type="checkbox" checked={groupByType} onChange={(event) => setGroupByType(event.target.checked)} />
+          Group the list by vendor type
+        </label>
       </Card>
 
       <Card bodyClassName="p-4 sm:p-5">
@@ -181,11 +232,33 @@ export default function AdminVendorsPage() {
                 { key: 'actions', label: '', className: 'text-right' },
               ]}
             >
-              {data.items.map((vendor) => (
-                <tr key={vendor.id} className="hover:bg-stone-50/60">
+              {rows.map((vendor, index) => {
+                const typeCode = getVendorType(vendor.vendor_type).code;
+                const startsGroup = groupByType && (index === 0 || getVendorType(rows[index - 1].vendor_type).code !== typeCode);
+                return (
+                <React.Fragment key={vendor.id}>
+                {startsGroup && (
+                  <tr className="bg-stone-50">
+                    <td colSpan={6} className="px-4 py-2">
+                      <span className="inline-flex items-center gap-2">
+                        <VendorTypeBadge type={typeCode} />
+                        <span className="text-[11px] font-bold text-stone-500">
+                          {rows.filter((row) => getVendorType(row.vendor_type).code === typeCode).length} on this page
+                          {typeCounts[typeCode] != null ? ` · ${typeCounts[typeCode]} in total` : ''}
+                        </span>
+                      </span>
+                    </td>
+                  </tr>
+                )}
+                <tr className="hover:bg-stone-50/60">
                   <td className="px-4 py-3">
                     <p className="font-bold text-gray-900">{vendor.name}</p>
-                    <p className="text-[11px] text-stone-400">{toTitle(vendor.vendor_type)}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      <VendorTypeBadge type={vendor.vendor_type} size="xs" />
+                      {vendor.vendor_type_request && (
+                        <Badge tone="amber">Wants {vendor.vendor_type_request.vendor_type_label}</Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-stone-600">
                     <p>{vendor.phone || '—'}</p>
@@ -214,7 +287,9 @@ export default function AdminVendorsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                </React.Fragment>
+                );
+              })}
             </Table>
             <Pagination page={data.page} limit={data.limit} total={data.total} onPage={setPage} />
           </>
@@ -251,12 +326,19 @@ export default function AdminVendorsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               <Info label="Status" value={<StatusBadge status={detailQuery.data.vendor.status} />} />
-              <Info label="Type" value={toTitle(detailQuery.data.vendor.vendor_type)} />
+              <Info label="Type" value={<VendorTypeBadge type={detailQuery.data.vendor.vendor_type} />} />
               <Info label="Rating" value={detailQuery.data.vendor.rating} />
               <Info label="Total Sales" value={formatRwf(detailQuery.data.vendor.total_sales_rwf)} />
               <Info label="Balance" value={formatRwf(detailQuery.data.vendor.available_balance_rwf)} />
               <Info label="Phone" value={detailQuery.data.vendor.phone || '—'} />
             </div>
+
+            <VendorTypeAdmin
+              vendor={detailQuery.data.vendor}
+              newType={newType}
+              setNewType={setNewType}
+              mutation={typeMutation}
+            />
 
             <KitchenLocation vendor={detailQuery.data.vendor} />
 
@@ -441,6 +523,60 @@ function KitchenLocation({ vendor }) {
       {hasCoords && (
         <LiveRouteMap kitchen={{ lat, lng, label: vendor.name }} className="h-56 !rounded-none" />
       )}
+    </div>
+  );
+}
+
+/**
+ * Vendor type in the detail view: answer the vendor's change request, or set
+ * the type directly. The vendor is told either way.
+ */
+function VendorTypeAdmin({ vendor, newType, setNewType, mutation }) {
+  const request = vendor.vendor_type_request;
+  return (
+    <div className="rounded-2xl border border-stone-200 px-4 py-3 space-y-3">
+      <p className="text-xs font-black uppercase tracking-wider text-stone-400">Vendor type</p>
+      {request && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 space-y-2">
+          <p className="text-xs font-semibold text-amber-900 flex flex-wrap items-center gap-1.5">
+            Asked to change from <VendorTypeBadge type={vendor.vendor_type} size="xs" /> to{' '}
+            <VendorTypeBadge type={request.vendor_type} size="xs" />
+            {request.requested_at ? <span className="text-amber-800">· {formatDate(request.requested_at)}</span> : null}
+          </p>
+          {request.reason && <p className="text-xs text-amber-800">“{request.reason}”</p>}
+          <Can permission="vendors:write">
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate({ decision: 'approve' })}>
+                Approve change
+              </Button>
+              <Button size="sm" variant="secondary" disabled={mutation.isPending} onClick={() => mutation.mutate({ decision: 'reject' })}>
+                Decline
+              </Button>
+            </div>
+          </Can>
+        </div>
+      )}
+      <Can permission="vendors:write">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={newType} onChange={(event) => setNewType(event.target.value)} className="max-w-xs">
+            <option value="">Change type to…</option>
+            {VENDOR_TYPES.filter((type) => type.code !== getVendorType(vendor.vendor_type).code).map((type) => (
+              <option key={type.code} value={type.code}>
+                {type.label}
+              </option>
+            ))}
+          </Select>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={!newType || mutation.isPending}
+            onClick={() => mutation.mutate({ vendor_type: newType })}
+          >
+            {mutation.isPending ? 'Saving…' : 'Save type'}
+          </Button>
+        </div>
+      </Can>
+      {mutation.isError && <ErrorNote error={mutation.error} />}
     </div>
   );
 }

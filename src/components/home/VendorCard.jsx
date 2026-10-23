@@ -3,19 +3,9 @@ import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { Bike, Clock, MapPin, Navigation, Star } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
+import VendorTypeBadge from '../common/VendorTypeBadge';
 import { formatRwf } from '../../api/normalize';
 import { useLocation } from '../../context/LocationContext';
-
-const TYPE_STYLES = {
-  'Home Cook': 'bg-[#3d1b0c] text-white',
-  Restaurant: 'bg-stone-800 text-white',
-  'Café': 'bg-[#542813] text-white',
-  Bakery: 'bg-amber-900 text-white',
-  'Food Truck': 'bg-stone-700 text-white',
-  'Professional Chef': 'bg-[#2b1206] text-white',
-  Caterer: 'bg-[#6d391d] text-white',
-  'Juice Bar': 'bg-emerald-800 text-white',
-};
 
 /** Vendor's uploaded profile picture / logo, falling back to their initial. */
 export function VendorAvatar({ vendor, className = 'w-9 h-9 rounded-xl text-sm' }) {
@@ -80,14 +70,7 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/20 pointer-events-none" />
 
-        <span
-          className={clsx(
-            'absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-black shadow-md backdrop-blur-sm',
-            TYPE_STYLES[vendor.type] ?? 'bg-stone-800 text-white',
-          )}
-        >
-          {vendor.type}
-        </span>
+        <VendorTypeBadge type={vendor.typeCode || vendor.type} className="absolute top-3 left-3 shadow-md" />
 
         <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />

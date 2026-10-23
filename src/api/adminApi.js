@@ -125,6 +125,9 @@ export const adminApi = {
     adminRequest(`/admin/vendors/${encodeURIComponent(id)}/documents/review`, { method: 'POST' }),
   setVendorStatus: (id, body) =>
     adminRequest(`/admin/vendors/${encodeURIComponent(id)}/status`, { method: 'PATCH', body }),
+  // { vendor_type } to set it directly, or { decision: 'approve' | 'reject' } for the vendor's request.
+  setVendorType: (id, body) =>
+    adminRequest(`/admin/vendors/${encodeURIComponent(id)}/type`, { method: 'PATCH', body }),
 
   listDrivers: (params) => adminRequest(`/admin/drivers${qs(params)}`),
   driverCounts: () => adminRequest('/admin/drivers/counts'),

@@ -11,6 +11,7 @@
 
 import { ApiError, buildUrl } from './client';
 import { notifyDataChanged } from './liveUpdates';
+import { toVendorTypeCode, vendorTypeLabel } from '../data/vendorTypes';
 
 export const VENDOR_TOKEN_KEY = 'ofk_vendor_token';
 export const VENDOR_PROFILE_KEY = 'ofk_vendor_profile_v2';
@@ -135,7 +136,17 @@ export function mapVendorAccount(raw = {}) {
   return {
     id: raw.id,
     name: raw.name || 'Your Kitchen',
-    type: raw.vendor_type || 'Food Vendor',
+    type: raw.vendor_type_label || vendorTypeLabel(raw.vendor_type),
+    typeCode: toVendorTypeCode(raw.vendor_type),
+    // A type change the vendor asked for, waiting for an admin (null when none).
+    typeRequest: raw.vendor_type_request
+      ? {
+          code: raw.vendor_type_request.vendor_type,
+          label: raw.vendor_type_request.vendor_type_label || vendorTypeLabel(raw.vendor_type_request.vendor_type),
+          reason: raw.vendor_type_request.reason || '',
+          requestedAt: raw.vendor_type_request.requested_at || null,
+        }
+      : null,
     ownerName: raw.owner_name || '',
     phone: raw.phone || '',
     email: raw.email || '',
@@ -330,6 +341,10 @@ export const vendorApi = {
   },
   updateProfile: (payload) =>
     vendorRequest('/vendor/profile', { method: 'PATCH', body: payload }),
+  // Ask an admin to change the kitchen's vendor type, or withdraw the request.
+  requestTypeChange: (payload) =>
+    vendorRequest('/vendor/profile/type-request', { method: 'POST', body: payload }),
+  cancelTypeChange: () => vendorRequest('/vendor/profile/type-request', { method: 'DELETE' }),
   // Open (with live GPS position) / close the store, or refresh the position.
   setAvailability: (payload) =>
     vendorRequest('/vendor/availability', { method: 'PATCH', body: payload }),

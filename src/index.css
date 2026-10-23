@@ -726,3 +726,15 @@
 .dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .group:hover :is(.group-hover\:text-\[\#542813\], .group-hover\:text-\[\#8a5332\]) {
   color: var(--text-accent);
 }
+
+/* ── Vendor type badges: solid tinted chips in dark mode (they also sit on photos) ── */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-lime-800 {
+  color: #bef264;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .vendor-type-badge {
+  background-color: color-mix(in srgb, currentColor 22%, var(--bg-card));
+  border-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-lime-100 {
+  background-color: color-mix(in srgb, #84cc16 18%, transparent);
+}

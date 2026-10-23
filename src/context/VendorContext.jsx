@@ -380,6 +380,17 @@ export function VendorProvider({ children }) {
     [],
   );
 
+  /** Asks an admin to change the vendor type (code); the type changes only when approved. */
+  const requestTypeChange = useCallback(async (vendorType, reason = '') => {
+    const { vendor: raw } = await vendorApi.requestTypeChange({ vendor_type: vendorType, reason });
+    if (mounted.current) setVendor(mapVendorAccount(raw));
+  }, []);
+
+  const cancelTypeChange = useCallback(async () => {
+    const { vendor: raw } = await vendorApi.cancelTypeChange();
+    if (mounted.current) setVendor(mapVendorAccount(raw));
+  }, []);
+
   /**
    * Opens or closes the store. An open store shows on the map at the kitchen's
    * registered coordinates; the vendor's own position is never read.
@@ -583,6 +594,8 @@ export function VendorProvider({ children }) {
       clearAccountBlock,
       logout,
       updateVendorProfile,
+      requestTypeChange,
+      cancelTypeChange,
       toggleStoreOpen,
       registerVendor,
       saveSpecial,
@@ -637,6 +650,8 @@ export function VendorProvider({ children }) {
       clearAccountBlock,
       logout,
       updateVendorProfile,
+      requestTypeChange,
+      cancelTypeChange,
       toggleStoreOpen,
       registerVendor,
       saveSpecial,

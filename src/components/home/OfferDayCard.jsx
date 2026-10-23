@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, ChefHat, Gift } from 'lucide-react';
+import { CalendarDays, Gift } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
+import VendorTypeBadge from '../common/VendorTypeBadge';
 import { formatOfferDay, offerCountdown } from '../../utils/offerDays';
 
 /**
@@ -38,10 +39,7 @@ export default function OfferDayCard({ offer }) {
         </span>
         <div className="absolute bottom-3 left-3 right-3">
           <p className="text-white font-extrabold text-sm line-clamp-1">{vendor.name}</p>
-          <p className="text-white/85 text-[11px] font-medium flex items-center gap-1">
-            <ChefHat className="w-3 h-3" aria-hidden="true" />
-            {vendor.type}
-          </p>
+          <VendorTypeBadge type={vendor.typeCode || vendor.type} size="xs" className="mt-1" />
         </div>
       </div>
 

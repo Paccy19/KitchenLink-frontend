@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Percent, Plus, Trash2 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
+import { VENDOR_TYPES } from '../../data/vendorTypes';
 import { useAdmin } from '../../context/AdminContext';
 import {
   Badge,
@@ -25,20 +26,6 @@ import {
 } from '../../components/admin-dashboard/ui';
 
 const PAYMENT_STATUSES = ['pending', 'processing', 'successful', 'failed', 'refunded'];
-const VENDOR_TYPES = [
-  'Home Cook',
-  'Restaurant',
-  'Café',
-  'Bakery',
-  'Caterer',
-  'Food Truck',
-  'Chef',
-  'Meal-prep business',
-  'Juice/Drinks vendor',
-  'Other food business',
-  'Cafe',
-  'Bar & Grill',
-];
 const EMPTY = { items: [], total: 0, page: 1, limit: 20 };
 
 const emptyCommission = {
@@ -297,7 +284,7 @@ export default function AdminPaymentsPage() {
                   <Badge tone="violet">{toTitle(commission.scope)}</Badge>
                 </td>
                 <td className="px-4 py-3 text-stone-600">
-                  {commission.vendor_name || commission.category_name || commission.vendor_type || 'All'}
+                  {commission.vendor_name || commission.category_name || commission.vendor_type_label || commission.vendor_type || 'All'}
                 </td>
                 <td className="px-4 py-3 font-bold text-gray-900">
                   {commission.percentage}%
@@ -422,8 +409,8 @@ export default function AdminPaymentsPage() {
               >
                 <option value="">Select vendor type…</option>
                 {VENDOR_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+                  <option key={type.code} value={type.code}>
+                    {type.label}
                   </option>
                 ))}
               </Select>

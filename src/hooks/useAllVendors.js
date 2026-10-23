@@ -11,10 +11,11 @@ const round = (value) => Number(Number(value).toFixed(4));
  * customer's location is known (GPS or a picked neighbourhood), kitchens near
  * them come first; without it, open and top-rated kitchens lead.
  *
- * @param {{categoryId?:string|null, sort?:string, perPage?:number, enabled?:boolean}} options
+ * @param {{categoryId?:string|null, vendorTypes?:string[], sort?:string, perPage?:number, enabled?:boolean}} options
  */
 export default function useAllVendors({
   categoryId = null,
+  vendorTypes = [],
   sort = 'distance',
   perPage = 9,
   enabled = true,
@@ -24,14 +25,16 @@ export default function useAllVendors({
   const located = source !== 'default';
   const lat = located ? round(coords.lat) : null;
   const lng = located ? round(coords.lng) : null;
+  const typeParam = vendorTypes.length ? vendorTypes.join(',') : undefined;
 
   return useInfiniteQuery({
-    queryKey: ['home', 'vendors', 'all', lat, lng, categoryId ?? 'all', sort, perPage],
+    queryKey: ['home', 'vendors', 'all', lat, lng, categoryId ?? 'all', typeParam ?? 'all-types', sort, perPage],
     enabled,
     queryFn: ({ pageParam = 1 }) =>
       fetchAllVendors({
         ...(located ? { lat: coords.lat, lng: coords.lng } : {}),
         category_id: categoryId ?? undefined,
+        vendor_type: typeParam,
         sort,
         page: pageParam,
         limit: perPage,

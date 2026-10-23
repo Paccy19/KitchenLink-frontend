@@ -25,6 +25,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { formatRwf } from '../api/normalize';
 import { VendorAvatar } from '../components/home/VendorCard';
 import DishHoverPreview from '../components/common/DishHoverPreview';
+import VendorTypeBadge from '../components/common/VendorTypeBadge';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
 /**
@@ -180,9 +181,7 @@ export default function VendorPage() {
 
         <div className="absolute bottom-12 sm:bottom-14 left-4 right-4 sm:left-8 sm:right-8 text-white">
           <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className="px-3 py-1 rounded-full text-xs font-black bg-[#2b1206] text-white border border-[#522712] shadow-md">
-              {vendor.type}
-            </span>
+            <VendorTypeBadge type={vendor.typeCode || vendor.type} size="md" className="shadow-md" />
             {vendor.isOpen ? (
               <span className="px-2.5 py-1 rounded-full text-xs font-black bg-forest-600 shadow-md">
                 Open now
