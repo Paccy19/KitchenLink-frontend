@@ -594,3 +594,135 @@
 .dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .stat-card span[class*='bg-white'] {
   background-color: color-mix(in srgb, var(--text-primary) 10%, transparent);
 }
+
+/* =============================================================================
+   Dark mode contrast fixes (audit: every text colour must read on dark cards)
+============================================================================= */
+/* ── Status colours the overrides above missed (red/rose/sky/violet/blue/orange) ── */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-red-500,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-red-600,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-red-900 {
+  color: #fca5a5;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-rose-500,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-rose-600 {
+  color: #fda4af;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-sky-600 {
+  color: #7dd3fc;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-violet-600 {
+  color: #c4b5fd;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-blue-600,
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-blue-700 {
+  color: #93c5fd;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .text-orange-600 {
+  color: #fdba74;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-blue-50 {
+  background-color: color-mix(in srgb, #3b82f6 16%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .border-blue-100 {
+  border-color: color-mix(in srgb, #3b82f6 35%, transparent);
+}
+
+/* ── Light gradient panels that kept light-coloured text on a light background ── */
+/* Vendor "offer day" cards. */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .from-amber-50 {
+  background-image: none;
+  background-color: color-mix(in srgb, #f59e0b 14%, var(--bg-card));
+}
+/* Delivery worker "You are offline" card (and image placeholders). */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .from-stone-200 {
+  background-image: none;
+  background-color: var(--bg-subtle);
+}
+
+/* ── Olive "Tomorrow's Special" text on surfaces that turn dark ── */
+.dark .app-theme .text-\[\#2b3317\],
+.dark .app-theme .text-\[\#3b3a1a\],
+.dark .app-theme .text-\[\#6b6f3a\] {
+  color: #e3e7bf;
+}
+/* The light olive pill stays light in dark mode, so its text stays dark. */
+.dark .app-theme .bg-\[\#c9cda2\].text-\[\#2b3317\] {
+  color: #2b3317;
+}
+
+/* ── "Back to Delivery Worker Dashboard" button in the customer header ── */
+.dark .app-theme .text-\[\#12301c\],
+.dark .app-theme .text-\[\#3b5327\] {
+  color: #c6d8b6;
+}
+.dark .app-theme .hover\:bg-\[\#e6f2de\]:hover,
+.dark .app-theme .hover\:bg-\[\#f2f8ee\]:hover {
+  background-color: var(--bg-card);
+}
+
+/* ── Admin: the one caramel icon colour used in the admin panel ── */
+.dark .app-theme-admin .text-\[\#8a5332\] {
+  color: var(--text-accent);
+}
+
+/* ── Hover states: light hover backgrounds and dark hover text vanish on dark ──
+   (The white primary pills/buttons keep their own hover rules above.) */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(
+    .hover\:bg-white,
+    .hover\:bg-stone-50,
+    .hover\:bg-stone-100,
+    .hover\:bg-stone-200,
+    .hover\:bg-stone-300,
+    .hover\:bg-gray-50,
+    .hover\:bg-gray-100,
+    .hover\:bg-brand-50,
+    .hover\:bg-\[\#faf6f2\],
+    .hover\:bg-\[\#f5ebe1\],
+    .hover\:bg-\[\#faf5f0\],
+    .hover\:bg-\[\#f5f8f2\]
+  ):not(.theme-primary-pill):hover {
+  background-color: color-mix(in srgb, var(--text-primary) 10%, var(--bg-card));
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(.hover\:bg-red-50, .hover\:bg-red-100, .hover\:bg-rose-50):hover {
+  background-color: color-mix(in srgb, #ef4444 22%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(.hover\:bg-orange-50):hover {
+  background-color: color-mix(in srgb, #f97316 22%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(.hover\:bg-emerald-100):hover {
+  background-color: color-mix(in srgb, #10b981 22%, transparent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(
+    .hover\:text-\[\#542813\],
+    .hover\:text-\[\#2b1206\],
+    .hover\:text-\[\#3d1b0c\],
+    .hover\:text-\[\#8a5332\],
+    .hover\:text-\[\#3b5327\],
+    .hover\:text-\[\#1c2b12\],
+    .hover\:text-\[\#1f2937\]
+  ):not(.theme-primary-pill):hover {
+  color: var(--text-accent);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(
+    .hover\:text-stone-600,
+    .hover\:text-stone-700,
+    .hover\:text-stone-800,
+    .hover\:text-stone-900,
+    .hover\:text-gray-900
+  ):hover {
+  color: var(--text-primary);
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(.hover\:text-red-500, .hover\:text-red-600, .hover\:text-red-700):hover {
+  color: #fca5a5;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(.hover\:text-orange-600):hover {
+  color: #fdba74;
+}
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) :is(.hover\:text-blue-700):hover {
+  color: #93c5fd;
+}
+/* Titles that turn chocolate while their card is hovered (dish/kitchen cards). */
+.dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .group:hover :is(.group-hover\:text-\[\#542813\], .group-hover\:text-\[\#8a5332\]) {
+  color: var(--text-accent);
+}
