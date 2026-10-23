@@ -190,12 +190,12 @@ function OperationsRulesCard() {
 
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Pickup clock (delivery workers)</p>
             <RuleRow label="Reminder after" value={`${rules.pickup_clock.warning_after_minutes} min`} />
-            <RuleRow label="Late-pickup charge after" value={`${rules.pickup_clock.grace_minutes} min`} />
+            <RuleRow label="Counts as late after" value={`${rules.pickup_clock.grace_minutes} min`} />
             <RuleRow
               label="Given to another worker after"
               value={rules.pickup_clock.reassign_after_minutes ? `${rules.pickup_clock.reassign_after_minutes} min` : 'Off'}
             />
-            <RuleRow label="Late-pickup charge" value={rules.pickup_clock.charge_amount} warn />
+            <RuleRow label="Late-pickup charge" value="None" />
           </div>
           <div>
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-1">Customer pickup</p>

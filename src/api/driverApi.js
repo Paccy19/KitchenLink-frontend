@@ -180,8 +180,6 @@ export function mapDelivery(raw = {}) {
           warningMinutes: raw.pickup_rules.warning_minutes,
           chargeAfterMinutes: raw.pickup_rules.charge_after_minutes,
           reassignAfterMinutes: raw.pickup_rules.reassign_after_minutes ?? null,
-          // The penalty share of the delivery fee for a late pickup.
-          latePenaltyPercent: Number(raw.pickup_rules.late_penalty_percent ?? 0),
         }
       : null,
     pickupGraceMinutes: Number(raw.pickup_grace_minutes ?? 15),

@@ -10,8 +10,9 @@ const timeOf = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', 
 /**
  * Where the assigned delivery worker stands on collecting the food, using
  * the timing rules the admin set: wait near the kitchen while it cooks, then
- * a countdown to the late-pickup charge, then to the moment the order is
- * given to another worker (if the admin turned that on).
+ * a countdown to when the pickup is late, then to the moment the order is
+ * given to another worker (if the admin turned that on). Late pickups are
+ * never charged.
  */
 export default function PickupClock({ delivery }) {
   const waiting = delivery.status === 'assigned_to_driver';
@@ -36,7 +37,7 @@ export default function PickupClock({ delivery }) {
         <div>
           <p className="text-sm font-black text-red-800">Late pickup</p>
           <p className="text-xs font-medium text-red-700 mt-0.5">
-            Collected{minutes ? ` ${minutes} minute${minutes === 1 ? '' : 's'}` : ''} late. A late-pickup charge applies to this delivery.
+            Collected{minutes ? ` ${minutes} minute${minutes === 1 ? '' : 's'}` : ''} late. You are still paid the full delivery fee.
           </p>
         </div>
       </div>
@@ -54,7 +55,7 @@ export default function PickupClock({ delivery }) {
             {delivery.expectedReadyAt ? ` — it should be ready around ${timeOf(delivery.expectedReadyAt)}` : ''}.
             {rules && (
               <>
-                {' '}Once it's ready you have {rules.chargeAfterMinutes} minutes to collect it, or a late-pickup charge applies
+                {' '}Once it's ready you have {rules.chargeAfterMinutes} minutes to collect it
                 {rules.reassignAfterMinutes ? `; after ${rules.reassignAfterMinutes} minutes the order goes to another delivery worker` : ''}.
               </>
             )}
@@ -75,10 +76,9 @@ export default function PickupClock({ delivery }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-black text-red-800">Late — collect it now</p>
           <p className="text-xs font-medium text-red-700 mt-0.5">
-            A late-pickup charge applies.
             {reassignLeft != null
-              ? ` If you don't collect it by ${timeOf(delivery.pickupReassignAt)}, the order will be given to another delivery worker.`
-              : ''}
+              ? `If you don't collect it by ${timeOf(delivery.pickupReassignAt)}, the order will be given to another delivery worker.`
+              : 'Support has been alerted.'}
           </p>
         </div>
         {reassignLeft != null && (
@@ -98,7 +98,7 @@ export default function PickupClock({ delivery }) {
       <div className="flex-1 min-w-0">
         <p className={`text-sm font-black ${urgent ? 'text-red-800' : 'text-emerald-900'}`}>The food is ready — collect it now</p>
         <p className={`text-xs font-medium mt-0.5 ${urgent ? 'text-red-700' : 'text-emerald-800'}`}>
-          Pick it up by {timeOf(delivery.pickupDueAt)} to avoid a late-pickup charge
+          Pick it up by {timeOf(delivery.pickupDueAt)}
           {delivery.pickupReassignAt ? `; at ${timeOf(delivery.pickupReassignAt)} it goes to another delivery worker` : ''}.
         </p>
       </div>

@@ -82,10 +82,7 @@ export default function DeliveryOfferCard({ delivery, busy = false, onAccept, on
         <p className="flex items-start gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] font-semibold text-amber-900">
           <Timer className="w-4 h-4 flex-shrink-0" />
           <span>
-            Collect within {delivery.pickupRules.chargeAfterMinutes} min of the food being ready, or{' '}
-            {delivery.pickupRules.latePenaltyPercent > 0
-              ? `${delivery.pickupRules.latePenaltyPercent}% of the delivery fee is kept as a late-pickup penalty`
-              : 'a late-pickup charge applies'}
+            Collect within {delivery.pickupRules.chargeAfterMinutes} min of the food being ready
             {delivery.pickupRules.reassignAfterMinutes
               ? `; after ${delivery.pickupRules.reassignAfterMinutes} min the order goes to another delivery worker`
               : ''}

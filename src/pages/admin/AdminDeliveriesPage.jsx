@@ -177,7 +177,7 @@ export default function AdminDeliveriesPage() {
       {tab === 'late' && (
         <Card
           title="Late pickups"
-          description="Delivery workers who didn't collect the food within the grace period after it was ready. The penalty set in Settings is taken out of that order's delivery fee when it is delivered."
+          description="Delivery workers who didn't collect the food within the grace period after it was ready. Late pickups are not charged; if the worker is too late the order goes to another worker. Older records may show charges taken before charges were removed."
           action={
             <div className="w-44">
               <Select
@@ -191,7 +191,7 @@ export default function AdminDeliveriesPage() {
                 <option value="">All charges</option>
                 <option value="pending">Charge pending</option>
                 <option value="charged">Charged</option>
-                <option value="waived">Waived</option>
+                <option value="waived">No charge</option>
               </Select>
             </div>
           }
@@ -252,7 +252,7 @@ export default function AdminDeliveriesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={row.charge_status === 'pending' ? 'amber' : row.charge_status === 'charged' ? 'red' : 'slate'}>
-                        {row.charge_status === 'pending' ? 'Pending' : row.charge_status === 'charged' ? 'Charged' : 'Waived'}
+                        {row.charge_status === 'pending' ? 'Pending' : row.charge_status === 'charged' ? 'Charged' : 'No charge'}
                       </Badge>
                       {row.charge_rwf != null && (
                         <p className="mt-1 text-[11px] font-bold text-red-700">
