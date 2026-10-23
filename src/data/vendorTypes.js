@@ -53,6 +53,86 @@ export const VENDOR_TYPES = [
 /** The name shown on sign-up / type-change cards ("Other food business" for Other). */
 export const vendorTypeTitle = (type) => type.title || type.label;
 
+/**
+ * What each type does well, what it is less suited for, and a short note —
+ * SOFT guidance only (nothing is blocked). `features` are the tools that suit
+ * the type best, shown as tips on the kitchen dashboard. Same as the backend's
+ * PROFILES in config/vendorTypes.js.
+ */
+const PROFILES = {
+  home_cook: {
+    strengths: ['Sell any food', 'Scheduled orders & pre-orders', "Tomorrow's Special", 'Small daily capacity', 'Personal touch'],
+    lessSuited: ['High-volume immediate orders', 'Large catering', 'Formal dine-in feel'],
+    note: 'Best for homemade food with limited daily slots.',
+    features: ['preorder', 'scheduled', 'pickup'],
+  },
+  restaurant: {
+    strengths: ['Full menu', 'High volume', 'Immediate & scheduled orders', 'Delivery & pick-up'],
+    lessSuited: ['Very small home-style batches'],
+    note: 'Classic full-service kitchen.',
+    features: ['immediate', 'scheduled', 'delivery', 'pickup'],
+  },
+  cafe: {
+    strengths: ['Coffee', 'Light meals', 'Breakfast', 'Snacks', 'Quick orders'],
+    lessSuited: ['Heavy main meals', 'Large catering', 'Late-night heavy food'],
+    note: 'Casual and daytime-focused.',
+    features: ['immediate', 'pickup'],
+  },
+  bakery: {
+    strengths: ['Bread', 'Cakes', 'Pastries', 'Desserts', 'Pre-orders'],
+    lessSuited: ['Full savoury meals', 'Hot cooked dishes as the main business'],
+    note: 'Can still sell savoury items.',
+    features: ['preorder', 'scheduled', 'offer_days'],
+  },
+  caterer: {
+    strengths: ['Bulk orders', 'Events', 'Advance & scheduled orders', 'Large quantities'],
+    lessSuited: ['Small single-portion immediate orders'],
+    note: 'Strong with Offer Days and pre-orders.',
+    features: ['offer_days', 'preorder', 'scheduled'],
+  },
+  food_truck: {
+    strengths: ['Mobile location', 'Street-style food', 'Quick service'],
+    lessSuited: ['Fixed-address fine dining', 'Large advance catering'],
+    note: 'Location can change.',
+    features: ['immediate', 'pickup'],
+  },
+  chef: {
+    strengths: ['Custom menus', 'Private dining', 'Premium & specialty dishes', 'Scheduled orders'],
+    lessSuited: ['High-volume standard delivery', 'Cheap daily meals'],
+    note: 'More personalised and higher-end.',
+    features: ['scheduled', 'preorder', 'offer_days'],
+  },
+  meal_prep: {
+    strengths: ['Weekly plans', 'Portioned meals', 'Subscriptions', 'Scheduled orders'],
+    lessSuited: ['On-demand single hot meals', 'Café-style snacks'],
+    note: 'Best with recurring orders.',
+    features: ['scheduled', 'offer_days', 'preorder'],
+  },
+  juice_drinks: {
+    strengths: ['Juices', 'Smoothies', 'Beverages', 'Light add-ons'],
+    lessSuited: ['Full solid meals as the main offering'],
+    note: 'Can still sell light food.',
+    features: ['immediate', 'pickup'],
+  },
+  other: {
+    strengths: ["Any specialty or niche concept that doesn't fit the types above"],
+    lessSuited: [],
+    note: 'Catch-all for unique businesses — fully open.',
+    features: ['immediate', 'scheduled', 'preorder', 'offer_days'],
+  },
+};
+VENDOR_TYPES.forEach((type) => Object.assign(type, PROFILES[type.code]));
+
+/** Dashboard tips: what each recommended feature is and where to set it up. */
+export const TYPE_FEATURES = {
+  preorder: { label: "Tomorrow's Special", hint: 'Announce a dish for tomorrow; customers pre-order it before your cut-off.', to: '/vendor-dashboard#special' },
+  offer_days: { label: 'Offer Days', hint: 'Announce a deal for a coming day; customers get a reminder the day before.', to: '/vendor-dashboard#offer-days' },
+  scheduled: { label: 'Scheduled orders', hint: 'Customers can order for a later time — set your opening hours so they know when.', to: '/vendor-dashboard/profile' },
+  immediate: { label: 'Orders for now', hint: 'Keep your store open and your menu up to date so you show up for quick orders.', to: '/vendor-dashboard/menu' },
+  pickup: { label: 'Customer pick-up', hint: 'Customers can collect at your kitchen — keep your kitchen location correct.', to: '/vendor-dashboard/profile' },
+  delivery: { label: 'Delivery', hint: 'Nearby delivery workers bring your food to customers.', to: '/vendor-dashboard/orders' },
+};
+
 const BY_CODE = new Map(VENDOR_TYPES.map((type) => [type.code, type]));
 
 // Labels the API returned before types became codes.

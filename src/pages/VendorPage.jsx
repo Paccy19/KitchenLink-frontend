@@ -27,6 +27,7 @@ import { VendorAvatar } from '../components/home/VendorCard';
 import DishHoverPreview from '../components/common/DishHoverPreview';
 import VendorTypeBadge from '../components/common/VendorTypeBadge';
 import MessageKitchenButton from '../components/chat/MessageKitchenButton';
+import { getVendorType } from '../data/vendorTypes';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
 /**
@@ -250,6 +251,12 @@ export default function VendorPage() {
 
             <MessageKitchenButton vendorId={vendor.id} className="sm:ml-auto" />
           </div>
+
+          {/* What this kind of kitchen is like (from its vendor type). */}
+          <p className="mt-3 text-xs text-stone-500 flex items-center gap-1.5 flex-wrap">
+            <span className="font-bold text-stone-700">{getVendorType(vendor.typeCode || vendor.type).label}:</span>
+            {getVendorType(vendor.typeCode || vendor.type).note}
+          </p>
 
           {vendor.description && (
             <p className="text-sm text-stone-600 leading-relaxed mt-4 pt-4 border-t border-stone-100 max-w-3xl">

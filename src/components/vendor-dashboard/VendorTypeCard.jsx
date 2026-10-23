@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Clock, Shapes } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import VendorTypeBadge from '../common/VendorTypeBadge';
+import VendorTypeProfile from '../common/VendorTypeProfile';
 import { VENDOR_TYPES, getVendorType, vendorTypeTitle } from '../../data/vendorTypes';
 
 /**
@@ -59,6 +60,10 @@ export default function VendorTypeCard() {
             Request a type change
           </button>
         )}
+      </div>
+
+      <div className="rounded-2xl border border-stone-100 bg-stone-50 px-3.5 py-3">
+        <VendorTypeProfile type={current.code} />
       </div>
 
       {pending && (

@@ -20,6 +20,7 @@ import {
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
 import { VENDOR_TYPES, vendorTypeLabel, vendorTypeTitle } from '../../data/vendorTypes';
+import VendorTypeProfile from '../../components/common/VendorTypeProfile';
 import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinatesPicker';
 import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
 import {
@@ -296,6 +297,13 @@ export default function VendorRegisterPage() {
                   );
                 })}
               </div>
+              {/* The chosen type's profile: what it does well and what it's less suited for. */}
+              {form.type && (
+                <div className="mt-2 rounded-2xl border border-[#ebd7c5] bg-[#faf6f2] px-3.5 py-3">
+                  <p className="text-xs font-black text-gray-900 mb-2">{vendorTypeTitle(VENDOR_TYPES.find((type) => type.code === form.type))}</p>
+                  <VendorTypeProfile type={form.type} />
+                </div>
+              )}
               {/* "Other": examples of what fits, so niche kitchens know they belong here. */}
               {form.type === 'other' && (
                 <div className="mt-2 rounded-2xl border border-stone-200 bg-stone-50 px-3.5 py-2.5">
