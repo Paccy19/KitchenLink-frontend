@@ -22,6 +22,11 @@ export function fetchHomeFeed({ lat, lng, label, vendor_type } = {}) {
   return apiRequest('/home/feed', { lat, lng, label, vendor_type });
 }
 
+/** GET /geo/route — the road route, distance, time and steps between two points ({lat, lng}). */
+export function fetchRoute({ from, to }) {
+  return apiRequest('/geo/route', { from_lat: from.lat, from_lng: from.lng, to_lat: to.lat, to_lng: to.lng });
+}
+
 /** GET /banks — banks for withdrawals, each with its account-number length (min/max digits). */
 export function fetchBanks() {
   return apiRequest('/banks');

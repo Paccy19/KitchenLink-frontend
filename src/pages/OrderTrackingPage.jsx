@@ -23,6 +23,8 @@ import {
 import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
 import SwitchToDeliveryModal from '../components/orders/SwitchToDeliveryModal';
+import CallKitchenButton from '../components/orders/CallKitchenButton';
+import KitchenDirectionsModal from '../components/orders/KitchenDirectionsModal';
 import MessageKitchenButton from '../components/chat/MessageKitchenButton';
 import LiveDeliveryTracker from '../components/tracking/LiveDeliveryTracker';
 import { formatScheduledFor } from '../utils/schedule';
@@ -52,6 +54,7 @@ export default function OrderTrackingPage() {
 
   const [switchOpen, setSwitchOpen] = useState(false);
   const [switchedNotice, setSwitchedNotice] = useState(false);
+  const [directionsOpen, setDirectionsOpen] = useState(false);
 
   const targetOrderId = orderId || activeTrackingOrderId;
   const order = targetOrderId
@@ -84,10 +87,16 @@ export default function OrderTrackingPage() {
   const isCancelled = order.status === 'cancelled';
   const canCancel = ['placed', 'confirmed', 'preparing', 'ready'].includes(order.status);
   const progressStatuses = statuses.filter((status) => status.id !== 'cancelled');
-  const pickupDirections =
+  // Directions open on our own map, from the customer's position to the kitchen.
+  const pickupKitchen =
     isPickup && order.pickup?.latitude != null
-      ? `https://www.google.com/maps/dir/?api=1&destination=${order.pickup.latitude},${order.pickup.longitude}`
-      : '';
+      ? {
+          lat: order.pickup.latitude,
+          lng: order.pickup.longitude,
+          label: order.vendorName,
+          address: [order.pickup.address, order.pickup.neighborhood].filter(Boolean).join(', '),
+        }
+      : null;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
@@ -144,6 +153,8 @@ export default function OrderTrackingPage() {
           </button>
         )}
       </div>
+
+      <KitchenDirectionsModal open={directionsOpen} onClose={() => setDirectionsOpen(false)} kitchen={pickupKitchen} />
 
       <SwitchToDeliveryModal
         order={order}
@@ -372,13 +383,9 @@ export default function OrderTrackingPage() {
                   </div>
                 </div>
 
-                <a
-                  href={`tel:${order.driver.phone}`}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
-                >
-                  <Phone className="w-3.5 h-3.5 text-[#6d391d]" />
-                  <span>Call Delivery Worker</span>
-                </a>
+                {order.driver.phone && (
+                  <CallKitchenButton phone={order.driver.phone} kitchenName={order.driver.name || 'your delivery worker'} label="Call Delivery Worker" />
+                )}
               </div>
             </div>
           )}
@@ -398,23 +405,17 @@ export default function OrderTrackingPage() {
                   </p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
-                  {pickupDirections && (
-                    <a
-                      href={pickupDirections}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  {pickupKitchen && (
+                    <button
+                      type="button"
+                      onClick={() => setDirectionsOpen(true)}
                       className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
                     >
                       <Navigation className="w-3.5 h-3.5 text-[#6d391d]" /> Directions
-                    </a>
+                    </button>
                   )}
                   {order.pickup?.vendorPhone && (
-                    <a
-                      href={`tel:${order.pickup.vendorPhone}`}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
-                    >
-                      <Phone className="w-3.5 h-3.5 text-[#6d391d]" /> Call kitchen
-                    </a>
+                    <CallKitchenButton phone={order.pickup.vendorPhone} kitchenName={order.vendorName} />
                   )}
                 </div>
               </div>

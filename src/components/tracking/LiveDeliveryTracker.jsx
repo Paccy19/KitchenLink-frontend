@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Bike, Crosshair, Map as MapIcon, Phone, Radio, Star, X } from 'lucide-react';
+import { Bike, Crosshair, Map as MapIcon, Radio, Star, X } from 'lucide-react';
 import { fetchOrderLive } from '../../api/endpoints';
 import { formatDistance, formatMinutes } from '../../utils/routeMath';
 import LiveRouteMap from './LiveRouteMap';
+import CallKitchenButton from '../orders/CallKitchenButton';
 import useFullScreenOverlay from '../../hooks/useFullScreenOverlay';
 import { FullScreenPanel, FullScreenToggle, safeBottom, safeTop } from './FullScreenPanel';
 
@@ -165,12 +166,7 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
             </div>
           </div>
           {driver.phone && (
-            <a
-              href={`tel:${driver.phone}`}
-              className="flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#6d391d]" /> Call
-            </a>
+            <CallKitchenButton phone={driver.phone} kitchenName={driver.name || 'your delivery worker'} label="Call" className="flex-shrink-0" />
           )}
         </div>
       )}

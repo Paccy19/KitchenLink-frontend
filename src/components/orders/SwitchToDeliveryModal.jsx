@@ -4,6 +4,7 @@ import { Bike, CreditCard, Loader2, MapPin, Navigation, Smartphone, Wallet, X } 
 import { quoteSwitchToDelivery, switchOrderToDelivery } from '../../api/endpoints';
 import { useLocation } from '../../context/LocationContext';
 import { useAuth } from '../../context/AuthContext';
+import ModalPortal from '../common/ModalPortal';
 import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidMomoPhone, isValidRwandaPhone, sanitizePhoneInput, toLocalRwandaPhone } from '../../utils/validation';
 
 const METHODS = [
@@ -115,11 +116,12 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
   const field = 'w-full text-sm p-3 rounded-xl border border-stone-200 outline-none bg-white focus:border-[#542813]';
 
   return (
+    <ModalPortal>
     <div
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={(event) => event.target === event.currentTarget && !busy && onClose()}
     >
-      <div role="dialog" aria-modal="true" aria-label="Get this order delivered" className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto p-5 sm:p-6 space-y-4">
+      <div role="dialog" aria-modal="true" aria-label="Get this order delivered" className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="font-black text-gray-900 flex items-center gap-2">
@@ -255,5 +257,6 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
         {!addressOk && <p className="text-[11px] text-stone-400 -mt-2">Add a street, building or landmark so the worker can find you.</p>}
       </div>
     </div>
+    </ModalPortal>
   );
 }
