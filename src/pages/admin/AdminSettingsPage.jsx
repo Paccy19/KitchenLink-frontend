@@ -7,6 +7,7 @@ import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
 import Can from '../../components/admin-dashboard/Can';
 import DeliveryTimingCard from '../../components/admin-dashboard/DeliveryTimingCard';
 import BankFormatsCard from '../../components/admin-dashboard/BankFormatsCard';
+import DeliveryFeesCard from '../../components/admin-dashboard/DeliveryFeesCard';
 import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
   Badge,
@@ -71,6 +72,10 @@ export default function AdminSettingsPage() {
 
       <Can permission="deliveries:read">
         <DeliveryTimingCard />
+      </Can>
+
+      <Can permission="deliveries:read">
+        <DeliveryFeesCard />
       </Can>
 
       <Can permission="payouts:read">
@@ -209,10 +214,20 @@ function OperationsRulesCard() {
             <RuleRow label="Wrong codes before the order locks" value={rules.customer_pickup.max_wrong_codes} />
 
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Delivery fee</p>
-            <RuleRow
-              label="Price"
-              value={`${rules.fees.base_rwf} RWF + ${rules.fees.per_km_rwf} RWF/km (min ${rules.fees.minimum_rwf} RWF)`}
-            />
+            {(rules.fees.ranges || []).length > 0 ? (
+              rules.fees.ranges.map((range) => (
+                <RuleRow
+                  key={range.from_km}
+                  label={range.to_km == null ? `${range.from_km} km and more` : `${range.from_km}–${range.to_km} km`}
+                  value={`${Number(range.fee_rwf).toLocaleString()} RWF`}
+                />
+              ))
+            ) : (
+              <RuleRow
+                label="Price"
+                value={`${rules.fees.base_rwf} RWF + ${rules.fees.per_km_rwf} RWF/km (min ${rules.fees.minimum_rwf} RWF)`}
+              />
+            )}
             <RuleRow label="Share paid to the delivery worker" value={`${rules.fees.driver_share_percent}%`} />
 
             <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Maps & messages</p>
