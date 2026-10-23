@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Clock, Layers, ImageOff, UtensilsCrossed, PackageOpen } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Clock, Layers, ImageOff, UtensilsCrossed, PackageOpen, EyeOff } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
 import MenuItemFormModal from '../../components/vendor-dashboard/MenuItemFormModal';
@@ -7,7 +7,9 @@ import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
 
 export default function VendorMenuPage() {
-  const { menuItems, categoryNames, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability } = useVendor();
+  const { vendor, menuItems, categoryNames, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability } = useVendor();
+  // Pending kitchens can build their menu; customers see it once approved.
+  const isPending = vendor?.verificationStatus === 'Pending';
   const { success, error } = useToast();
 
   const [query, setQuery] = useState('');
@@ -89,6 +91,16 @@ export default function VendorMenuPage() {
           Add Dish
         </button>
       </div>
+
+      {isPending && (
+        <div className="flex items-start gap-3 rounded-2xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-900">
+          <EyeOff className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <p>
+            <span className="font-bold">Not visible to customers yet.</span> Add and edit your dishes now — your
+            kitchen and menu appear on the marketplace as soon as an admin approves your account.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">

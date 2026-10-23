@@ -230,7 +230,8 @@ export default function VendorLayout() {
                 <BadgeCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <p>
                   <span className="font-bold">Verification pending.</span> Your documents are under review by our team.
-                  You can't manage your menu, orders, wallet or store until your account is approved.
+                  You can already add your menu — customers will see your kitchen and dishes once you're approved.
+                  Orders, wallet and opening your store unlock after approval.
                 </p>
               </div>
             )}
@@ -258,8 +259,9 @@ function PendingReviewPopup({ onClose }) {
           Documents under review
         </h2>
         <p className="mt-2 text-sm text-stone-600">
-          Your verification documents are still being reviewed by our team. You can't take any vendor
-          actions (menu, orders, wallet or opening your store) until your account is approved.
+          Your verification documents are still being reviewed by our team. You can set up your menu now,
+          but it stays hidden from customers — and orders, wallet and opening your store stay locked — until
+          your account is approved.
         </p>
         <p className="mt-2 text-xs text-stone-500">
           We'll notify you as soon as a decision is made. Questions? Use Help &amp; Support.
