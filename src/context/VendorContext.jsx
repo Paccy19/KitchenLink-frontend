@@ -344,7 +344,8 @@ export function VendorProvider({ children }) {
           : {
               payout_method: 'mobile_money',
               account_name: data.ownerName,
-              mobile_money_number: data.payoutNumber || data.phone,
+              // Always the registered phone (the server refuses any other).
+              mobile_money_number: data.phone,
             },
       ),
     );

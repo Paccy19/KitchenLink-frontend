@@ -39,6 +39,22 @@ import {
 
 const BANK_ACCOUNT_MAX_LENGTH = 20;
 
+/** "0788123456" from any Rwandan phone format ('' when not valid yet). */
+const localPhone = (value) => {
+  let digits = String(value || '').replace(/\D/g, '');
+  if (digits.startsWith('250')) digits = digits.slice(3);
+  if (!digits.startsWith('0')) digits = `0${digits}`;
+  return /^07\d{8}$/.test(digits) ? digits : '';
+};
+
+/** Mobile network of a Rwandan number: 078/079 MTN, 072/073 Airtel. */
+const networkOf = (phone) => {
+  const local = localPhone(phone);
+  if (/^07[89]/.test(local)) return 'MTN Mobile Money';
+  if (/^07[23]/.test(local)) return 'Airtel Money';
+  return '';
+};
+
 const STEPS = [
   { id: 1, label: 'Business', icon: Store },
   { id: 2, label: 'Operations', icon: MapPin },
@@ -118,9 +134,14 @@ export default function VendorRegisterPage() {
       if (form.foodCategories.length === 0) next.foodCategories = 'Select at least one food category.';
     }
     if (current === 3) {
-      if (!form.payoutNumber.trim()) next.payoutNumber = 'Payout number/account is required.';
-      else if (isBankPayout && form.payoutNumber.length < 6) next.payoutNumber = 'Enter a valid bank account number.';
-      else if (!isBankPayout && !isValidRwandaPhone(form.payoutNumber)) next.payoutNumber = PHONE_ERROR;
+      if (isBankPayout) {
+        if (!form.payoutNumber.trim()) next.payoutNumber = 'Bank account number is required.';
+        else if (form.payoutNumber.length < 6) next.payoutNumber = 'Enter a valid bank account number.';
+      } else if (!localPhone(form.phone)) {
+        next.payoutNumber = 'Enter a valid phone number in step 1 first — payouts go to that number.';
+      } else if (networkOf(form.phone) && networkOf(form.phone) !== form.payoutMethod) {
+        next.payoutNumber = `${localPhone(form.phone)} is an ${networkOf(form.phone).split(' ')[0]} number — choose ${networkOf(form.phone)}, or Bank Transfer.`;
+      }
       if (form.documents.length === 0) next.documents = 'Upload at least one verification document.';
       if (!form.agree) next.agree = 'Please accept the vendor agreement.';
     }
@@ -341,7 +362,12 @@ export default function VendorRegisterPage() {
                   autoComplete="tel"
                   maxLength={PHONE_MAX_LENGTH}
                   value={form.phone}
-                  onChange={(event) => update({ phone: sanitizePhoneInput(event.target.value) })}
+                  onChange={(event) => {
+                    const phone = sanitizePhoneInput(event.target.value);
+                    // Mobile-money payouts use this number, so match its network.
+                    const network = networkOf(phone);
+                    update(network && !isBankPayout ? { phone, payoutMethod: network } : { phone });
+                  }}
                   placeholder={PHONE_PLACEHOLDER}
                   className={inputClass(errors.phone)}
                 />
@@ -459,22 +485,35 @@ export default function VendorRegisterPage() {
                   <option>Bank Transfer</option>
                 </select>
               </Field>
-              <Field label="Payout number / account" error={errors.payoutNumber}>
-                <input
-                  type={isBankPayout ? 'text' : 'tel'}
-                  inputMode="numeric"
-                  maxLength={isBankPayout ? BANK_ACCOUNT_MAX_LENGTH : PHONE_MAX_LENGTH}
-                  value={form.payoutNumber}
-                  onChange={(event) =>
-                    update({
-                      payoutNumber: isBankPayout
-                        ? event.target.value.replace(/\D/g, '').slice(0, BANK_ACCOUNT_MAX_LENGTH)
-                        : sanitizePhoneInput(event.target.value),
-                    })
-                  }
-                  placeholder={isBankPayout ? 'Bank account number' : PHONE_PLACEHOLDER}
-                  className={inputClass(errors.payoutNumber)}
-                />
+              <Field label={isBankPayout ? 'Bank account number' : 'Payout number'} error={errors.payoutNumber}>
+                {isBankPayout ? (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={BANK_ACCOUNT_MAX_LENGTH}
+                    value={form.payoutNumber}
+                    onChange={(event) =>
+                      update({ payoutNumber: event.target.value.replace(/\D/g, '').slice(0, BANK_ACCOUNT_MAX_LENGTH) })
+                    }
+                    placeholder="Bank account number"
+                    className={inputClass(errors.payoutNumber)}
+                  />
+                ) : (
+                  <>
+                    {/* Mobile-money payouts always go to the registered phone. */}
+                    <input
+                      type="tel"
+                      readOnly
+                      value={localPhone(form.phone) || form.phone}
+                      placeholder={PHONE_PLACEHOLDER}
+                      aria-describedby="payout-phone-hint"
+                      className={`${inputClass(errors.payoutNumber)} bg-stone-50 text-stone-600 cursor-not-allowed`}
+                    />
+                    <p id="payout-phone-hint" className="mt-1 text-[11px] text-stone-500">
+                      Your registered phone number. To use another number, change your phone in step 1.
+                    </p>
+                  </>
+                )}
               </Field>
             </div>
 
