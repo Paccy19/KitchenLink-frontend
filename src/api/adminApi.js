@@ -146,6 +146,9 @@ export const adminApi = {
   latePickups: (params) => adminRequest(`/admin/operations/late-pickups${qs(params)}`),
   operationsRules: () => adminRequest('/admin/operations/rules'),
   // Delivery timing rules (warning / late charge / automatic reassign), in minutes.
+  // Banks for withdrawals and each bank's account-number length.
+  bankFormats: () => adminRequest('/admin/settings/banks'),
+  saveBankFormats: (body) => adminRequest('/admin/settings/banks', { method: 'PUT', body }),
   deliveryTiming: () => adminRequest('/admin/operations/delivery-timing'),
   saveDeliveryTiming: (body) => adminRequest('/admin/operations/delivery-timing', { method: 'PUT', body }),
 

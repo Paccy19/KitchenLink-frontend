@@ -264,11 +264,13 @@ export function mapDriverWallet(raw = {}) {
     withdrawn: Number(raw.withdrawn_rwf ?? 0),
     processing: Number(raw.processing_rwf ?? 0),
     payoutPhone: raw.payout_phone || '',
+    payoutName: raw.payout_name || '',
     withdrawals: (raw.withdrawals || []).map((entry) => ({
       id: entry.id,
       amount: Number(entry.amount_rwf ?? 0),
       method: entry.method_label || entry.method || 'Mobile Money',
-      accountNumber: entry.account_number || '',
+      // MoMo number, or "<bank> · <account number>" for bank transfers.
+      accountNumber: entry.bank_name ? `${entry.bank_name} · ${entry.account_number || ''}` : entry.account_number || '',
       status: entry.status || 'processing',
       reference: entry.reference || '',
       failureReason: entry.failure_reason || '',

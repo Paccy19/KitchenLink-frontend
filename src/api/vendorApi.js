@@ -300,11 +300,18 @@ export function mapWallet(raw = {}) {
   return {
     withdrawn: Number(raw.withdrawn_rwf ?? 0),
     baseSales: Math.max(0, Number(raw.total_sales_rwf ?? 0) - Number(raw.withdrawn_rwf ?? 0)),
+    // The number the kitchen registered with, suggested for mobile money payouts.
+    payoutPhone: raw.payout_phone || '',
+    payoutName: raw.payout_name || '',
     withdrawalHistory: (raw.withdrawals || []).map((entry) => ({
       id: entry.id,
       reference: entry.reference || entry.id,
       amount: Number(entry.amount_rwf ?? 0),
       method: entry.method_label || entry.method,
+      // Where it was sent: the MoMo number, or "<bank> · <account>".
+      destination: entry.bank_name
+        ? `${entry.bank_name} · ${entry.account_number || ''}`
+        : entry.account_number || '',
       date: entry.created_at,
       status: titleCase(entry.status),
     })),

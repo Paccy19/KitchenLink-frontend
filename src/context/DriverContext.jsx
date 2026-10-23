@@ -266,8 +266,9 @@ export function DriverProvider({ children }) {
 
   /** Request a payout of `amount` RWF to a mobile money number. */
   const requestWithdrawal = useCallback(
-    async ({ amount, method, phone }) => {
-      const result = await driverApi.requestWithdrawal({ amount_rwf: amount, method, phone });
+    // `destination`: { method, phone } for mobile money, or { method, bank_name, account_name, account_number }.
+    async ({ amount, ...destination }) => {
+      const result = await driverApi.requestWithdrawal({ amount_rwf: amount, ...destination });
       await refreshWallet();
       return result.withdrawal;
     },

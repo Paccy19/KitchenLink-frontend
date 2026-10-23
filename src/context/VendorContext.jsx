@@ -534,8 +534,10 @@ export function VendorProvider({ children }) {
   /* ------------------------------- wallet ------------------------------ */
 
   const requestWithdrawal = useCallback(
-    async (amount, method = 'MTN Mobile Money') => {
-      const result = await vendorApi.requestWithdrawal({ amount_rwf: amount, method });
+    // `destination`: { method, phone } for mobile money, or { method, bank_name, account_name, account_number }.
+    async (amount, destination = { method: 'MTN Mobile Money' }) => {
+      const method = destination.method;
+      const result = await vendorApi.requestWithdrawal({ amount_rwf: amount, ...destination });
       await Promise.all([refreshWallet(), refreshDashboard()]);
       return {
         id: result.withdrawal?.id,

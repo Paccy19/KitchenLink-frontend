@@ -2,12 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Wallet,
-  CheckCircle2,
   Star,
   RotateCcw,
   TrendingUp,
   Banknote,
-  Smartphone,
   ArrowUpRight,
   Clock,
 } from 'lucide-react';
@@ -16,15 +14,14 @@ import { deliveryStatusLabel } from '../../api/driverApi';
 import { useToast } from '../../components/common/Toast';
 import StatCard from '../../components/vendor-dashboard/StatCard';
 import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
-import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
+import PayoutDestinationPicker, {
+  emptyPayoutDestination,
+  payoutDestinationPayload,
+  payoutDestinationReady,
+  payoutDestinationText,
+} from '../../components/common/PayoutDestinationPicker';
 
 const money = (value) => `${Number(value || 0).toLocaleString()} RWF`;
-
-// Riders are paid by mobile money (same options as the vendor wallet).
-const METHODS = [
-  { id: 'MTN Mobile Money', hint: '078 / 079' },
-  { id: 'Airtel Money', hint: '072 / 073' },
-];
 
 const STATUS_STYLES = {
   processing: { label: 'Processing', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -33,24 +30,19 @@ const STATUS_STYLES = {
 };
 
 export default function DriverEarningsPage() {
-  const { earnings, refreshEarnings, stats, wallet, refreshWallet, requestWithdrawal } = useDriver();
+  const { driver, earnings, refreshEarnings, stats, wallet, refreshWallet, requestWithdrawal } = useDriver();
   const { success, error } = useToast();
   const [busy, setBusy] = useState(false);
 
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState(METHODS[0].id);
-  const [phone, setPhone] = useState('');
+  // Where the money goes: registered number (confirmed), another number, or a bank account.
+  const [destination, setDestination] = useState(emptyPayoutDestination);
   const [confirm, setConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     refreshWallet().catch(() => null);
   }, [refreshWallet]);
-
-  // Default the payout number to the rider's own phone once it is known.
-  useEffect(() => {
-    if (!phone && wallet?.payoutPhone) setPhone(wallet.payoutPhone);
-  }, [wallet?.payoutPhone, phone]);
 
   const refresh = async () => {
     setBusy(true);
@@ -74,18 +66,18 @@ export default function DriverEarningsPage() {
   const numericAmount = Number(amount);
   const invalid = !amount || !Number.isInteger(numericAmount) || numericAmount <= 0;
   const exceeds = !invalid && numericAmount > available;
-  const phoneInvalid = !isValidRwandaPhone(phone);
+  const destinationReady = payoutDestinationReady(destination);
 
   const submit = () => {
-    if (invalid || exceeds || phoneInvalid) return;
+    if (invalid || exceeds || !destinationReady) return;
     setConfirm(true);
   };
 
   const confirmWithdrawal = async () => {
     setSubmitting(true);
     try {
-      await requestWithdrawal({ amount: numericAmount, method, phone });
-      success(`Withdrawal of ${money(numericAmount)} requested to ${method} ${phone}.`);
+      await requestWithdrawal({ amount: numericAmount, ...payoutDestinationPayload(destination) });
+      success(`Withdrawal of ${money(numericAmount)} requested to ${payoutDestinationText(destination)}.`);
       setAmount('');
     } catch (err) {
       error(err?.message || 'Could not submit your withdrawal.');
@@ -109,7 +101,7 @@ export default function DriverEarningsPage() {
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Earnings & Wallet</h1>
           <p className="text-sm font-medium text-stone-500">
-            You keep {summary.sharePercent}% of every delivery fee · withdraw to mobile money anytime
+            You keep {summary.sharePercent}% of every delivery fee · withdraw to mobile money or your bank anytime
           </p>
         </div>
         <button
@@ -198,58 +190,18 @@ export default function DriverEarningsPage() {
             {exceeds && <p className="text-[11px] text-red-500 font-semibold mt-1.5">Amount exceeds available balance.</p>}
           </div>
 
-          <div>
-            <span className="text-xs font-bold text-stone-500 block mb-1.5">Payout method</span>
-            <div className="space-y-2">
-              {METHODS.map((option) => {
-                const active = method === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setMethod(option.id)}
-                    aria-pressed={active}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-xs font-bold transition ${
-                      active
-                        ? 'border-[#3b5327] bg-emerald-50/60 text-[#1c2b12]'
-                        : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                    }`}
-                  >
-                    <Smartphone className="w-4 h-4 text-[#3b5327]" />
-                    {option.id}
-                    <span className="text-[10px] font-medium text-stone-400">{option.hint}</span>
-                    {active && <CheckCircle2 className="w-4 h-4 ml-auto text-[#3b5327]" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="withdraw-phone" className="text-xs font-bold text-stone-500 block mb-1.5">
-              Mobile money number
-            </label>
-            <input
-              id="withdraw-phone"
-              type="tel"
-              inputMode="tel"
-              maxLength={PHONE_MAX_LENGTH}
-              value={phone}
-              onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
-              placeholder={PHONE_PLACEHOLDER}
-              className={`w-full text-sm p-3 rounded-xl border outline-none transition ${
-                phone && phoneInvalid ? 'border-red-300 focus:border-red-400' : 'border-stone-200 focus:border-[#3b5327]'
-              }`}
-            />
-            {phone && phoneInvalid && (
-              <p className="text-[11px] text-red-500 font-semibold mt-1.5">Enter an MTN or Airtel number, e.g. 0788123456.</p>
-            )}
-          </div>
+          <PayoutDestinationPicker
+            value={destination}
+            onChange={setDestination}
+            registeredPhone={wallet?.payoutPhone || driver?.phone || ''}
+            defaultName={wallet?.payoutName || driver?.name || ''}
+            theme="moss"
+          />
 
           <button
             type="button"
             onClick={submit}
-            disabled={invalid || exceeds || phoneInvalid || submitting}
+            disabled={invalid || exceeds || !destinationReady || submitting}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1c2b12] to-[#3b5327] text-white font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-50 disabled:active:scale-100"
           >
             Withdraw
@@ -369,7 +321,7 @@ export default function DriverEarningsPage() {
       <ConfirmDialog
         isOpen={confirm}
         title="Confirm withdrawal"
-        message={`Withdraw ${money(numericAmount)} to ${method} ${phone}? It will be sent within 24 hours.`}
+        message={`Withdraw ${money(numericAmount)} to ${payoutDestinationText(destination)}? It will be sent within 24 hours.`}
         confirmLabel={submitting ? 'Submitting…' : 'Confirm Withdrawal'}
         tone="default"
         onConfirm={confirmWithdrawal}

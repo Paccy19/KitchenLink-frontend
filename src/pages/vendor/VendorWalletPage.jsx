@@ -4,32 +4,31 @@ import {
   TrendingUp,
   Percent,
   Clock,
-  CheckCircle2,
   ArrowDownRight,
   ArrowUpRight,
   Banknote,
-  Smartphone,
-  Building2,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
 import StatCard from '../../components/vendor-dashboard/StatCard';
 import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
+import PayoutDestinationPicker, {
+  emptyPayoutDestination,
+  payoutDestinationPayload,
+  payoutDestinationReady,
+  payoutDestinationText,
+} from '../../components/common/PayoutDestinationPicker';
 
 const money = (value) => `${value.toLocaleString()} RWF`;
-const METHODS = [
-  { id: 'MTN Mobile Money', icon: Smartphone },
-  { id: 'Airtel Money', icon: Smartphone },
-  { id: 'Bank Transfer', icon: Building2 },
-];
 
 export default function VendorWalletPage() {
   const { vendor, orders, wallet, stats, requestWithdrawal } = useVendor();
   const { success, error } = useToast();
 
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState(METHODS[0].id);
+  const [destination, setDestination] = useState(emptyPayoutDestination);
   const [confirm, setConfirm] = useState(false);
+  const destinationReady = payoutDestinationReady(destination);
 
   const transactions = useMemo(() => {
     const payouts = orders
@@ -56,7 +55,7 @@ export default function VendorWalletPage() {
       id: entry.id,
       type: 'debit',
       title: 'Withdrawal',
-      subtitle: `${entry.method} · ${entry.status === 'Failed' ? 'Failed · refunded to your balance' : entry.status}`,
+      subtitle: `${entry.method}${entry.destination ? ` ${entry.destination}` : ''} · ${entry.status === 'Failed' ? 'Failed · refunded to your balance' : entry.status}`,
       amount: entry.amount,
       date: entry.date,
     }));
@@ -69,14 +68,14 @@ export default function VendorWalletPage() {
   const exceeds = !invalid && numericAmount > stats.availableBalance;
 
   const submit = () => {
-    if (invalid || exceeds) return;
+    if (invalid || exceeds || !destinationReady) return;
     setConfirm(true);
   };
 
   const confirmWithdrawal = async () => {
     try {
-      const entry = await requestWithdrawal(numericAmount, method);
-      success(`Withdrawal of ${money(numericAmount)} submitted via ${entry.method}.`);
+      await requestWithdrawal(numericAmount, payoutDestinationPayload(destination));
+      success(`Withdrawal of ${money(numericAmount)} submitted to ${payoutDestinationText(destination)}.`);
       setConfirm(false);
       setAmount('');
     } catch (err) {
@@ -139,36 +138,18 @@ export default function VendorWalletPage() {
             {exceeds && <p className="text-[11px] text-red-500 font-semibold mt-1.5">Amount exceeds available balance.</p>}
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-stone-500 block mb-1.5">Payout method</label>
-            <div className="space-y-2">
-              {METHODS.map((option) => {
-                const Icon = option.icon;
-                const active = method === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setMethod(option.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-xs font-bold transition ${
-                      active
-                        ? 'border-[#542813] bg-[#faf6f2] text-[#3d1b0c]'
-                        : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 text-[#8a5332]" />
-                    {option.id}
-                    {active && <CheckCircle2 className="w-4 h-4 ml-auto text-[#542813]" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <PayoutDestinationPicker
+            value={destination}
+            onChange={setDestination}
+            registeredPhone={wallet.payoutPhone || vendor.phone}
+            defaultName={wallet.payoutName || vendor.ownerName || vendor.name}
+            theme="brown"
+          />
 
           <button
             type="button"
             onClick={submit}
-            disabled={invalid || exceeds}
+            disabled={invalid || exceeds || !destinationReady}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-50 disabled:active:scale-100"
           >
             Withdraw
@@ -221,7 +202,7 @@ export default function VendorWalletPage() {
       <ConfirmDialog
         isOpen={confirm}
         title="Confirm withdrawal"
-        message={`Withdraw ${money(numericAmount)} via ${method}? It will be processed within 24 hours.`}
+        message={`Withdraw ${money(numericAmount)} to ${payoutDestinationText(destination)}? It will be processed within 24 hours.`}
         confirmLabel="Confirm Withdrawal"
         tone="default"
         onConfirm={confirmWithdrawal}

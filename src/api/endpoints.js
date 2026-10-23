@@ -22,6 +22,11 @@ export function fetchHomeFeed({ lat, lng, label, vendor_type } = {}) {
   return apiRequest('/home/feed', { lat, lng, label, vendor_type });
 }
 
+/** GET /banks — banks for withdrawals, each with its account-number length (min/max digits). */
+export function fetchBanks() {
+  return apiRequest('/banks');
+}
+
 /** GET /vendors/types — every kitchen type with its label and description. */
 export function fetchVendorTypes() {
   return apiRequest('/vendors/types');

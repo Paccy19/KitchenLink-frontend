@@ -6,6 +6,7 @@ import { useAdmin } from '../../context/AdminContext';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
 import Can from '../../components/admin-dashboard/Can';
 import DeliveryTimingCard from '../../components/admin-dashboard/DeliveryTimingCard';
+import BankFormatsCard from '../../components/admin-dashboard/BankFormatsCard';
 import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
   Badge,
@@ -70,6 +71,10 @@ export default function AdminSettingsPage() {
 
       <Can permission="deliveries:read">
         <DeliveryTimingCard />
+      </Can>
+
+      <Can permission="payouts:read">
+        <BankFormatsCard />
       </Can>
 
       <Can permission="dashboard:read">

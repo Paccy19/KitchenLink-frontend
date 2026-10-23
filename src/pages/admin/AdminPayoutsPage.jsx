@@ -233,6 +233,7 @@ export default function AdminPayoutsPage() {
                     <td className="px-4 py-3 font-bold text-gray-900">{formatRwf(withdrawal.amount_rwf)}</td>
                     <td className="px-4 py-3 text-stone-600">
                       <p>{withdrawal.method_label}</p>
+                      {withdrawal.bank_name && <p className="text-[11px] font-semibold text-stone-500">{withdrawal.bank_name}</p>}
                       <p className="text-[11px] text-stone-400">{withdrawal.account_number || 'No number on file'}</p>
                     </td>
                     <td className="px-4 py-3">
@@ -374,6 +375,7 @@ export default function AdminPayoutsPage() {
               <p className="text-stone-600">
                 Send <strong className="text-gray-900">{formatRwf(target.amount_rwf)}</strong> via{' '}
                 <strong className="text-gray-900">{target.method_label}</strong> to{' '}
+                {target.bank_name && <strong className="text-gray-900">{target.bank_name} account </strong>}
                 <strong className="text-gray-900">{target.account_number || 'their saved payout details'}</strong>
                 {target.account_name ? ` (${target.account_name})` : ''}
               </p>
