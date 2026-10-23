@@ -35,9 +35,12 @@ import { notificationLink } from '../../utils/notificationLink';
 import NotificationPopups from './NotificationPopups';
 import RoleSelectModal from '../auth/RoleSelectModal';
 import ThemeToggle from './ThemeToggle';
+import useSupportUnread from '../../hooks/useSupportUnread';
+import { chatApi } from '../../api/endpoints';
 import {
   Bell,
   CheckCheck,
+  MessageCircle,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -71,6 +74,8 @@ export default function Navbar() {
   } = useAdmin();
   const adminSignedIn = isAdminSignedIn || hasAdminToken;
   const { notifications, unreadCount, loaded: notificationsLoaded, markRead, markAllRead } = useNotifications();
+  // Unread messages from kitchens (customer–kitchen chat).
+  const chatUnread = useSupportUnread(chatApi, { enabled: isAuthenticated });
 
   // A vendor/driver only gets a way back to their dashboard after explicitly
   // choosing to visit the marketplace, and only while browsing marketplace/shop pages.
@@ -400,6 +405,15 @@ export default function Navbar() {
                           <ListOrdered className="w-4 h-4 text-stone-400" />
                           <span>Order History</span>
                         </Link>
+                        <Link to="/messages" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <MessageCircle className="w-4 h-4 text-stone-400" />
+                          <span>Messages</span>
+                          {chatUnread > 0 && (
+                            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-[#542813] text-white text-[10px] font-black flex items-center justify-center">
+                              {chatUnread}
+                            </span>
+                          )}
+                        </Link>
                         <Link to="/wishlist" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
                           <Heart className="w-4 h-4 text-rose-500" />
                           <span>Saved Dishes</span>
@@ -640,6 +654,19 @@ export default function Navbar() {
               className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
             >
               My Profile
+            </Link>
+            <Link
+              to="/messages"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
+            >
+              <MessageCircle className="w-4 h-4 text-[#8a5332]" />
+              Messages
+              {chatUnread > 0 && (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-[#542813] text-white text-[10px] font-black flex items-center justify-center">
+                  {chatUnread}
+                </span>
+              )}
             </Link>
             <Link
               to="/support"

@@ -339,6 +339,18 @@ export const vendorApi = {
     reply: (id, message) =>
       vendorRequest(`/vendor/support/${encodeURIComponent(id)}/messages`, { method: 'POST', body: { message } }),
   },
+  // Chats with customers (one conversation per customer).
+  chats: {
+    list: () => vendorRequest('/vendor/chats'),
+    unreadCount: () => vendorRequest('/vendor/chats/unread-count'),
+    get: (id, params = {}) => {
+      const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value)).toString();
+      return vendorRequest(`/vendor/chats/${encodeURIComponent(id)}${query ? `?${query}` : ''}`);
+    },
+    send: (id, body) =>
+      vendorRequest(`/vendor/chats/${encodeURIComponent(id)}/messages`, { method: 'POST', body: { body } }),
+    markRead: (id) => vendorRequest(`/vendor/chats/${encodeURIComponent(id)}/read`, { method: 'POST' }),
+  },
   updateProfile: (payload) =>
     vendorRequest('/vendor/profile', { method: 'PATCH', body: payload }),
   // Ask an admin to change the kitchen's vendor type, or withdraw the request.

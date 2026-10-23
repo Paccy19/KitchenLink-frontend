@@ -26,6 +26,7 @@ import { formatRwf } from '../api/normalize';
 import { VendorAvatar } from '../components/home/VendorCard';
 import DishHoverPreview from '../components/common/DishHoverPreview';
 import VendorTypeBadge from '../components/common/VendorTypeBadge';
+import MessageKitchenButton from '../components/chat/MessageKitchenButton';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
 /**
@@ -246,6 +247,8 @@ export default function VendorPage() {
                 {vendor.operatingHours}
               </div>
             )}
+
+            <MessageKitchenButton vendorId={vendor.id} className="sm:ml-auto" />
           </div>
 
           {vendor.description && (

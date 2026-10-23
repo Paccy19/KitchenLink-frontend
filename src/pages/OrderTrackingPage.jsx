@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
+import MessageKitchenButton from '../components/chat/MessageKitchenButton';
 import LiveDeliveryTracker from '../components/tracking/LiveDeliveryTracker';
 import { formatScheduledFor } from '../utils/schedule';
 
@@ -167,6 +168,11 @@ export default function OrderTrackingPage() {
               {order.vendorName}
               {order.vendorLocation ? ` (${order.vendorLocation})` : ''}
             </span>
+            {order.vendorId && (
+              <div className="mt-2">
+                <MessageKitchenButton vendorId={order.vendorId} label="Message the kitchen" />
+              </div>
+            )}
           </div>
         </div>
 

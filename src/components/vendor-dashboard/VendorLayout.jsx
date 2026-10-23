@@ -16,6 +16,7 @@ import {
   Bell,
   LifeBuoy,
   FileSearch,
+  MessageCircle,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { vendorApi } from '../../api/vendorApi';
@@ -30,6 +31,7 @@ const NAV = [
   { to: '/vendor-dashboard/orders', label: 'Orders', icon: ClipboardList, badgeKey: 'pendingOrders' },
   { to: '/vendor-dashboard/menu', label: 'Menu', icon: UtensilsCrossed, badgeKey: 'menuCount' },
   { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet },
+  { to: '/vendor-dashboard/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'chats' },
   { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications' },
   { to: '/vendor-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support' },
 ];
@@ -49,6 +51,8 @@ export default function VendorLayout() {
   } = useVendor();
   const { connected } = useVendorRealtime({ enabled: true });
   const supportUnread = useSupportUnread(vendorApi.support, { enabled: Boolean(hasToken && isAuthenticated) });
+  // Unread customer messages.
+  const chatUnread = useSupportUnread(vendorApi.chats, { enabled: Boolean(hasToken && isAuthenticated) });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isPending = vendor?.verificationStatus === 'Pending';
   // Pending vendors see the review popup on arrival and whenever they try an action.
@@ -80,6 +84,7 @@ export default function VendorLayout() {
     if (item.badgeKey === 'menuCount') return menuItems.length;
     if (item.badgeKey === 'notifications') return unreadNotifications;
     if (item.badgeKey === 'support') return supportUnread;
+    if (item.badgeKey === 'chats') return chatUnread;
     return 0;
   };
 

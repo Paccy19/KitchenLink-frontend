@@ -185,6 +185,16 @@ export const supportApi = {
     apiJson('POST', `/support/${encodeURIComponent(ticketId)}/messages`, { message }),
 };
 
+// Customer–kitchen chat (one conversation per kitchen).
+export const chatApi = {
+  list: () => apiJson('GET', '/chats'),
+  unreadCount: () => apiJson('GET', '/chats/unread-count'),
+  openWithVendor: (vendorId) => apiJson('POST', `/chats/with/${encodeURIComponent(vendorId)}`),
+  get: (id, params = {}) => apiRequest(`/chats/${encodeURIComponent(id)}`, params),
+  send: (id, body) => apiJson('POST', `/chats/${encodeURIComponent(id)}/messages`, { body }),
+  markRead: (id) => apiJson('POST', `/chats/${encodeURIComponent(id)}/read`),
+};
+
 export const fetchNotifications = (params = {}) =>
   apiRequest('/notifications', params);
 export const markNotificationRead = (notificationId) =>

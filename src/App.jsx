@@ -20,6 +20,9 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrdersHistoryPage = lazy(() => import('./pages/OrdersHistoryPage'));
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage'));
+const VendorMessagesPage = lazy(() => import('./pages/vendor/VendorMessagesPage'));
+const AdminChatsPage = lazy(() => import('./pages/admin/AdminChatsPage'));
 
 // Vendor dashboard (separate shell without the customer chrome).
 const VendorLayout = lazy(() => import('./components/vendor-dashboard/VendorLayout'));
@@ -104,6 +107,7 @@ export default function App() {
               <Route path="/orders" element={<OrdersHistoryPage />} />
               <Route path="/wishlist" element={<WishlistPage />} />
               <Route path="/support" element={<SupportPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
               <Route path="/vendor-register" element={<VendorRegisterPage />} />
               <Route path="/vendor-login" element={<VendorLoginPage />} />
               <Route path="/driver-register" element={<DriverRegisterPage />} />
@@ -124,6 +128,7 @@ export default function App() {
                 <Route path="books" element={<AdminPlatformBooksPage />} />
                 <Route path="categories" element={<AdminCategoriesPage />} />
                 <Route path="complaints" element={<AdminComplaintsPage />} />
+                <Route path="chats" element={<AdminChatsPage />} />
                 <Route path="refunds" element={<AdminRefundsPage />} />
                 <Route path="analytics" element={<AdminAnalyticsPage />} />
                 <Route path="team" element={<AdminTeamPage />} />
@@ -148,6 +153,7 @@ export default function App() {
                 <Route path="notifications" element={<VendorNotificationsPage />} />
                 <Route path="profile" element={<VendorProfilePage />} />
                 <Route path="support" element={<VendorSupportPage />} />
+                <Route path="messages" element={<VendorMessagesPage />} />
               </Route>
 
               <Route path="*" element={<HomePage />} />

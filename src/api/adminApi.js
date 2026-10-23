@@ -118,6 +118,10 @@ export const adminApi = {
   setUserStatus: (id, body) =>
     adminRequest(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'PATCH', body }),
 
+  // Customer–kitchen chats, read only.
+  listChats: (params) => adminRequest(`/admin/chats${qs(params)}`),
+  getChat: (id, params) => adminRequest(`/admin/chats/${encodeURIComponent(id)}${qs(params)}`),
+
   listVendors: (params) => adminRequest(`/admin/vendors${qs(params)}`),
   vendorCounts: () => adminRequest('/admin/vendors/counts'),
   getVendor: (id) => adminRequest(`/admin/vendors/${encodeURIComponent(id)}`),

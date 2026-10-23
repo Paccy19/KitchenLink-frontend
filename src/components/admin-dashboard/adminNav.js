@@ -8,6 +8,7 @@ import {
   Wallet,
   Tags,
   MessageSquareWarning,
+  MessagesSquare,
   RotateCcw,
   BarChart3,
   ScrollText,
@@ -44,7 +45,10 @@ export const ADMIN_SECTIONS = [
   {
     id: 'support',
     label: 'Support',
-    items: [{ to: '/admin-dashboard/complaints', label: 'Support & Complaints', icon: MessageSquareWarning, permission: 'complaints:read' }],
+    items: [
+      { to: '/admin-dashboard/complaints', label: 'Support & Complaints', icon: MessageSquareWarning, permission: 'complaints:read' },
+      { to: '/admin-dashboard/chats', label: 'Customer–Kitchen Chats', icon: MessagesSquare, permission: 'chats:read' },
+    ],
   },
   {
     id: 'finance',

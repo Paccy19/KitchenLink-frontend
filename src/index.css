@@ -738,3 +738,8 @@
 .dark :is(.app-theme, .app-theme-driver, .app-theme-admin) .bg-lime-100 {
   background-color: color-mix(in srgb, #84cc16 18%, transparent);
 }
+
+/* ── Chat: my own bubbles turn white in dark mode, so their time label must stay readable ── */
+.dark .app-theme .chat-bubble-mine .text-white\/70 {
+  color: color-mix(in srgb, var(--btn-primary-text) 65%, transparent);
+}
