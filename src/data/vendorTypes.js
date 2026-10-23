@@ -29,8 +29,29 @@ export const VENDOR_TYPES = [
   { code: 'chef', label: 'Chef', description: 'A professional chef cooking signature dishes.', icon: ChefHat, badge: 'bg-stone-800 text-white border-stone-800' },
   { code: 'meal_prep', label: 'Meal Prep', description: 'Ready-made meals prepared in advance for the week.', icon: Salad, badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
   { code: 'juice_drinks', label: 'Juice & Drinks', description: 'Fresh juices, smoothies and other drinks.', icon: CupSoda, badge: 'bg-lime-100 text-lime-800 border-lime-200' },
-  { code: 'other', label: 'Other', description: 'Any other kind of food business.', icon: Store, badge: 'bg-stone-100 text-stone-700 border-stone-200' },
+  {
+    code: 'other',
+    label: 'Other',
+    // Longer name on the sign-up and type-change cards; badges and filters use `label`.
+    title: 'Other food business',
+    description: 'Any food business that does not fit the types above (specialty, niche, or unique concept).',
+    // Catch-all for legitimate kitchens that don't fit the other types — same features, no extra rules.
+    examples: [
+      'Snack or street-food kiosks',
+      'Single-cuisine or cultural kitchens',
+      'Diet-specific kitchens (vegan, keto, diabetic-friendly)',
+      'Dessert-only or ice-cream shops',
+      'Hybrid concepts that mix categories',
+      'Niche sellers (only grilled fish, party snacks, breakfast packages)',
+      'Pop-up or cloud kitchens',
+    ],
+    icon: Store,
+    badge: 'bg-stone-100 text-stone-700 border-stone-200',
+  },
 ];
+
+/** The name shown on sign-up / type-change cards ("Other food business" for Other). */
+export const vendorTypeTitle = (type) => type.title || type.label;
 
 const BY_CODE = new Map(VENDOR_TYPES.map((type) => [type.code, type]));
 

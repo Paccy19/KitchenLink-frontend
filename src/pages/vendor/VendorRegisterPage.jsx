@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
-import { VENDOR_TYPES, vendorTypeLabel } from '../../data/vendorTypes';
+import { VENDOR_TYPES, vendorTypeLabel, vendorTypeTitle } from '../../data/vendorTypes';
 import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinatesPicker';
 import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
 import {
@@ -288,7 +288,7 @@ export default function VendorRegisterPage() {
                         <Icon className="w-4 h-4" aria-hidden="true" />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-sm font-extrabold text-gray-900">{type.label}</span>
+                        <span className="block text-sm font-extrabold text-gray-900">{vendorTypeTitle(type)}</span>
                         <span className="block text-[11px] text-stone-500 leading-snug mt-0.5">{type.description}</span>
                       </span>
                       {selected && <Check className="w-4 h-4 text-[#542813] flex-shrink-0 ml-auto" aria-hidden="true" />}
@@ -296,6 +296,18 @@ export default function VendorRegisterPage() {
                   );
                 })}
               </div>
+              {/* "Other": examples of what fits, so niche kitchens know they belong here. */}
+              {form.type === 'other' && (
+                <div className="mt-2 rounded-2xl border border-stone-200 bg-stone-50 px-3.5 py-2.5">
+                  <p className="text-[11px] font-bold text-stone-600">Other is for kitchens like:</p>
+                  <ul className="mt-1 grid sm:grid-cols-2 gap-x-4 gap-y-0.5 text-[11px] text-stone-500 list-disc pl-4">
+                    {VENDOR_TYPES.find((type) => type.code === 'other').examples.map((example) => (
+                      <li key={example}>{example}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-1.5 text-[11px] text-stone-400">Same features as every kitchen type — customers can filter by Other to find unique kitchens.</p>
+                </div>
+              )}
               {errors.type ? (
                 <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.type}</p>
               ) : (

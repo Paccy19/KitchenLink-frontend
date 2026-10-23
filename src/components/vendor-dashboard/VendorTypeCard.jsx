@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Clock, Shapes } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import VendorTypeBadge from '../common/VendorTypeBadge';
-import { VENDOR_TYPES, getVendorType } from '../../data/vendorTypes';
+import { VENDOR_TYPES, getVendorType, vendorTypeTitle } from '../../data/vendorTypes';
 
 /**
  * Vendor profile: the kitchen's current type and a request to change it. The
@@ -104,7 +104,7 @@ export default function VendorTypeCard() {
                     <Icon className="w-4 h-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-extrabold text-gray-900">{type.label}</span>
+                    <span className="block text-sm font-extrabold text-gray-900">{vendorTypeTitle(type)}</span>
                     <span className="block text-[11px] text-stone-500 leading-snug">{type.description}</span>
                   </span>
                 </button>
