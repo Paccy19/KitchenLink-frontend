@@ -170,7 +170,17 @@ export default function AdminCategoriesPage() {
                       </span>
                     )}
                     <div>
-                      <p className="font-bold text-gray-900">{category.name}</p>
+                      <p className="font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
+                        {category.name}
+                        {category.created_by_vendor && (
+                          <span
+                            title="Created by a kitchen from its menu"
+                            className="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700"
+                          >
+                            Added by {category.created_by_vendor.name}
+                          </span>
+                        )}
+                      </p>
                       {category.description && (
                         <p className="text-[11px] text-stone-400 line-clamp-1">{category.description}</p>
                       )}

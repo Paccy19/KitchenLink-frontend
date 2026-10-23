@@ -47,7 +47,30 @@ const Toggle = ({ checked, onChange, label, hint }) => (
 );
 
 export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
-  const { categoryNames } = useVendor();
+  const { categoryNames, createCategory } = useVendor();
+  // "+ New category": the kitchen names a category of its own.
+  const [newCategory, setNewCategory] = useState(null); // null = closed, string = draft name
+  const [categoryBusy, setCategoryBusy] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
+
+  const saveNewCategory = async () => {
+    const name = String(newCategory || '').trim().replace(/\s+/g, ' ');
+    if (name.length < 2) {
+      setCategoryError('Give the category a name (at least 2 letters).');
+      return;
+    }
+    setCategoryBusy(true);
+    setCategoryError('');
+    try {
+      const saved = await createCategory(name);
+      setForm((current) => ({ ...current, category: saved }));
+      setNewCategory(null);
+    } catch (err) {
+      setCategoryError(err?.message || 'Could not add the category.');
+    } finally {
+      setCategoryBusy(false);
+    }
+  };
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
@@ -256,17 +279,71 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
 
             <div>
               <label className="text-xs font-bold text-stone-500 block mb-1.5">Category</label>
-              <select
-                value={form.category}
-                onChange={(event) => update({ category: event.target.value })}
-                className={inputClass('category')}
-              >
-                {categoryNames.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+              {newCategory === null ? (
+                <select
+                  value={form.category}
+                  onChange={(event) => {
+                    if (event.target.value === '__new__') {
+                      setNewCategory('');
+                      setCategoryError('');
+                    } else {
+                      update({ category: event.target.value });
+                    }
+                  }}
+                  className={inputClass('category')}
+                >
+                  {categoryNames.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                  <option value="__new__">+ New category…</option>
+                </select>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      autoFocus
+                      maxLength={40}
+                      value={newCategory}
+                      onChange={(event) => setNewCategory(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          saveNewCategory();
+                        }
+                        if (event.key === 'Escape') {
+                          event.stopPropagation();
+                          setNewCategory(null);
+                        }
+                      }}
+                      placeholder="e.g. Seafood"
+                      className={`${inputClass('category')} flex-1`}
+                    />
+                    <button
+                      type="button"
+                      onClick={saveNewCategory}
+                      disabled={categoryBusy}
+                      className="px-3 rounded-xl bg-[#542813] text-white text-xs font-bold disabled:opacity-60"
+                    >
+                      {categoryBusy ? 'Adding…' : 'Add'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewCategory(null)}
+                      className="px-3 rounded-xl border border-stone-200 text-xs font-bold text-stone-600 hover:bg-stone-100"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {categoryError ? (
+                    <p className="text-[11px] text-red-500 font-semibold">{categoryError}</p>
+                  ) : (
+                    <p className="text-[11px] text-stone-400">Name it however you like — customers will see it too.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>

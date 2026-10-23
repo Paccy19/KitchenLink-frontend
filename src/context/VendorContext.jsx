@@ -189,6 +189,17 @@ export function VendorProvider({ children }) {
   }, [refreshProfile, refreshDashboard, refreshOrders, refreshWallet, refreshMenu, refreshSpecial, refreshNotifications, markSynced]);
   useAutoRefresh(refreshQuietly, { enabled: Boolean(authToken), intervalMs: 10000 });
 
+  /** Adds a food category from the menu form; returns its name. */
+  const createCategory = useCallback(async (name) => {
+    const category = await vendorApi.createCategory(name);
+    if (mounted.current && category) {
+      setCategories((current) =>
+        current.some((entry) => entry.id === category.id) ? current : [...current, category],
+      );
+    }
+    return category?.name || name;
+  }, []);
+
   const loadCategories = useCallback(async () => {
     try {
       const data = await vendorApi.menuCategories();
@@ -575,6 +586,7 @@ export function VendorProvider({ children }) {
       wallet,
       categories,
       categoryNames,
+      createCategory,
       stats,
       isRegistered,
       isAuthenticated,
@@ -631,6 +643,7 @@ export function VendorProvider({ children }) {
       wallet,
       categories,
       categoryNames,
+      createCategory,
       stats,
       isRegistered,
       isAuthenticated,

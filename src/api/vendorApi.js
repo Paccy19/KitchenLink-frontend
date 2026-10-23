@@ -393,6 +393,9 @@ export const vendorApi = {
 
   // Public discovery categories (no auth) so it works during registration too.
   menuCategories: () => vendorRequest('/home/categories'),
+  // A kitchen adds a food category (an existing one with that name is reused).
+  createCategory: async (name) =>
+    (await vendorRequest('/vendor/menu/categories', { method: 'POST', body: { name } }))?.category,
   listMenu: (params = {}) =>
     vendorRequest(`/vendor/menu?limit=${params.limit ?? 100}`),
   createMenuItem: (payload) =>
