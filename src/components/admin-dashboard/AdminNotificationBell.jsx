@@ -13,6 +13,7 @@ import {
   Inbox,
   Landmark,
   RotateCcw,
+  Shapes,
 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
@@ -21,6 +22,7 @@ import NotificationPopups from '../common/NotificationPopups';
 
 const TYPE_META = {
   vendor_application: { icon: Store, tone: 'bg-amber-50 text-amber-600' },
+  vendor_type_request: { icon: Shapes, tone: 'bg-orange-50 text-orange-600' },
   driver_application: { icon: Bike, tone: 'bg-sky-50 text-sky-600' },
   complaint_opened: { icon: MessageSquareWarning, tone: 'bg-rose-50 text-rose-600' },
   payout_requested: { icon: Wallet, tone: 'bg-violet-50 text-violet-600' },
@@ -35,6 +37,7 @@ const TYPE_META = {
 
 const FALLBACK_LINK = {
   vendor_application: '/admin-dashboard/vendors',
+  vendor_type_request: '/admin-dashboard/vendors',
   driver_application: '/admin-dashboard/drivers',
   complaint_opened: '/admin-dashboard/complaints',
   payout_requested: '/admin-dashboard/payouts',

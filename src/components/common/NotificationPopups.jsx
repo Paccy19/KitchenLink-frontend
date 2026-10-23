@@ -74,10 +74,23 @@ export default function NotificationPopups({ notifications, loaded, linkFor, onR
 
   const dismiss = useCallback((id) => setPopups((current) => current.filter((p) => p.id !== id)), []);
 
+  // Clicking or tapping anywhere outside the pop-ups closes them (they stay unread in the bell).
+  const stackRef = useRef(null);
+  const hasPopups = popups.length > 0;
+  useEffect(() => {
+    if (!hasPopups) return undefined;
+    const onPointerDown = (event) => {
+      if (stackRef.current && !stackRef.current.contains(event.target)) setPopups([]);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [hasPopups]);
+
   if (popups.length === 0) return null;
 
   return createPortal(
     <div
+      ref={stackRef}
       className="fixed z-[1100] inset-x-0 top-0 sm:inset-x-auto sm:right-4 sm:top-20 flex flex-col items-center sm:items-end gap-2 px-3 sm:px-0 pointer-events-none"
       style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
       aria-live="polite"
