@@ -85,7 +85,7 @@ function ProfileSection() {
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <span>
             You are still using the <strong>default admin password</strong>. Anyone who knows it can sign in.
-            Change it below; moving platform money stays blocked until you do.
+            Change it below: the rest of the admin panel stays locked until you do.
           </span>
         </div>
       )}

@@ -43,6 +43,10 @@ export default function AdminLayout() {
   const firstPage = sections[0]?.items[0]?.to || '/admin-dashboard/settings/profile';
   const current = itemForPath(pathname);
   const blocked = current && !allowed(current, access);
+  // Still on the default (publicly known) password: the server refuses every
+  // other admin action, so only the page to change it opens.
+  const passwordPage = '/admin-dashboard/settings/profile';
+  const mustChangePassword = Boolean(admin?.uses_default_password);
 
   const navLinkClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
@@ -212,14 +216,16 @@ export default function AdminLayout() {
           <main className="p-4 sm:p-6 pb-16">
             {admin?.uses_default_password && (
               <Link
-                to="/admin-dashboard/settings"
+                to={passwordPage}
                 className="mb-4 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-xs font-bold text-red-800 hover:bg-red-100"
               >
                 <AlertTriangle className="w-4 h-4" />
-                You are using the default admin password. Change it now in Settings.
+                You are using the default admin password. Change it below to unlock the admin panel.
               </Link>
             )}
-            {blocked && current.end ? (
+            {mustChangePassword && pathname.replace(/\/+$/, '') !== passwordPage ? (
+              <Navigate to={passwordPage} replace />
+            ) : blocked && current.end ? (
               <Navigate to={firstPage} replace />
             ) : blocked ? (
               <div className="max-w-lg mx-auto mt-16 bg-white rounded-3xl border border-stone-200 p-8 text-center">
