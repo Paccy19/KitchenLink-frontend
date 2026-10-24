@@ -1,5 +1,5 @@
 /**
- * Thin HTTP client for the Online Food Kitchen API.
+ * Thin HTTP client for the KitchenLink API.
  *
  * - Reads the base URL from `VITE_API_BASE_URL`
  * - Applies request timeouts and normalises errors into `ApiError`
@@ -64,7 +64,7 @@ async function http(path, params = {}, { method = 'GET', body, headers = {} } = 
     throw new ApiError(
       error?.name === 'AbortError'
         ? 'The request took too long. Check your connection.'
-        : 'Cannot reach the Online Food Kitchen API.',
+        : 'Cannot reach the KitchenLink API.',
       { path, cause: error },
     );
   } finally {

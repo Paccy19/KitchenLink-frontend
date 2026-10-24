@@ -384,7 +384,7 @@ function AddDestinationModal({ open, onClose, onDone }) {
         </Field>
         <Field label="Name for this account"><Input value={form.label} onChange={set('label')} placeholder="e.g. Company BK account" /></Field>
         <Field label={form.type === 'bank' ? 'Bank' : 'Network'}><Input value={form.provider} onChange={set('provider')} placeholder={form.type === 'bank' ? 'e.g. Bank of Kigali' : 'e.g. MTN Mobile Money'} /></Field>
-        <Field label="Account holder name"><Input value={form.account_name} onChange={set('account_name')} placeholder="e.g. Food Kitchen Ltd" /></Field>
+        <Field label="Account holder name"><Input value={form.account_name} onChange={set('account_name')} placeholder="e.g. KitchenLink Ltd" /></Field>
         <Field
           label={form.type === 'bank' ? 'Account number' : 'Phone number'}
           hint={accountNumberInvalid ? <span className="text-red-500 font-semibold">{PHONE_ERROR}</span> : null}
@@ -541,7 +541,7 @@ function PayoutSettingsCard({ settings, sweep, onChanged }) {
         {isBank ? (
           <>
             <Field label="Bank"><Input value={form.bank_name} onChange={set('bank_name')} placeholder="e.g. Bank of Kigali" /></Field>
-            <Field label="Account holder name"><Input value={form.account_name} onChange={set('account_name')} placeholder="e.g. Food Kitchen Ltd" /></Field>
+            <Field label="Account holder name"><Input value={form.account_name} onChange={set('account_name')} placeholder="e.g. KitchenLink Ltd" /></Field>
             <Field label="Bank account number"><Input inputMode="numeric" maxLength={20} value={form.account_number} onChange={(event) => setForm((prev) => ({ ...prev, account_number: event.target.value.replace(/\D/g, '').slice(0, 20) }))} placeholder="Digits only" /></Field>
           </>
         ) : (

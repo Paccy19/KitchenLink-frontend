@@ -212,7 +212,7 @@ export default function Navbar() {
             </div>
             <div className="min-w-0 hidden min-[420px]:block">
               <div className="font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 group-hover:text-[#542813] transition-colors flex items-center gap-1.5">
-                Food<span className="text-[#8a5332]">Kitchen</span>
+                Kitchen<span className="text-[#8a5332]">Link</span>
                 <span className="hidden lg:inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5]">Market</span>
               </div>
               <p className="hidden sm:block text-[11px] text-stone-500 font-medium">Any Cook · Any Food · Anywhere</p>

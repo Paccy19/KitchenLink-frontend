@@ -229,7 +229,7 @@ export default function VendorRegisterPage() {
           Become a Vendor
         </h1>
         <p className="mt-1 text-sm text-stone-500 max-w-lg mx-auto">
-          Create your digital storefront on Online Food Kitchen in a few steps — no restaurant required.
+          Create your digital storefront on KitchenLink in a few steps — no restaurant required.
         </p>
         <p className="mt-3 text-xs font-bold text-stone-500">
           Already have a vendor account?{' '}
@@ -550,7 +550,7 @@ export default function VendorRegisterPage() {
                 className="mt-0.5 w-4 h-4 accent-[#542813]"
               />
               <span className="text-xs text-stone-600 font-medium">
-                I confirm the information is accurate and agree to the Online Food Kitchen vendor terms & commission
+                I confirm the information is accurate and agree to the KitchenLink vendor terms & commission
                 policy.
               </span>
             </label>

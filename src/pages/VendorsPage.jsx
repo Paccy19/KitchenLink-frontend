@@ -214,7 +214,7 @@ export default function VendorsPage() {
           <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
             <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
             {source === 'default'
-              ? 'Every kitchen on Online Food Kitchen'
+              ? 'Every kitchen on KitchenLink'
               : `Nearest to ${currentLocation} first`}
             {!firstLoad && !query.isError && (
               <span className="bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] px-2.5 py-0.5 rounded-full font-extrabold text-[11px]">

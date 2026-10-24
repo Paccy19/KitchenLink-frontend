@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
           </div>
           <h1 className="mt-4 text-2xl font-black text-gray-900 tracking-tight">Admin Sign In</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Secure access to the FoodKitchen admin panel.
+            Secure access to the KitchenLink admin panel.
           </p>
         </div>
 

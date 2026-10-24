@@ -38,7 +38,7 @@ async function driverRequest(path, { method = 'GET', body, form, params } = {}) 
   try {
     response = await fetch(url, { method, headers, body: payload });
   } catch (error) {
-    throw new ApiError('Cannot reach the Online Food Kitchen API.', {
+    throw new ApiError('Cannot reach the KitchenLink API.', {
       path,
       cause: error,
     });

@@ -38,7 +38,7 @@ export default function LocationPrimer() {
             Find kitchens near you
           </h2>
           <p className="text-sm text-stone-500 leading-relaxed">
-            Online Food Kitchen uses your location to show nearby home cooks and
+            KitchenLink uses your location to show nearby home cooks and
             restaurants, accurate delivery distances and realistic prep times.
             Your location is only used while you browse.
           </p>

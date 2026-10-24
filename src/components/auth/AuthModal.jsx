@@ -67,7 +67,7 @@ export default function AuthModal() {
             </div>
 
             <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">
-              Welcome to Food Kitchen
+              Welcome to KitchenLink
             </h3>
             <p className="text-xs text-stone-500 mb-6 font-medium">
               Enter your phone number to sign in or create your customer account

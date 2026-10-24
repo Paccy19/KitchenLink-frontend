@@ -207,7 +207,7 @@ export default function DriverEarningsPage() {
             Withdraw
           </button>
           <p className="text-[10px] text-stone-400 font-medium leading-snug">
-            The amount is reserved right away and sent by the Online Food Kitchen team, usually within 24 hours.
+            The amount is reserved right away and sent by the KitchenLink team, usually within 24 hours.
             If a payout fails, the money returns to your balance.
           </p>
         </div>

@@ -58,7 +58,7 @@ export default function AdminLayout() {
           <ShieldCheck className="w-6 h-6 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="font-extrabold text-sm text-gray-900 truncate">FoodKitchen</p>
+          <p className="font-extrabold text-sm text-gray-900 truncate">KitchenLink</p>
           <p className="text-[11px] text-[#374151] font-bold">Admin Panel</p>
         </div>
       </div>

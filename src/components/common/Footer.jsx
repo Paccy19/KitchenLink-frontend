@@ -14,7 +14,7 @@ export default function Footer() {
                 <UtensilsCrossed className="w-5 h-5 stroke-[2.2] text-[#f5ebe1]" />
               </div>
               <span className="font-extrabold text-xl text-white">
-                Food<span className="text-[#8a5332]">Kitchen</span>
+                Kitchen<span className="text-[#8a5332]">Link</span>
               </span>
             </div>
             <p className="text-xs text-stone-400 leading-relaxed">
@@ -98,7 +98,7 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-[#3d1b0c]/60 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 gap-4">
-          <p>© {new Date().getFullYear()} Online Food Kitchen. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} KitchenLink. All rights reserved.</p>
           <p className="flex items-center gap-1">
             Made with <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> for Kigali Food Culture
           </p>

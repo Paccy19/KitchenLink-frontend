@@ -1,5 +1,5 @@
 /**
- * Backend JSON contracts for the Online Food Kitchen "home" API group.
+ * Backend JSON contracts for the KitchenLink "home" API group.
  *
  * Every typedef below describes the RAW payload returned by the backend
  * (snake_case). The `normalize.js` layer converts these into the camelCase
