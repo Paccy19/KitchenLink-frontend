@@ -226,6 +226,11 @@ export function mapOrder(raw = {}) {
     createdAt: raw.created_at,
     // 'pickup': the customer collects it here; the vendor confirms with their code.
     isPickup: raw.fulfillment === 'pickup',
+    // 'vendor_delivery': too far for delivery workers, so the kitchen brings it
+    // (nationwide kitchens) and confirms with the customer's code too.
+    kitchenDelivers: raw.fulfillment === 'vendor_delivery',
+    usesCode: raw.fulfillment === 'pickup' || raw.fulfillment === 'vendor_delivery',
+    distanceKm: raw.delivery_distance_km ?? null,
     canConfirmPickup: Boolean(raw.can_confirm_pickup),
     pickupAttemptsLeft: raw.pickup_attempts_left ?? null,
     collectedAt: raw.collected_at || null,
@@ -371,6 +376,10 @@ export const vendorApi = {
   ordering: async () => (await vendorRequest('/vendor/ordering'))?.ordering,
   saveOrdering: async (payload) =>
     (await vendorRequest('/vendor/ordering', { method: 'PUT', body: payload }))?.ordering,
+  // Nationwide events: status, platform delivery range and the kitchen's travel fee.
+  nationwide: async () => (await vendorRequest('/vendor/nationwide'))?.nationwide,
+  saveNationwide: async (payload) =>
+    (await vendorRequest('/vendor/nationwide', { method: 'PUT', body: payload }))?.nationwide,
   // Open (with live GPS position) / close the store, or refresh the position.
   setAvailability: (payload) =>
     vendorRequest('/vendor/availability', { method: 'PATCH', body: payload }),

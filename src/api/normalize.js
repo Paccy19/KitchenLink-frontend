@@ -102,6 +102,8 @@ export function normalizeVendor(raw = {}) {
     prepTime: formatPrepTime(prepRaw),
     prepTimeMinutes: prepTimeMinutes(prepRaw),
     deliveryAvailable: toBool(raw.delivery_available ?? raw.delivery, true),
+    // Takes orders anywhere in Rwanda (big events), bringing far orders itself.
+    nationwide: toBool(raw.nationwide, false),
     isOpen: toBool(raw.is_open ?? raw.open ?? raw.is_open_now, true),
     isNearby: toBool(raw.is_nearby, false),
     hasDistance: raw.distance_km != null || raw.distance != null,
@@ -227,6 +229,8 @@ export function normalizeOrder(raw = {}) {
     orderType: toText(raw.order_type, 'immediate'),
     orderTypeLabel: toText(raw.order_type_label, 'Immediate'),
     // 'pickup': the customer collects it at the kitchen with `pickup.code`.
+    // 'vendor_delivery': the kitchen brings it (too far for delivery workers)
+    // and the customer gives it the same `pickup.code`.
     fulfillment: toText(raw.fulfillment, 'delivery'),
     pickup: raw.pickup
       ? {

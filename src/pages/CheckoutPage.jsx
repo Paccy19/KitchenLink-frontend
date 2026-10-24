@@ -21,6 +21,7 @@ import { useLocation } from '../context/LocationContext';
 import { buildScheduledFor, formatScheduledFor, scheduleDayLabel } from '../utils/schedule';
 import { basketRuleProblem } from '../data/vendorTypes';
 import { PHONE_MAX_LENGTH, sanitizePhoneInput } from '../utils/validation';
+import { KIGALI_AREAS } from '../utils/kigaliAreas';
 
 const PAYMENT_METHODS = [
   {
@@ -133,7 +134,7 @@ export default function CheckoutPage() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [newTitle, setNewTitle] = useState('Home');
   const [newStreet, setNewStreet] = useState('');
-  const [newDistrict, setNewDistrict] = useState('Kimironko, Gasabo');
+  const [newDistrict, setNewDistrict] = useState('');
   const [newInstructions, setNewInstructions] = useState('');
 
   // Payment method state
@@ -211,10 +212,14 @@ export default function CheckoutPage() {
       setErrorMsg('Please specify your street address');
       return;
     }
+    if (!newDistrict.trim()) {
+      setErrorMsg('Please enter your area (e.g. Kicukiro, Nyamirambo)');
+      return;
+    }
     const newAddr = {
       title: newTitle,
       street: newStreet,
-      district: newDistrict,
+      district: newDistrict.trim(),
       city: 'Kigali',
       instructions: newInstructions
     };
@@ -237,6 +242,10 @@ export default function CheckoutPage() {
       || user.addresses?.[0];
     if (!isPickup && !currentAddr?.street) {
       setErrorMsg('Add or select a delivery address before placing your order.');
+      return;
+    }
+    if (!isPickup && deliveryQuote.unavailableReason) {
+      setErrorMsg(deliveryQuote.unavailableReason);
       return;
     }
     if (!isPickup && deliveryFee == null) {
@@ -450,18 +459,16 @@ export default function CheckoutPage() {
                     placeholder="Label (e.g. Home, Work)"
                     className="p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
                   />
-                  <select
+                  <input
+                    list="checkout-kigali-areas"
                     value={newDistrict}
-                    onChange={(e) => setNewDistrict(e.target.value)}
+                    onChange={(e) => setNewDistrict(e.target.value.slice(0, 80))}
+                    placeholder="Area (any part of Kigali)"
                     className="p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
-                  >
-                    <option value="Kimironko, Gasabo">Kimironko, Gasabo</option>
-                    <option value="Remera, Gasabo">Remera, Gasabo</option>
-                    <option value="Nyarutarama, Gasabo">Nyarutarama, Gasabo</option>
-                    <option value="Kiyovu, Nyarugenge">Kiyovu, Nyarugenge</option>
-                    <option value="Kacyiru, Gasabo">Kacyiru, Gasabo</option>
-                    <option value="Gisozi, Gasabo">Gisozi, Gasabo</option>
-                  </select>
+                  />
+                  <datalist id="checkout-kigali-areas">
+                    {KIGALI_AREAS.map((area) => <option key={area} value={area} />)}
+                  </datalist>
                 </div>
                 <input
                   type="text"
@@ -710,7 +717,11 @@ export default function CheckoutPage() {
               <p className="text-[10px] leading-relaxed text-stone-400 font-medium">
                 {isPickup
                   ? "You collect your order at the kitchen, so there's no delivery fee."
-                  : 'The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.'}
+                  : deliveryQuote.unavailableReason
+                    ? deliveryQuote.unavailableReason
+                    : deliveryQuote.kitchenDelivers
+                      ? "You're beyond the delivery workers' range, so the kitchen brings your order itself and charges its own travel fee. Far orders are scheduled ahead. At handover, give the kitchen the code we send you."
+                      : 'The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.'}
               </p>
               <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
                 <span>Total Due</span>

@@ -113,6 +113,15 @@ export default function AdminVendorsPage() {
     },
   });
 
+  const nationwideMutation = useMutation({
+    mutationFn: (enabled) => adminApi.setVendorNationwide(detailId, enabled),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'vendor'] });
+      setToast(result.vendor?.nationwide?.enabled ? 'Nationwide orders switched on.' : 'Nationwide orders switched off.');
+    },
+  });
+
   const reviewMutation = useMutation({
     mutationFn: () => adminApi.reviewVendorDocuments(detailId),
     onSuccess: () => {
@@ -255,6 +264,7 @@ export default function AdminVendorsPage() {
                     <p className="font-bold text-gray-900">{vendor.name}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1">
                       <VendorTypeBadge type={vendor.vendor_type} size="xs" />
+                      {vendor.nationwide?.enabled && <Badge tone="violet">Nationwide</Badge>}
                       {vendor.vendor_type_request && (
                         <Badge tone="amber">Wants {vendor.vendor_type_request.vendor_type_label}</Badge>
                       )}
@@ -339,6 +349,8 @@ export default function AdminVendorsPage() {
               setNewType={setNewType}
               mutation={typeMutation}
             />
+
+            <NationwideAdmin vendor={detailQuery.data.vendor} mutation={nationwideMutation} />
 
             <KitchenLocation vendor={detailQuery.data.vendor} />
 
@@ -574,6 +586,50 @@ function VendorTypeAdmin({ vendor, newType, setNewType, mutation }) {
           >
             {mutation.isPending ? 'Saving…' : 'Save type'}
           </Button>
+        </div>
+      </Can>
+      {mutation.isError && <ErrorNote error={mutation.error} />}
+    </div>
+  );
+}
+
+/**
+ * Nationwide events: the kitchen takes orders anywhere in Rwanda and brings
+ * orders beyond the delivery workers' range itself. Caterers are on by type;
+ * the admin can switch any kitchen on or off, or go back to the type default.
+ */
+function NationwideAdmin({ vendor, mutation }) {
+  const nationwide = vendor.nationwide || {};
+  const choice = nationwide.source === 'admin' ? (nationwide.enabled ? 'on' : 'off') : 'default';
+  const options = [
+    { value: 'default', label: `Type default (${nationwide.by_type ? 'on' : 'off'})`, enabled: null },
+    { value: 'on', label: 'On', enabled: true },
+    { value: 'off', label: 'Off', enabled: false },
+  ];
+  return (
+    <div className="rounded-2xl border border-stone-200 px-4 py-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-black uppercase tracking-wider text-stone-400">Nationwide events</p>
+        <Badge tone={nationwide.enabled ? 'violet' : 'slate'}>{nationwide.enabled ? 'On' : 'Off'}</Badge>
+      </div>
+      <p className="text-xs text-stone-500">
+        Takes orders anywhere in Rwanda. Orders beyond the delivery workers' range are brought by the kitchen itself, for its travel fee
+        ({Number(nationwide.travel_base_fee_rwf || 0).toLocaleString()} RWF + {Number(nationwide.travel_per_km_rwf || 0).toLocaleString()} RWF/km).
+        Caterers are on by default.
+      </p>
+      <Can permission="vendors:write">
+        <div className="flex flex-wrap gap-2">
+          {options.map((option) => (
+            <Button
+              key={option.value}
+              size="sm"
+              variant={choice === option.value ? 'primary' : 'secondary'}
+              disabled={mutation.isPending || choice === option.value}
+              onClick={() => mutation.mutate(option.enabled)}
+            >
+              {option.label}
+            </Button>
+          ))}
         </div>
       </Can>
       {mutation.isError && <ErrorNote error={mutation.error} />}

@@ -22,7 +22,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
   const currentIndex = FLOW.indexOf(order.status);
   const commissionPercent = order.commissionPercent || 15;
   const commission = order.commission || Math.round(order.subtotal * (commissionPercent / 100));
-  const payout = order.payout || Math.max(0, order.subtotal - commission);
+  // Orders the kitchen brings itself: the travel fee is the kitchen's too.
+  const payout = order.payout || Math.max(0, order.subtotal - commission) + (order.kitchenDelivers ? order.deliveryFee : 0);
 
   return (
     <div
@@ -152,7 +153,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
               <span className="font-semibold">{order.subtotal.toLocaleString()} RWF</span>
             </div>
             <div className="flex justify-between text-stone-600">
-              <span>Delivery fee</span>
+              <span>{order.kitchenDelivers ? 'Your travel fee' : 'Delivery fee'}</span>
               <span className="font-semibold">
                 {order.isPickup ? 'None (customer pickup)' : `${order.deliveryFee.toLocaleString()} RWF`}
               </span>
@@ -172,17 +173,19 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
             <p className="text-[10px] text-stone-400 font-medium pt-1">
               {order.isPickup
                 ? 'The customer collects this order at your kitchen. Enter their pickup code to complete it.'
-                : `The ${order.deliveryFee.toLocaleString()} RWF delivery fee goes to the delivery worker.`}
+                : order.kitchenDelivers
+                  ? `This address is ${order.distanceKm ? `about ${Math.round(order.distanceKm)} km` : 'too far'} from your kitchen for delivery workers, so you bring the food yourself. The ${order.deliveryFee.toLocaleString()} RWF travel fee is yours (included in your payout). Mark it ready when you set off, then enter the customer's code when you hand it over.`
+                  : `The ${order.deliveryFee.toLocaleString()} RWF delivery fee goes to the delivery worker.`}
             </p>
           </div>
         </div>
 
-        {order.status === 'Ready' && !order.isPickup && (
+        {order.status === 'Ready' && !order.usesCode && (
           <p className="mx-5 sm:mx-6 mb-4 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
             {READY_ORDER_NOTE}
           </p>
         )}
-        {order.status === 'Ready' && order.isPickup && (
+        {order.status === 'Ready' && order.usesCode && (
           <ConfirmPickupForm order={order} onDone={onClose} className="mx-5 sm:mx-6 mb-4" />
         )}
 

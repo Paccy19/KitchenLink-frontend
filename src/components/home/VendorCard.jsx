@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-import { Bike, Clock, MapPin, Navigation, Star } from 'lucide-react';
+import { Bike, Clock, Globe2, MapPin, Navigation, Star } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
 import VendorTypeBadge from '../common/VendorTypeBadge';
 import { formatRwf } from '../../api/normalize';
@@ -80,7 +80,12 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
           )}
         </div>
 
-        {vendor.deliveryAvailable && (
+        {vendor.nationwide ? (
+          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-700/95 text-white text-[11px] font-black shadow-md backdrop-blur-sm">
+            <Globe2 className="w-3.5 h-3.5" aria-hidden="true" />
+            Events nationwide
+          </span>
+        ) : vendor.deliveryAvailable && (
           <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-forest-600/95 text-white text-[11px] font-black shadow-md backdrop-blur-sm">
             <Bike className="w-3.5 h-3.5" aria-hidden="true" />
             Delivery available

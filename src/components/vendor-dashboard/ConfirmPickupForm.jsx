@@ -3,7 +3,8 @@ import { PackageCheck } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 
 /**
- * Pickup orders only: the customer is at the counter. The vendor enters the
+ * Pickup orders (the customer is at the counter) and orders the kitchen
+ * brings itself (it is with the customer at the drop-off). The vendor enters the
  * 6-digit code the customer received, which completes the order and credits
  * the vendor's wallet.
  */
@@ -14,9 +15,9 @@ export default function ConfirmPickupForm({ order, onDone, className = '' }) {
   const [error, setError] = useState('');
 
   if (!order.canConfirmPickup) {
-    return order.isPickup && order.status === 'Ready' && order.pickupAttemptsLeft === 0 ? (
+    return order.usesCode && order.status === 'Ready' && order.pickupAttemptsLeft === 0 ? (
       <p className={`text-[11px] font-semibold text-red-700 bg-red-50 border border-red-100 rounded-xl px-3 py-2 ${className}`}>
-        Too many wrong pickup codes. Contact support to complete this order.
+        Too many wrong codes. Contact support to complete this order.
       </p>
     ) : null;
   }
@@ -34,7 +35,7 @@ export default function ConfirmPickupForm({ order, onDone, className = '' }) {
       setCode('');
       onDone?.();
     } catch (err) {
-      setError(err?.message || 'Could not confirm the pickup.');
+      setError(err?.message || 'Could not confirm the handover.');
     } finally {
       setBusy(false);
     }
@@ -43,7 +44,9 @@ export default function ConfirmPickupForm({ order, onDone, className = '' }) {
   return (
     <form onSubmit={submit} className={`rounded-2xl bg-emerald-50 border border-emerald-200 p-3 space-y-2 ${className}`}>
       <p className="text-[11px] font-bold text-emerald-900">
-        Customer here to collect? Enter the pickup code they received.
+        {order.kitchenDelivers
+          ? 'Handing the food over? Enter the code the customer received.'
+          : 'Customer here to collect? Enter the pickup code they received.'}
       </p>
       <div className="flex gap-2">
         <input
@@ -65,7 +68,7 @@ export default function ConfirmPickupForm({ order, onDone, className = '' }) {
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition active:scale-95 disabled:opacity-60"
         >
           <PackageCheck className="w-4 h-4" />
-          {busy ? 'Checking…' : 'Confirm collected'}
+          {busy ? 'Checking…' : order.kitchenDelivers ? 'Confirm delivered' : 'Confirm collected'}
         </button>
       </div>
       {error && (

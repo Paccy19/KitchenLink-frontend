@@ -132,6 +132,9 @@ export const adminApi = {
   // { vendor_type } to set it directly, or { decision: 'approve' | 'reject' } for the vendor's request.
   setVendorType: (id, body) =>
     adminRequest(`/admin/vendors/${encodeURIComponent(id)}/type`, { method: 'PATCH', body }),
+  // Nationwide events: true / false, or null for the type default (Caterers on).
+  setVendorNationwide: (id, enabled) =>
+    adminRequest(`/admin/vendors/${encodeURIComponent(id)}/nationwide`, { method: 'PATCH', body: { enabled } }),
 
   listDrivers: (params) => adminRequest(`/admin/drivers${qs(params)}`),
   driverCounts: () => adminRequest('/admin/drivers/counts'),

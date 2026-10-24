@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { UtensilsCrossed, Phone, Mail, MapPin, Heart, ShieldCheck } from 'lucide-react';
+import { KIGALI_DISTRICTS } from '../../utils/kigaliAreas';
 
 export default function Footer() {
   return (
@@ -18,11 +19,11 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-xs text-stone-400 leading-relaxed">
-              Kigali's multi-vendor marketplace connecting home cooks, culinary chefs, bakeries and restaurants directly with food lovers.
+              Rwanda's multi-vendor marketplace connecting home cooks, culinary chefs, bakeries and restaurants directly with food lovers.
             </p>
             <div className="flex items-center gap-2 text-xs text-stone-400">
               <MapPin className="w-4 h-4 text-[#8a5332]" />
-              <span>Kimironko, Kigali · Rwanda</span>
+              <span>Kigali, Rwanda</span>
             </div>
           </div>
 
@@ -58,18 +59,21 @@ export default function Footer() {
           {/* Col 3: Coverage Areas */}
           <div>
             <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mb-4">
-              Kigali Delivery Zones
+              We deliver across Kigali
             </h4>
             <div className="flex flex-wrap gap-1.5 text-xs">
-              {['Kimironko', 'Remera', 'Nyarutarama', 'Kiyovu', 'Kacyiru', 'Gisozi', 'Gikondo', 'Downtown'].map((zone) => (
+              {KIGALI_DISTRICTS.map((district) => (
                 <span
-                  key={zone}
+                  key={district}
                   className="px-2.5 py-1 rounded-lg bg-stone-900/90 text-stone-300 text-[11px] border border-stone-800"
                 >
-                  {zone}
+                  {district}
                 </span>
               ))}
             </div>
+            <p className="mt-3 text-xs text-stone-400 leading-relaxed">
+              Every neighbourhood in all three districts. Order from home kitchens near you, wherever you are in the city.
+            </p>
           </div>
 
           {/* Col 4: Payments & Trust */}

@@ -20,7 +20,7 @@ import {
   Store,
   Navigation,
 } from 'lucide-react';
-import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES } from '../context/OrderContext';
+import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES, KITCHEN_DELIVERY_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
 import SwitchToDeliveryModal from '../components/orders/SwitchToDeliveryModal';
 import CallKitchenButton from '../components/orders/CallKitchenButton';
@@ -81,7 +81,9 @@ export default function OrderTrackingPage() {
 
   // Pickup orders: collected at the kitchen with a code, no delivery worker.
   const isPickup = order.fulfillment === 'pickup';
-  const statuses = isPickup ? PICKUP_ORDER_STATUSES : ORDER_STATUSES;
+  // Too far for delivery workers: the kitchen brings it and takes the same kind of code.
+  const kitchenDelivers = order.fulfillment === 'vendor_delivery';
+  const statuses = isPickup ? PICKUP_ORDER_STATUSES : kitchenDelivers ? KITCHEN_DELIVERY_ORDER_STATUSES : ORDER_STATUSES;
   const currentStatusIndex = statuses.findIndex((s) => s.id === order.status);
   const isDeliveredOrDone = order.status === 'delivered';
   const isCancelled = order.status === 'cancelled';
@@ -190,6 +192,12 @@ export default function OrderTrackingPage() {
                 You pick up
               </span>
             )}
+            {kitchenDelivers && (
+              <span className="inline-flex items-center gap-1.5 mt-3 mr-2 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-violet-50 text-violet-800 border border-violet-200">
+                <Store className="w-3.5 h-3.5" />
+                The kitchen delivers
+              </span>
+            )}
             {order.orderType && order.orderType !== 'immediate' && (
               <span className="inline-flex items-center gap-1.5 mt-3 text-[11px] font-black uppercase tracking-wide px-2.5 py-1 rounded-full bg-[#f5f6e9] text-[#6b6f3a] border border-[#d9dcc0]">
                 <CalendarClock className="w-3.5 h-3.5" />
@@ -240,7 +248,7 @@ export default function OrderTrackingPage() {
             />
 
             {/* Stepper nodes */}
-            <div className={`grid grid-cols-2 gap-3 relative z-10 ${isPickup ? 'sm:grid-cols-5' : 'sm:grid-cols-4 lg:grid-cols-8'}`}>
+            <div className={`grid grid-cols-2 gap-3 relative z-10 ${isPickup || kitchenDelivers ? 'sm:grid-cols-5' : 'sm:grid-cols-4 lg:grid-cols-8'}`}>
               {progressStatuses.map((step, idx) => {
                 const isPassed = idx <= currentStatusIndex;
                 const isCurrent = idx === currentStatusIndex;
@@ -284,12 +292,12 @@ export default function OrderTrackingPage() {
       </div>
 
       {/* Pickup code: shown from placement until collected, like the delivery code */}
-      {isPickup && order.pickup?.code && !isDeliveredOrDone && (
+      {(isPickup || kitchenDelivers) && order.pickup?.code && !isDeliveredOrDone && (
         <div className="mb-8 rounded-3xl border-2 border-dashed border-[#6d391d]/40 bg-gradient-to-br from-[#fff7ee] to-[#faf6f2] p-6 sm:p-8 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#2b1206] via-[#8a5332] to-[#2b1206]" />
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-[#6d391d]">
             <ShieldCheck className="w-3.5 h-3.5" />
-            Your pickup code
+            {kitchenDelivers ? 'Your delivery code' : 'Your pickup code'}
           </div>
           <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="flex items-center gap-4 sm:gap-6">
@@ -297,15 +305,25 @@ export default function OrderTrackingPage() {
                 {order.pickup.code}
               </div>
               <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-[240px] leading-relaxed">
-                {order.pickup.readyForCollection
-                  ? 'Your food is ready. Give this code to the kitchen when you collect your order.'
-                  : "Give this code to the kitchen when you collect your order. We'll tell you when the food is ready."}
+                {kitchenDelivers
+                  ? order.pickup.readyForCollection
+                    ? 'The kitchen is on the way. Give them this code when they hand you the food.'
+                    : 'The kitchen brings this order to you. Give them this code when they hand you the food, never before.'
+                  : order.pickup.readyForCollection
+                    ? 'Your food is ready. Give this code to the kitchen when you collect your order.'
+                    : "Give this code to the kitchen when you collect your order. We'll tell you when the food is ready."}
               </p>
             </div>
             <span className="text-[11px] font-bold text-stone-400 self-start sm:self-center">
               Sent to your phone and stored here in your account
             </span>
           </div>
+        </div>
+      )}
+      {kitchenDelivers && isDeliveredOrDone && (
+        <div className="mb-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <p className="text-sm font-semibold text-emerald-800">The kitchen delivered your order. Enjoy!</p>
         </div>
       )}
       {isPickup && isDeliveredOrDone && (
@@ -353,7 +371,7 @@ export default function OrderTrackingPage() {
         <div className="lg:col-span-7 space-y-6">
           
           {/* Live map of the delivery worker, from the moment one accepts */}
-          {!isPickup && !isCancelled && !isDeliveredOrDone && (
+          {!isPickup && !kitchenDelivers && !isCancelled && !isDeliveredOrDone && (
             <LiveDeliveryTracker orderId={order.id} enabled={apiEnabled} />
           )}
 
@@ -477,7 +495,7 @@ export default function OrderTrackingPage() {
                 <span>{order.pricing.subtotal.toLocaleString()} RWF</span>
               </div>
               <div className="flex justify-between text-stone-600">
-                <span>Delivery Fee{isPickup ? ' (you pick up)' : ''}</span>
+                <span>{kitchenDelivers ? "Kitchen's travel fee" : `Delivery Fee${isPickup ? ' (you pick up)' : ''}`}</span>
                 <span>{isPickup ? 'Free' : `${order.pricing.deliveryFee.toLocaleString()} RWF`}</span>
               </div>
               <div className="flex justify-between text-sm font-black text-gray-900 pt-2 border-t border-stone-200">

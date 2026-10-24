@@ -346,13 +346,19 @@ export const CartProvider = ({ children }) => {
     isPickup,
     isLoading: quoteEnabled && quoteQuery.isPending,
     isError: quoteQuery.isError,
+    // Beyond the delivery workers' range a nationwide kitchen brings the food
+    // itself for its travel fee; other kitchens can't deliver that far.
+    kitchenDelivers: !isPickup && quoteQuery.data?.fulfillment === 'vendor_delivery',
+    unavailableReason: isPickup ? null : quoteQuery.data?.unavailable_reason || null,
   };
   const grandTotal = subtotal + (deliveryFee ?? 0);
   const totalItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   // The kitchen type's ordering rules (advance-only, notice, days ahead,
   // minimum order, basket size) — the server enforces the same at checkout.
-  const orderingRules = activeVendor ? orderingRulesFor(activeVendor.ordering, activeVendor.typeCode || activeVendor.type) : null;
+  const typeRules = activeVendor ? orderingRulesFor(activeVendor.ordering, activeVendor.typeCode || activeVendor.type) : null;
+  // A kitchen bringing the food from far away needs the order scheduled ahead.
+  const orderingRules = typeRules && deliveryQuote.kitchenDelivers ? { ...typeRules, orderNow: false } : typeRules;
   const scheduleDays = scheduleDayOptions(orderingRules);
   const scheduleSlots = scheduleTimeSlots(scheduledDate, orderingRules);
 
@@ -412,14 +418,16 @@ export const CartProvider = ({ children }) => {
 
 export const useCart = () => useContext(CartContext);
 
-export const deliveryFeeLabel = (quote) =>
-  quote?.isPickup
-    ? 'Delivery fee (you pick up)'
-    : quote?.distanceKm != null ? `Delivery fee (${quote.distanceKm} km)` : 'Delivery fee';
+export const deliveryFeeLabel = (quote) => {
+  if (quote?.isPickup) return 'Delivery fee (you pick up)';
+  const name = quote?.kitchenDelivers ? "Kitchen's travel fee" : 'Delivery fee';
+  return quote?.distanceKm != null ? `${name} (${quote.distanceKm} km)` : name;
+};
 
 export const deliveryFeeValue = (fee, quote) => {
   if (quote?.isPickup) return 'Free';
   if (quote?.isLoading) return 'Calculating…';
+  if (quote?.unavailableReason) return 'Too far';
   if (fee == null) return 'Unavailable';
   return `${fee.toLocaleString()} RWF`;
 };

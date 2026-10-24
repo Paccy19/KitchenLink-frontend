@@ -13,6 +13,7 @@ const RULES = [
   { field: 'location_max_age_minutes', group: 'dispatch', from: 'driver_location_max_age_minutes', label: 'Their location must be newer than', unit: 'minutes' },
   { field: 'rebroadcast_every_seconds', group: 'dispatch', from: 'rebroadcast_every_seconds', label: 'Re-offer open orders every', unit: 'seconds' },
   { field: 'max_active_deliveries', group: 'dispatch', from: 'max_active_deliveries_per_driver', label: 'Max deliveries at once per worker', unit: 'deliveries' },
+  { field: 'platform_delivery_max_km', group: 'dispatch', from: 'platform_delivery_max_km', label: 'Delivery workers deliver up to', unit: 'km from the kitchen', step: '0.1' },
   { field: 'pickup_code_max_attempts', group: 'customer_pickup', from: 'max_wrong_codes', label: 'Wrong pickup codes before the order locks', unit: 'tries' },
 ];
 
@@ -111,6 +112,11 @@ export default function DeliveryRulesCard() {
               <strong>{form.location_max_age_minutes || '…'} min</strong> old and who carry fewer than{' '}
               <strong>{form.max_active_deliveries || '…'}</strong> deliveries. Workers further away can't take it. If nobody accepts, it is
               offered again every <strong>{form.rebroadcast_every_seconds || '…'} s</strong> to anyone who has come into range.
+            </p>
+            <p className="mt-2 rounded-2xl bg-stone-50 border border-stone-100 p-3 text-sm text-stone-700">
+              Customers more than <strong>{form.platform_delivery_max_km || '…'} km</strong> from a kitchen can't get delivery workers. Nationwide
+              kitchens (Caterers, and any kitchen you switch on in Vendors) bring those orders themselves for their own travel fee; other
+              kitchens offer pickup only.
             </p>
           </div>
 

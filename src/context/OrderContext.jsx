@@ -28,6 +28,16 @@ export const PICKUP_ORDER_STATUSES = [
   { id: 'cancelled', label: 'Cancelled', icon: '×', description: 'This order has been cancelled.' },
 ];
 
+// Too far for delivery workers: a nationwide kitchen brings the order itself.
+export const KITCHEN_DELIVERY_ORDER_STATUSES = [
+  { id: 'placed', label: 'Order placed', icon: 'clipboard', description: 'Your order was sent to the kitchen.' },
+  { id: 'confirmed', label: 'Confirmed by kitchen', icon: 'check-circle', description: 'The kitchen accepted your order.' },
+  { id: 'preparing', label: 'Preparing your food', icon: 'chef-hat', description: 'Fresh ingredients are being cooked.' },
+  { id: 'ready', label: 'On the way', icon: 'shopping-bag', description: 'The kitchen is bringing your order. Give them your code when it arrives.' },
+  { id: 'delivered', label: 'Delivered', icon: 'package', description: 'The kitchen delivered your order. Enjoy!' },
+  { id: 'cancelled', label: 'Cancelled', icon: '×', description: 'This order has been cancelled.' },
+];
+
 export const OrderProvider = ({ children }) => {
   const { accessToken } = useAuth();
   const apiEnabled = Boolean(accessToken);

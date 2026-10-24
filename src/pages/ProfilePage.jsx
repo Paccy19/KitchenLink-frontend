@@ -14,6 +14,7 @@ import {
   Camera
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { KIGALI_AREAS } from '../utils/kigaliAreas';
 import {
   NAME_MAX_LENGTH,
   formatNameInput,
@@ -55,7 +56,7 @@ export default function ProfilePage() {
   const [showAddAddr, setShowAddAddr] = useState(false);
   const [title, setTitle] = useState('Home');
   const [street, setStreet] = useState('');
-  const [district, setDistrict] = useState('Kimironko, Gasabo');
+  const [district, setDistrict] = useState('');
   const [instructions, setInstructions] = useState('');
 
   const [profileError, setProfileError] = useState('');
@@ -93,10 +94,11 @@ export default function ProfilePage() {
 
   const handleAddAddress = (e) => {
     e.preventDefault();
-    if (!street) return;
-    addAddress({ title, street, district, city: 'Kigali', instructions });
+    if (!street || !district.trim()) return;
+    addAddress({ title, street, district: district.trim(), city: 'Kigali', instructions });
     setShowAddAddr(false);
     setStreet('');
+    setDistrict('');
     setInstructions('');
   };
 
@@ -263,17 +265,17 @@ export default function ProfilePage() {
                   className="p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
                   required
                 />
-                <select
+                <input
+                  list="profile-kigali-areas"
                   value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
+                  onChange={(e) => setDistrict(e.target.value.slice(0, 80))}
+                  placeholder="Area (any part of Kigali)"
                   className="p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
-                >
-                  <option value="Kimironko, Gasabo">Kimironko, Gasabo</option>
-                  <option value="Remera, Gasabo">Remera, Gasabo</option>
-                  <option value="Nyarutarama, Gasabo">Nyarutarama, Gasabo</option>
-                  <option value="Kiyovu, Nyarugenge">Kiyovu, Nyarugenge</option>
-                  <option value="Kacyiru, Gasabo">Kacyiru, Gasabo</option>
-                </select>
+                  required
+                />
+                <datalist id="profile-kigali-areas">
+                  {KIGALI_AREAS.map((area) => <option key={area} value={area} />)}
+                </datalist>
               </div>
               <input
                 type="text"
