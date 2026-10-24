@@ -10,6 +10,7 @@ import {
   ErrorNote,
   Input,
   LoadingBlock,
+  Modal,
   PageHeader,
   Pagination,
   Select,
@@ -70,6 +71,19 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       setTarget(null);
       setToast(`${toTitle(variables.user.role)} status updated.`);
+    },
+  });
+
+  // Erasing a customer's personal data (on their request).
+  const [eraseTarget, setEraseTarget] = useState(null);
+  const [eraseConfirm, setEraseConfirm] = useState('');
+  const eraseMutation = useMutation({
+    mutationFn: (user) => adminApi.eraseCustomer(user.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setEraseTarget(null);
+      setEraseConfirm('');
+      setToast('Customer data erased. Their orders stay in the books without personal details.');
     },
   });
 
@@ -196,9 +210,29 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3 text-xs text-stone-500">{formatDate(user.created_at, { withTime: false })}</td>
                   <td className="px-4 py-3 text-right">
                     <Can permission="users:write">
-                      <Button variant="secondary" size="sm" onClick={() => setTarget(user)}>
-                        Change status
-                      </Button>
+                      {user.status === 'erased' ? (
+                        <span className="text-xs text-stone-400">Data erased</span>
+                      ) : (
+                        <div className="inline-flex gap-1.5">
+                          <Button variant="secondary" size="sm" onClick={() => setTarget(user)}>
+                            Change status
+                          </Button>
+                          {user.role === 'customer' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="!text-red-600"
+                              onClick={() => {
+                                eraseMutation.reset();
+                                setEraseConfirm('');
+                                setEraseTarget(user);
+                              }}
+                            >
+                              Erase data
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </Can>
                   </td>
                 </tr>
@@ -218,6 +252,43 @@ export default function AdminUsersPage() {
         onClose={() => setTarget(null)}
         onSubmit={(payload) => mutation.mutate({ user: target, payload })}
       />
+      <Modal
+        open={Boolean(eraseTarget)}
+        title={eraseTarget ? `Erase data · ${eraseTarget.name}` : 'Erase data'}
+        onClose={() => setEraseTarget(null)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEraseTarget(null)}>
+              Keep data
+            </Button>
+            <Button
+              variant="danger"
+              disabled={eraseConfirm !== 'ERASE' || eraseMutation.isPending}
+              onClick={() => eraseMutation.mutate(eraseTarget)}
+            >
+              {eraseMutation.isPending ? 'Erasing…' : 'Erase for good'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-sm text-stone-700">
+          <p>
+            Use this when the customer asks for their data to be deleted. It <strong>cannot be undone</strong>:
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-xs">
+            <li>Name, phone, email, photo and location are removed; the account is closed and signed out.</li>
+            <li>Their chats, notifications, cart and wishlist are deleted.</li>
+            <li>Orders and payments stay for the accounts, without address or payer details.</li>
+            <li>Complaints stay for support history, with their name and own messages removed.</li>
+          </ul>
+          <p className="text-xs text-stone-500">Not possible while they have an order in progress or a refund still owed.</p>
+          <label className="block">
+            <span className="text-xs font-bold text-stone-600">Type ERASE to confirm</span>
+            <Input value={eraseConfirm} onChange={(event) => setEraseConfirm(event.target.value.trim().toUpperCase())} placeholder="ERASE" className="mt-1" />
+          </label>
+          {eraseMutation.isError && <ErrorNote error={eraseMutation.error} />}
+        </div>
+      </Modal>
       {mutation.isError && (
         <ErrorNote error={mutation.error} className="fixed bottom-4 right-4 max-w-sm shadow-lg" />
       )}

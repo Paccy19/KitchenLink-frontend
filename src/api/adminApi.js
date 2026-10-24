@@ -140,6 +140,9 @@ export const adminApi = {
 
   listUsers: (params) => adminRequest(`/admin/users${qs(params)}`),
   getUser: (id, params) => adminRequest(`/admin/users/${encodeURIComponent(id)}${qs(params)}`),
+  // Erases a customer's personal data on request (cannot be undone).
+  eraseCustomer: (id) =>
+    adminRequest(`/admin/users/${encodeURIComponent(id)}/erase`, { method: 'POST', body: { confirm: 'ERASE' } }),
   setUserStatus: (id, body) =>
     adminRequest(`/admin/users/${encodeURIComponent(id)}/status`, { method: 'PATCH', body }),
 
