@@ -8,6 +8,7 @@ import {
   X,
   ExternalLink,
   LogOut,
+  ChevronDown,
 } from 'lucide-react';
 import { useAdmin } from '../../context/AdminContext';
 import RoleAccountMenu from '../common/RoleAccountMenu';
@@ -19,6 +20,7 @@ import { allowed, itemForPath, visibleSections } from './adminNav';
 export default function AdminLayout() {
   const { admin, hasToken, isAuthenticated, logout, can, isOwner } = useAdmin();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState({});
   const { pathname } = useLocation();
 
   if (!hasToken) {
@@ -38,7 +40,7 @@ export default function AdminLayout() {
 
   const access = { can, isOwner };
   const sections = visibleSections(access);
-  const firstPage = sections[0]?.items[0]?.to || '/admin-dashboard/settings';
+  const firstPage = sections[0]?.items[0]?.to || '/admin-dashboard/settings/profile';
   const current = itemForPath(pathname);
   const blocked = current && !allowed(current, access);
 
@@ -79,6 +81,42 @@ export default function AdminLayout() {
             <div className="space-y-1">
               {section.items.map((item) => {
                 const Icon = item.icon;
+                if (item.children) {
+                  const inside = pathname === item.to || pathname.startsWith(`${item.to}/`);
+                  const open = openMenus[item.to] ?? inside;
+                  return (
+                    <div key={item.to}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenMenus((prev) => ({ ...prev, [item.to]: !open }))}
+                        aria-expanded={open}
+                        className={`w-full ${navLinkClass({ isActive: inside && !open })}`}
+                      >
+                        <Icon className="w-[18px] h-[18px]" />
+                        <span className="flex-1 text-left">{item.label}</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+                      </button>
+                      {open && (
+                        <div className="mt-1 ml-6 pl-3 border-l border-stone-200 space-y-1">
+                          {item.children.map((child) => (
+                            <NavLink
+                              key={child.to}
+                              to={child.to}
+                              onClick={() => setDrawerOpen(false)}
+                              className={({ isActive }) =>
+                                `block px-3 py-2 rounded-lg text-[13px] font-bold transition ${
+                                  isActive ? 'bg-stone-100 text-gray-900' : 'text-stone-500 hover:bg-stone-100 hover:text-[#1f2937]'
+                                }`
+                              }
+                            >
+                              {child.label}
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
                 return (
                   <NavLink
                     key={item.to}

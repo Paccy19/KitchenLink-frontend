@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { Navigate, useParams } from 'react-router-dom';
 import { ShieldCheck, AlertTriangle, Smartphone } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
 import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
-import Can from '../../components/admin-dashboard/Can';
 import DeliveryTimingCard from '../../components/admin-dashboard/DeliveryTimingCard';
 import BankFormatsCard from '../../components/admin-dashboard/BankFormatsCard';
 import DeliveryFeesCard from '../../components/admin-dashboard/DeliveryFeesCard';
+import DeliveryRulesCard from '../../components/admin-dashboard/DeliveryRulesCard';
 import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
   Badge,
@@ -21,7 +22,30 @@ import {
   toTitle,
 } from '../../components/admin-dashboard/ui';
 
+/** Each Settings dropdown option (sidebar) opens one of these. */
+const SECTIONS = {
+  profile: { label: 'Profile & account security', Body: ProfileSection },
+  rules: { label: 'Delivery & pickup rules', Body: DeliveryRulesCard },
+  'bank-accounts': { label: 'Bank account numbers', Body: BankFormatsCard },
+  'delivery-fees': { label: 'Delivery fee by distance', Body: DeliveryFeesCard },
+  'delivery-timing': { label: 'Delivery timing', Body: DeliveryTimingCard },
+};
+
 export default function AdminSettingsPage() {
+  const { section } = useParams();
+  const current = SECTIONS[section];
+  if (!current) return <Navigate to="/admin-dashboard/settings/profile" replace />;
+  const { label, Body } = current;
+
+  return (
+    <div className="space-y-5">
+      <PageHeader title="Settings" description={label} />
+      <Body />
+    </div>
+  );
+}
+
+function ProfileSection() {
   const { admin, refreshProfile } = useAdmin();
   const [form, setForm] = useState({ current_password: '', new_password: '', confirm: '' });
   const [error, setError] = useState('');
@@ -56,8 +80,6 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Settings" description="Your admin profile and account security." />
-
       {admin?.uses_default_password && (
         <div role="alert" className="flex items-start gap-3 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -67,24 +89,6 @@ export default function AdminSettingsPage() {
           </span>
         </div>
       )}
-
-      <TwoFactorCard admin={admin} onChanged={refreshProfile} />
-
-      <Can permission="deliveries:read">
-        <DeliveryTimingCard />
-      </Can>
-
-      <Can permission="deliveries:read">
-        <DeliveryFeesCard />
-      </Can>
-
-      <Can permission="payouts:read">
-        <BankFormatsCard />
-      </Can>
-
-      <Can permission="dashboard:read">
-        <OperationsRulesCard />
-      </Can>
 
       <Card title="Profile">
         <div className="flex items-center gap-4">
@@ -116,6 +120,8 @@ export default function AdminSettingsPage() {
           </div>
         )}
       </Card>
+
+      <TwoFactorCard admin={admin} onChanged={refreshProfile} />
 
       <Card title="Change password">
         <div className="max-w-md space-y-4">
@@ -159,88 +165,6 @@ export default function AdminSettingsPage() {
 }
 
 /** Turn SMS codes on (verify a phone) or off (confirmed with a code). */
-/**
- * The delivery, pickup, tracking and SMS rules the platform is running with
- * (from the server configuration; read-only here).
- */
-function RuleRow({ label, value, warn = false }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2 border-b border-stone-50 last:border-0">
-      <span className="text-sm text-stone-600">{label}</span>
-      <span className={`text-sm font-bold text-right ${warn ? 'text-amber-700' : 'text-gray-900'}`}>{value}</span>
-    </div>
-  );
-}
-
-function OperationsRulesCard() {
-  const { data: rules, error } = useQuery({
-    queryKey: ['admin', 'operations-rules'],
-    queryFn: () => adminApi.operationsRules(),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  return (
-    <Card
-      title="Delivery & pickup rules"
-      description="How orders are dispatched, collected and tracked right now. These come from the server configuration."
-    >
-      {error ? (
-        <ErrorNote error={error} />
-      ) : !rules ? (
-        <p className="text-sm text-stone-400">Loading…</p>
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-1">Dispatch</p>
-            <RuleRow label="Delivery workers notified within" value={`${rules.dispatch.radius_km} km of the kitchen`} />
-            <RuleRow label="When" value={rules.dispatch.offered_when} />
-            <RuleRow label="Their location must be newer than" value={`${rules.dispatch.driver_location_max_age_minutes} min`} />
-            <RuleRow label="Open orders re-offered every" value={`${rules.dispatch.rebroadcast_every_seconds} s`} />
-            <RuleRow label="Max deliveries at once per worker" value={rules.dispatch.max_active_deliveries_per_driver} />
-
-            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Pickup clock (delivery workers)</p>
-            <RuleRow label="Reminder after" value={`${rules.pickup_clock.warning_after_minutes} min`} />
-            <RuleRow label="Counts as late after" value={`${rules.pickup_clock.grace_minutes} min`} />
-            <RuleRow
-              label="Given to another worker after"
-              value={rules.pickup_clock.reassign_after_minutes ? `${rules.pickup_clock.reassign_after_minutes} min` : 'Off'}
-            />
-            <RuleRow label="Late-pickup charge" value="None" />
-          </div>
-          <div>
-            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-1">Customer pickup</p>
-            <RuleRow label="Delivery fee" value="None" />
-            <RuleRow label="Pickup code" value={`${rules.customer_pickup.code_digits} digits, given when the order is placed`} />
-            <RuleRow label="Wrong codes before the order locks" value={rules.customer_pickup.max_wrong_codes} />
-
-            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Delivery fee</p>
-            {(rules.fees.ranges || []).length > 0 ? (
-              rules.fees.ranges.map((range) => (
-                <RuleRow
-                  key={range.from_km}
-                  label={range.to_km == null ? `${range.from_km} km and more` : `${range.from_km}–${range.to_km} km`}
-                  value={`${Number(range.fee_rwf).toLocaleString()} RWF`}
-                />
-              ))
-            ) : (
-              <RuleRow
-                label="Price"
-                value={`${rules.fees.base_rwf} RWF + ${rules.fees.per_km_rwf} RWF/km (min ${rules.fees.minimum_rwf} RWF)`}
-              />
-            )}
-            <RuleRow label="Share paid to the delivery worker" value={`${rules.fees.driver_share_percent}%`} />
-
-            <p className="text-xs font-black uppercase tracking-wider text-stone-400 mt-4 mb-1">Maps & messages</p>
-            <RuleRow label="Routes & live tracking" value={rules.tracking.routes_provider} warn={!rules.tracking.google_key_configured} />
-            <RuleRow label="Place search" value={rules.tracking.place_search_provider} />
-            <RuleRow label="SMS" value={rules.sms.note} warn={!rules.sms.configured} />
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-}
-
 function TwoFactorCard({ admin, onChanged }) {
   const enabled = Boolean(admin?.two_factor_enabled);
   const [phone, setPhone] = useState(admin?.phone || '');

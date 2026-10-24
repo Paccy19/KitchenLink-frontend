@@ -77,27 +77,52 @@ export const ADMIN_SECTIONS = [
   {
     id: 'account',
     label: 'Account',
-    items: [{ to: '/admin-dashboard/settings', label: 'My account', icon: Settings }],
+    items: [
+      {
+        to: '/admin-dashboard/settings',
+        label: 'Settings',
+        icon: Settings,
+        // Shown as a dropdown in the sidebar; each option is its own page.
+        children: [
+          { to: '/admin-dashboard/settings/profile', label: 'Profile' },
+          { to: '/admin-dashboard/settings/rules', label: 'Delivery & pickup rules', permission: 'dashboard:read' },
+          { to: '/admin-dashboard/settings/bank-accounts', label: 'Bank account numbers', permission: 'payouts:read' },
+          { to: '/admin-dashboard/settings/delivery-fees', label: 'Delivery fee by distance', permission: 'deliveries:read' },
+          { to: '/admin-dashboard/settings/delivery-timing', label: 'Delivery timing', permission: 'deliveries:read' },
+        ],
+      },
+    ],
   },
 ];
 
 export const allowed = (item, { can, isOwner }) =>
   (!item.owner || isOwner) && (!item.permission || can(item.permission));
 
+const visibleItem = (item, access) =>
+  item.children ? { ...item, children: item.children.filter((child) => allowed(child, access)) } : item;
+
 /** Sections with only the pages this admin may open. */
 export const visibleSections = (access) =>
-  ADMIN_SECTIONS.map((section) => ({ ...section, items: section.items.filter((item) => allowed(item, access)) })).filter(
-    (section) => section.items.length > 0,
-  );
+  ADMIN_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items
+      .filter((item) => allowed(item, access))
+      .map((item) => visibleItem(item, access))
+      .filter((item) => !item.children || item.children.length > 0),
+  })).filter((section) => section.items.length > 0);
 
-/** The menu item a path belongs to (longest match), or null. */
+/** The menu item a path belongs to (longest match, dropdown options included), or null. */
 export const itemForPath = (pathname) => {
   const clean = pathname.replace(/\/+$/, '') || '/';
   let best = null;
+  const check = (item) => {
+    const match = item.end ? clean === item.to : clean === item.to || clean.startsWith(`${item.to}/`);
+    if (match && (!best || item.to.length > best.to.length)) best = item;
+  };
   ADMIN_SECTIONS.forEach((section) =>
     section.items.forEach((item) => {
-      const match = item.end ? clean === item.to : clean === item.to || clean.startsWith(`${item.to}/`);
-      if (match && (!best || item.to.length > best.to.length)) best = item;
+      check(item);
+      (item.children || []).forEach(check);
     }),
   );
   return best;

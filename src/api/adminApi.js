@@ -145,6 +145,8 @@ export const adminApi = {
   liveMap: () => adminRequest('/admin/operations/live-map'),
   latePickups: (params) => adminRequest(`/admin/operations/late-pickups${qs(params)}`),
   operationsRules: () => adminRequest('/admin/operations/rules'),
+  // Dispatch and customer-pickup rules (notification radius, re-offer interval...).
+  saveOperationsRules: (body) => adminRequest('/admin/operations/rules', { method: 'PUT', body }),
   // Delivery timing rules (warning / late charge / automatic reassign), in minutes.
   // Delivery fee by distance ranges.
   deliveryFees: () => adminRequest('/admin/settings/delivery-fees'),
