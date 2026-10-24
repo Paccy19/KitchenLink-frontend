@@ -2,12 +2,7 @@ import React from 'react';
 import { Phone, MapPin, Clock, Eye, Check, X, CalendarClock, Store, Truck } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
 import ConfirmPickupForm from './ConfirmPickupForm';
-import {
-  ORDER_ACTION_LABEL,
-  ORDER_CANCELLABLE_STATUSES,
-  ORDER_NEXT_STATUS,
-  READY_ORDER_NOTE,
-} from '../../data/vendorOptions';
+import { READY_ORDER_NOTE, orderActions } from '../../data/vendorOptions';
 import { formatScheduledFor } from '../../utils/schedule';
 
 const timeAgo = (iso) => {
@@ -22,10 +17,8 @@ const timeAgo = (iso) => {
 };
 
 export default function OrderCard({ order, onAdvance, onCancel, onView }) {
-  const nextStatus = ORDER_NEXT_STATUS[order.status];
-  const nextLabel = ORDER_ACTION_LABEL[order.status];
-  const canAdvance = Boolean(nextStatus);
-  const canCancel = ORDER_CANCELLABLE_STATUSES.includes(order.status);
+  // Only actions the server will accept right now.
+  const { nextLabel, canAdvance, canCancel, readyHint } = orderActions(order);
   const visibleItems = order.items.slice(0, 3);
   const remaining = order.items.length - visibleItems.length;
 
@@ -135,6 +128,12 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
             <Check className="w-3.5 h-3.5" />
             {nextLabel}
           </button>
+        )}
+        {readyHint && (
+          <span className="flex-1 min-w-[130px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-stone-100 text-stone-500 font-bold text-[11px]">
+            <CalendarClock className="w-3.5 h-3.5" />
+            {readyHint}
+          </span>
         )}
 
         {canCancel && (

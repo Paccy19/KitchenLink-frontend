@@ -266,6 +266,10 @@ export function mapOrder(raw = {}) {
       PAYMENT_METHOD_LABELS[raw.payment_method] || raw.payment_method || 'Payment',
     notes: raw.cancel_reason || delivery.note || '',
     eta: raw.eta_minutes ? `${raw.eta_minutes} min` : '—',
+    // A scheduled order can be marked ready from this time (null = now / n/a).
+    readyAvailableAt: raw.ready_available_at || null,
+    // From the server: what the kitchen can do right now (null = not sent).
+    allowedFromServer: Array.isArray(raw.allowed_next_statuses),
     allowedNextStatuses: (raw.allowed_next_statuses || []).map(
       (value) => statusToTitle[value] || value,
     ),

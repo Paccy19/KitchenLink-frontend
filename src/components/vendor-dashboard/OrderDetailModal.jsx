@@ -2,12 +2,7 @@ import React from 'react';
 import { X, Phone, MapPin, Check, X as XIcon, Clock, CreditCard, FileText } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
 import ConfirmPickupForm from './ConfirmPickupForm';
-import {
-  ORDER_ACTION_LABEL,
-  ORDER_CANCELLABLE_STATUSES,
-  ORDER_NEXT_STATUS,
-  READY_ORDER_NOTE,
-} from '../../data/vendorOptions';
+import { READY_ORDER_NOTE, orderActions } from '../../data/vendorOptions';
 import { formatScheduledFor } from '../../utils/schedule';
 
 const FLOW = ['New', 'Accepted', 'Preparing', 'Ready', 'Completed'];
@@ -15,10 +10,8 @@ const FLOW = ['New', 'Accepted', 'Preparing', 'Ready', 'Completed'];
 export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, onCancel }) {
   if (!isOpen || !order) return null;
 
-  const nextStatus = ORDER_NEXT_STATUS[order.status];
-  const nextLabel = ORDER_ACTION_LABEL[order.status];
-  const canAdvance = Boolean(nextStatus);
-  const canCancel = ORDER_CANCELLABLE_STATUSES.includes(order.status);
+  // Only actions the server will accept right now.
+  const { nextLabel, canAdvance, canCancel, readyHint } = orderActions(order);
   const currentIndex = FLOW.indexOf(order.status);
   const commissionPercent = order.commissionPercent || 15;
   const commission = order.commission || Math.round(order.subtotal * (commissionPercent / 100));
@@ -189,16 +182,21 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
           <ConfirmPickupForm order={order} onDone={onClose} className="mx-5 sm:mx-6 mb-4" />
         )}
 
-        {canCancel && (
+        {(canCancel || canAdvance || readyHint) && (
           <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-stone-100 px-5 sm:px-6 py-4 flex items-center gap-2">
-            <button
+            {canCancel && <button
               type="button"
               onClick={() => onCancel(order)}
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs transition active:scale-95"
             >
               <XIcon className="w-4 h-4" />
               {order.status === 'New' ? 'Reject Order' : 'Cancel Order'}
-            </button>
+            </button>}
+            {readyHint && (
+              <span className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-stone-100 text-stone-500 font-bold text-xs">
+                {readyHint}
+              </span>
+            )}
             {canAdvance && <button
               type="button"
               onClick={() => onAdvance(order)}
