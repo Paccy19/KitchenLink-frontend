@@ -9,7 +9,7 @@ import {
   ShieldAlert,
   CheckCircle2,
 } from 'lucide-react';
-import { adminApi } from '../../api/adminApi';
+import { adminApi, adminFileUrl } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
 import useFocusParam from '../../components/admin-dashboard/useFocusParam';
 import {
@@ -130,6 +130,29 @@ export default function AdminVendorsPage() {
       setToast('Verification documents marked as reviewed.');
     },
   });
+
+  // Private documents open with the admin's sign-in (they have no public link).
+  const [docError, setDocError] = useState('');
+  const openDocument = async (doc, index) => {
+    setDocError('');
+    if (doc.url) {
+      window.open(doc.url, '_blank', 'noopener,noreferrer');
+      markViewed(index);
+      return;
+    }
+    // Opened right away (before the download) so the browser doesn't block it.
+    const tab = window.open('', '_blank');
+    try {
+      const url = await adminFileUrl(doc.download_path);
+      if (tab) tab.location.href = url;
+      else window.location.assign(url);
+      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+      markViewed(index);
+    } catch (error) {
+      tab?.close();
+      setDocError(error.message || 'Could not open the document.');
+    }
+  };
 
   const markViewed = (index) => {
     setViewedDocs((prev) => {
@@ -381,11 +404,12 @@ export default function AdminVendorsPage() {
               ) : (
                 <div className="space-y-2">
                   {documents.map((doc, index) => {
-                    const isImage = /\.(png|jpe?g|webp|gif)$/i.test(doc.url || '');
+                    // Private documents have no public link, so no preview: an icon instead.
+                    const isImage = Boolean(doc.url) && /\.(png|jpe?g|webp|gif)$/i.test(doc.url);
                     const opened = viewedDocs.has(index);
                     return (
                       <div
-                        key={`${doc.url}-${index}`}
+                        key={`${doc.url || doc.download_path}-${index}`}
                         className="flex items-center gap-3 rounded-xl border border-stone-100 bg-stone-50/60 p-2.5"
                       >
                         <span className="w-10 h-10 rounded-lg overflow-hidden bg-white border border-stone-100 flex items-center justify-center flex-shrink-0">
@@ -403,11 +427,9 @@ export default function AdminVendorsPage() {
                             {formatDate(doc.uploaded_at, { withTime: false })}
                           </p>
                         </div>
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={() => markViewed(index)}
+                        <button
+                          type="button"
+                          onClick={() => openDocument(doc, index)}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                             opened
                               ? 'text-emerald-700 bg-emerald-50'
@@ -416,10 +438,11 @@ export default function AdminVendorsPage() {
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                           {opened ? 'Opened' : 'Open'}
-                        </a>
+                        </button>
                       </div>
                     );
                   })}
+                  {docError && <ErrorNote error={docError} />}
                 </div>
               )}
 

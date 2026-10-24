@@ -18,6 +18,32 @@ export const setAdminToken = (token) => {
 };
 export const clearAdminToken = () => localStorage.removeItem(ADMIN_TOKEN_KEY);
 
+/**
+ * A private file (e.g. a vendor's verification document) fetched with the
+ * admin's sign-in, as a temporary blob: URL the browser can show. Revoke it
+ * with URL.revokeObjectURL when done.
+ */
+export async function adminFileUrl(path) {
+  const headers = {};
+  const token = getAdminToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let response;
+  try {
+    response = await fetch(buildUrl(path), { headers });
+  } catch (error) {
+    throw new ApiError('Cannot reach the KitchenLink API.', { path, cause: error });
+  }
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error?.message || `Could not open the file (${response.status}).`, {
+      status: response.status,
+      path,
+      code: data?.error?.code || '',
+    });
+  }
+  return URL.createObjectURL(await response.blob());
+}
+
 async function adminRequest(path, { method = 'GET', body } = {}) {
   const url = buildUrl(path);
   const headers = { Accept: 'application/json' };
