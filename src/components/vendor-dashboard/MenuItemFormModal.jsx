@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { shrinkImage } from '../../utils/shrinkImage';
 import { X, Upload, Plus, Trash2, ImageOff, Clock, Sparkles } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 
@@ -123,15 +124,15 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
       }));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      update({ image: String(reader.result) });
-      setErrors((prev) => ({ ...prev, image: '' }));
-    };
-    reader.onerror = () => {
-      setErrors((prev) => ({ ...prev, image: 'Could not read this file. Try another image.' }));
-    };
-    reader.readAsDataURL(file);
+    // Shrunk first: phone photos are far bigger than the 1 MB upload limit.
+    shrinkImage(file)
+      .then((dataUri) => {
+        update({ image: dataUri });
+        setErrors((prev) => ({ ...prev, image: '' }));
+      })
+      .catch(() => {
+        setErrors((prev) => ({ ...prev, image: 'Could not read this file. Try another image.' }));
+      });
   };
 
   const addOption = () => update({ options: [...form.options, { name: '', choicesText: '' }] });

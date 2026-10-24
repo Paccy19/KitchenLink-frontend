@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { shrinkAvatar } from '../../utils/shrinkImage';
 import { useNavigate } from 'react-router-dom';
 import { Bike, User, Phone, Mail, Truck, Star, Power, LogOut, MapPin, Camera } from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
@@ -29,13 +30,13 @@ export default function DriverProfilePage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file || !/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUri = String(reader.result);
-      setAvatarUrl(dataUri);
-      updateDriverProfile({ avatar: dataUri }).catch(() => setAvatarUrl(driver.avatar || ''));
-    };
-    reader.readAsDataURL(file);
+    // Shrunk first: phone photos are far bigger than the 1 MB upload limit.
+    shrinkAvatar(file)
+      .then((dataUri) => {
+        setAvatarUrl(dataUri);
+        return updateDriverProfile({ avatar: dataUri });
+      })
+      .catch(() => setAvatarUrl(driver.avatar || ''));
   };
 
   return (

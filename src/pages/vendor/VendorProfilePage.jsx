@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { shrinkAvatar } from '../../utils/shrinkImage';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -52,13 +53,13 @@ export default function VendorProfilePage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file || !/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUri = String(reader.result);
-      setAvatarUrl(dataUri);
-      updateVendorProfile({ avatar: dataUri }).catch(() => setAvatarUrl(vendor.avatar || ''));
-    };
-    reader.readAsDataURL(file);
+    // Shrunk first: phone photos are far bigger than the 1 MB upload limit.
+    shrinkAvatar(file)
+      .then((dataUri) => {
+        setAvatarUrl(dataUri);
+        return updateVendorProfile({ avatar: dataUri });
+      })
+      .catch(() => setAvatarUrl(vendor.avatar || ''));
   };
 
   const handleSave = async (event) => {

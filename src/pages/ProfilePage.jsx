@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { shrinkAvatar } from '../utils/shrinkImage';
 import { Link } from 'react-router-dom';
 import { 
   User, 
@@ -83,13 +84,13 @@ export default function ProfilePage() {
     e.target.value = '';
     if (!file) return;
     if (!/^image\/(jpeg|png|webp|gif)$/i.test(file.type)) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUri = String(reader.result);
-      setAvatarUrl(dataUri);
-      updateProfile({ avatar: dataUri }).catch(() => setAvatarUrl(user.avatar));
-    };
-    reader.readAsDataURL(file);
+    // Shrunk first: phone photos are far bigger than the 1 MB upload limit.
+    shrinkAvatar(file)
+      .then((dataUri) => {
+        setAvatarUrl(dataUri);
+        return updateProfile({ avatar: dataUri });
+      })
+      .catch(() => setAvatarUrl(user.avatar));
   };
 
   const handleAddAddress = (e) => {

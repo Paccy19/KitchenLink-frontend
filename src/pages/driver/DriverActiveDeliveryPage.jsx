@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { shrinkImage } from '../../utils/shrinkImage';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -31,9 +32,10 @@ function ConfirmDeliveryModal({ delivery, onClose }) {
   const handlePhoto = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPhotoBase64(String(reader.result || ''));
-    reader.readAsDataURL(file);
+    // Shrunk first: phone photos are far bigger than the 1 MB upload limit.
+    shrinkImage(file)
+      .then(setPhotoBase64)
+      .catch((error) => toast.error(error.message));
   };
 
   const submit = async () => {
