@@ -29,6 +29,8 @@ export function AdminProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [error, setError] = useState('');
+  // Minutes without activity before the panel signs itself out (from the server).
+  const [idleMinutes, setIdleMinutes] = useState(30);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -39,10 +41,11 @@ export function AdminProvider({ children }) {
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    const { admin: raw, limits: rawLimits } = await adminApi.me();
+    const { admin: raw, limits: rawLimits, idle_timeout_minutes: idle } = await adminApi.me();
     if (mounted.current) {
       setAdmin(raw);
       if (rawLimits) setLimits(rawLimits);
+      if (Number.isFinite(idle)) setIdleMinutes(idle);
     }
     return raw;
   }, []);
@@ -137,6 +140,30 @@ export function AdminProvider({ children }) {
   }, []);
 
   const isAuthenticated = Boolean(authToken && admin);
+
+  // Idle timeout: no mouse, keyboard, touch or scrolling for `idleMinutes`
+  // signs the admin out (the token is cancelled on the server) and clears the
+  // screen, so a panel left open on a shared computer doesn't stay usable.
+  // The server enforces the same limit for closed tabs and copied tokens.
+  useEffect(() => {
+    if (!isAuthenticated || !idleMinutes) return undefined;
+    let lastActivity = Date.now();
+    const touch = () => {
+      lastActivity = Date.now();
+    };
+    const events = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'];
+    events.forEach((name) => window.addEventListener(name, touch, { passive: true }));
+    const timer = setInterval(() => {
+      if (Date.now() - lastActivity > idleMinutes * 60 * 1000) {
+        logout();
+        setError(`You were signed out after ${idleMinutes} minutes without activity. Please log in again.`);
+      }
+    }, 30 * 1000);
+    return () => {
+      events.forEach((name) => window.removeEventListener(name, touch));
+      clearInterval(timer);
+    };
+  }, [isAuthenticated, idleMinutes, logout]);
   // What the signed-in admin may do (decided by their role on the server).
   const can = useCallback(
     (permission) => admin?.role === 'super_admin' || (admin?.permissions || []).includes(permission),

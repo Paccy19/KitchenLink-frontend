@@ -66,12 +66,11 @@ async function adminRequest(path, { method = 'GET', body } = {}) {
     });
   }
 
+  const data = await response.json().catch(() => null);
   if (response.status === 401) {
     clearAdminToken();
-    window.dispatchEvent(new Event('ofk:admin-unauthorized'));
+    window.dispatchEvent(new CustomEvent('ofk:admin-unauthorized', { detail: data?.error?.message }));
   }
-
-  const data = await response.json().catch(() => null);
   // A deactivated or removed team member is signed out straight away.
   if (response.status === 403 && ['ADMIN_DISABLED', 'INVITATION_PENDING'].includes(data?.error?.code)) {
     clearAdminToken();
