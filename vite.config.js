@@ -60,6 +60,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), contentSecurityPolicy(env)],
+    // No source maps in production builds: visitors get minified code, not
+    // the original source. (The dev server on your PC still has them.)
+    build: { sourcemap: false },
     server: {
       port: 3000,
       open: true,
