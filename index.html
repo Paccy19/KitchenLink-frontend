@@ -9,15 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-      // Apply the saved theme before paint to avoid a light-mode flash.
-      try {
-        if (localStorage.getItem('ofk-theme') === 'dark') {
-          document.documentElement.classList.add('dark');
-          document.documentElement.style.colorScheme = 'dark';
-        }
-      } catch (e) {}
-    </script>
+    <!-- Saved theme before paint (a file, so the CSP can forbid inline scripts). -->
+    <script src="/theme-init.js"></script>
   </head>
   <body class="bg-[#faf7f4] text-gray-900 font-sans antialiased min-h-screen selection:bg-brand-800 selection:text-white">
     <div id="root"></div>
