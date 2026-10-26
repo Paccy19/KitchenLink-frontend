@@ -1,83 +1,24 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  MapPin, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle,
-  Plus,
-  Smartphone,
-  CreditCard,
-  Coins,
-  Wallet,
-  Bike,
-  Store,
-} from 'lucide-react';
-import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../context/CartContext';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
-import { buildScheduledFor, formatScheduledFor, scheduleDayLabel } from '../utils/schedule';
+import { buildScheduledFor } from '../utils/schedule';
 import { basketRuleProblem } from '../data/vendorTypes';
-import { PHONE_MAX_LENGTH, sanitizePhoneInput } from '../utils/validation';
-import { KIGALI_AREAS } from '../utils/kigaliAreas';
-
-const PAYMENT_METHODS = [
-  {
-    code: 'mobile_money',
-    label: 'Mobile Money',
-    hint: 'MTN or Airtel — +25078, +25079 or +25073',
-    icon: Smartphone,
-  },
-  {
-    code: 'card',
-    label: 'Cards',
-    hint: 'Visa or Mastercard via secure checkout',
-    icon: CreditCard,
-  },
-  {
-    code: 'ekash',
-    label: 'eKash',
-    hint: 'Pay instantly from your eKash wallet',
-    icon: Coins,
-  },
-  {
-    code: 'wallet',
-    label: 'Wallet',
-    hint: 'Pay from the wallet linked to your phone',
-    icon: Wallet,
-  },
-];
-
-// Mobile Money only supports MTN (078, 079) and Airtel (073).
-const MOBILE_MONEY_PHONE_REGEX = /^0(78|79|73)\d{7}$/;
-const MOBILE_PHONE_REGEX = /^0(72|73|78|79)\d{7}$/;
-
-const normalizeRwandanPhone = (raw) => {
-  let digits = String(raw ?? '').replace(/[^\d]/g, '');
-  if (digits.startsWith('250')) digits = digits.slice(3);
-  if (!digits.startsWith('0')) digits = `0${digits}`;
-  return digits;
-};
-
-const formatCardNumber = (raw) =>
-  String(raw ?? '')
-    .replace(/[^\d]/g, '')
-    .slice(0, 19)
-    .replace(/(\d{4})(?=\d)/g, '$1 ');
-
-const formatCardExpiry = (raw) => {
-  const digits = String(raw ?? '').replace(/[^\d]/g, '').slice(0, 4);
-  return digits.length >= 3 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-};
+import FulfillmentSection from '../components/checkout/FulfillmentSection';
+import ScheduleSection from '../components/checkout/ScheduleSection';
+import PaymentSection from '../components/checkout/PaymentSection';
+import OrderSummary from '../components/checkout/OrderSummary';
+import { EMPTY_PAYMENT_INPUTS, PAYMENT_METHODS, buildPaymentDetails } from '../components/checkout/paymentMethods';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { 
-    cartItems, 
-    activeVendor, 
-    subtotal, 
+  const {
+    cartItems,
+    activeVendor,
+    subtotal,
     deliveryFee,
     deliveryQuote,
     grandTotal,
@@ -110,42 +51,14 @@ export default function CheckoutPage() {
   // no delivery worker, and the kitchen confirms with the customer's code.
   const isPickup = fulfillment === 'pickup';
 
-  const scheduleLabel =
-    orderType === 'immediate'
-      ? isPickup ? 'Pick up as soon as it is ready' : 'Immediate Delivery'
-      : orderType === 'preorder'
-        ? isPickup ? 'Pre-Order · pickup' : 'Pre-Order'
-        : isPickup ? 'Scheduled Pickup' : 'Scheduled Delivery';
-
-  const scheduleDescription =
-    orderType === 'immediate'
-      ? isPickup
-        ? "You get a pickup code right after ordering — it shows on your order page. Give it to the kitchen when you collect."
-        : 'Estimated delivery time: 25–35 minutes after kitchen preparation'
-      : orderType === 'preorder' && preorderSpecial
-        ? `${preorderSpecial.text} — ${isPickup ? 'ready to collect' : 'arrives'} by ${formatScheduledFor(scheduledFor)}`
-        : `${isPickup ? 'Ready to collect' : 'Scheduled to arrive'}: ${scheduleDayLabel(scheduledDate)} at ${scheduledTime}`;
-
   // Selected address state
   const [selectedAddressId, setSelectedAddressId] = useState(() => {
     return user.addresses && user.addresses.length > 0 ? user.addresses[0].id : 'new';
   });
 
-  // New address form state
-  const [showNewAddressForm, setShowNewAddressForm] = useState(false);
-  const [newTitle, setNewTitle] = useState('Home');
-  const [newStreet, setNewStreet] = useState('');
-  const [newDistrict, setNewDistrict] = useState('');
-  const [newInstructions, setNewInstructions] = useState('');
-
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState('mobile_money');
-  const [paymentInputs, setPaymentInputs] = useState({
-    mobile_money: { phone: '' },
-    card: { card_number: '', card_expiry: '', card_cvv: '' },
-    ekash: { phone: '' },
-    wallet: { phone: '' },
-  });
+  const [paymentInputs, setPaymentInputs] = useState(EMPTY_PAYMENT_INPUTS);
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -155,39 +68,6 @@ export default function CheckoutPage() {
       ...prev,
       [code]: { ...prev[code], [field]: value },
     }));
-
-  // Validates the inputs for the selected method and returns the payload that
-  // gets persisted with the order. The CVV is validated but never sent/stored.
-  const buildPaymentDetails = () => {
-    if (paymentMethod === 'card') {
-      const { card_number, card_expiry, card_cvv } = paymentInputs.card;
-      const cardNumber = String(card_number ?? '').replace(/\s/g, '');
-      if (!/^\d{13,19}$/.test(cardNumber)) {
-        return { error: 'Enter a valid card number (13–19 digits).' };
-      }
-      const expiry = String(card_expiry ?? '').trim();
-      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) {
-        return { error: 'Enter the card expiry as MM/YY.' };
-      }
-      if (!/^\d{3,4}$/.test(String(card_cvv ?? '').trim())) {
-        return { error: 'Enter the card CVV (3–4 digits).' };
-      }
-      return { details: { card_number: cardNumber, card_expiry: expiry } };
-    }
-
-    const phone = normalizeRwandanPhone(paymentInputs[paymentMethod]?.phone);
-    const regex =
-      paymentMethod === 'mobile_money' ? MOBILE_MONEY_PHONE_REGEX : MOBILE_PHONE_REGEX;
-    if (!regex.test(phone)) {
-      return {
-        error:
-          paymentMethod === 'mobile_money'
-            ? 'Enter a valid MTN or Airtel number (+25078, +25079 or +25073).'
-            : 'Enter a valid Rwandan mobile number (e.g. 0788123456).',
-      };
-    }
-    return { details: { phone } };
-  };
 
   if (cartItems.length === 0) {
     return (
@@ -206,28 +86,6 @@ export default function CheckoutPage() {
       </div>
     );
   }
-
-  const handleAddNewAddress = (e) => {
-    e.preventDefault();
-    if (!newStreet) {
-      setErrorMsg('Please specify your street address');
-      return;
-    }
-    if (!newDistrict.trim()) {
-      setErrorMsg('Please enter your area (e.g. Kicukiro, Nyamirambo)');
-      return;
-    }
-    const newAddr = {
-      title: newTitle,
-      street: newStreet,
-      district: newDistrict.trim(),
-      city: 'Kigali',
-      instructions: newInstructions
-    };
-    addAddress(newAddr);
-    setShowNewAddressForm(false);
-    setErrorMsg('');
-  };
 
   const handleConfirmOrder = async () => {
     if (isSyncing) {
@@ -261,7 +119,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const { error: paymentError, details: paymentDetails } = buildPaymentDetails();
+    const { error: paymentError, details: paymentDetails } = buildPaymentDetails(paymentMethod, paymentInputs);
     if (paymentError) {
       setErrorMsg(paymentError);
       return;
@@ -315,7 +173,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
-      
+
       {/* Back Button */}
       <div className="mb-6">
         <Link
@@ -339,322 +197,40 @@ export default function CheckoutPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+
         {/* Left Column: Form & Information */}
         <div className="lg:col-span-7 space-y-6">
 
-          {/* 1. Delivery Location Selection */}
-          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center font-black text-xs">
-                  1
-                </div>
-                <h3 className="font-extrabold text-gray-900 text-base">
-                  {isPickup ? 'Pickup at the kitchen' : 'Delivery Destination'}
-                </h3>
-              </div>
+          <FulfillmentSection
+            fulfillment={fulfillment}
+            onFulfillmentChange={(value) => {
+              setFulfillment(value);
+              setErrorMsg('');
+            }}
+            activeVendor={activeVendor}
+            addresses={user.addresses}
+            selectedAddressId={selectedAddressId}
+            onSelectAddress={setSelectedAddressId}
+            onAddAddress={addAddress}
+            onError={setErrorMsg}
+          />
 
-              {!isPickup && !showNewAddressForm && (
-                <button
-                  onClick={() => setShowNewAddressForm(true)}
-                  className="text-xs font-bold text-[#542813] hover:underline flex items-center gap-1 whitespace-nowrap flex-shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Location</span>
-                </button>
-              )}
-            </div>
+          <ScheduleSection
+            orderType={orderType}
+            isPickup={isPickup}
+            preorderSpecial={preorderSpecial}
+            scheduledFor={scheduledFor}
+            scheduledDate={scheduledDate}
+            scheduledTime={scheduledTime}
+            apiEnabled={apiEnabled}
+          />
 
-            <div role="radiogroup" aria-label="How do you want to get your order?" className="grid grid-cols-2 gap-2.5">
-              {[
-                { id: 'delivery', label: 'Deliver to me', hint: 'A delivery worker brings it', icon: Bike },
-                { id: 'pickup', label: "I'll pick it up", hint: 'Collect at the kitchen · no delivery fee', icon: Store },
-              ].map((option) => {
-                const Icon = option.icon;
-                const selected = fulfillment === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => {
-                      setFulfillment(option.id);
-                      setErrorMsg('');
-                    }}
-                    className={`flex items-start gap-2.5 p-3.5 rounded-2xl border text-left transition ${
-                      selected
-                        ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
-                        : 'border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 flex-shrink-0 ${selected ? 'text-[#542813]' : 'text-stone-400'}`} />
-                    <span className="min-w-0">
-                      <span className="block font-bold text-xs text-gray-900">{option.label}</span>
-                      <span className="block text-[11px] text-stone-500 mt-0.5">{option.hint}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {isPickup ? (
-              <div className="p-3.5 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] flex items-start gap-3 text-xs">
-                <Store className="w-5 h-5 text-[#8a5332] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-[#3d1b0c]">
-                    Collect from {activeVendor?.name || 'the kitchen'}
-                    {activeVendor?.location ? ` · ${activeVendor.location}` : ''}
-                  </p>
-                  <p className="text-stone-600 mt-0.5">
-                    When your food is ready we'll send you a 6-digit pickup code (it also shows on your order page).
-                    Give it to the kitchen when you collect your order.
-                  </p>
-                </div>
-              </div>
-            ) : !showNewAddressForm ? (
-              <div className="space-y-2.5">
-                {user.addresses && user.addresses.length > 0 ? (
-                  user.addresses.map((addr) => (
-                    <label
-                      key={addr.id}
-                      className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition ${
-                        selectedAddressId === addr.id
-                          ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
-                          : 'border-stone-200 hover:bg-stone-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="delivery_address"
-                        checked={selectedAddressId === addr.id}
-                        onChange={() => setSelectedAddressId(addr.id)}
-                        className="mt-1 accent-[#542813]"
-                      />
-                      <div className="text-xs">
-                        <div className="font-bold text-gray-900 flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-[#8a5332]" />
-                          <span>{addr.title}</span>
-                          {addr.isDefault && (
-                            <span className="text-[10px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded">
-                              Default
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-stone-700 mt-0.5 font-medium">{addr.street}, {addr.district}</p>
-                        {addr.instructions && (
-                          <p className="text-stone-400 italic mt-0.5">Note: {addr.instructions}</p>
-                        )}
-                      </div>
-                    </label>
-                  ))
-                ) : (
-                  <p className="text-xs text-stone-500">No saved addresses yet. Add one below:</p>
-                )}
-              </div>
-            ) : (
-              <form onSubmit={handleAddNewAddress} className="p-4 bg-stone-50 rounded-2xl space-y-3 border border-stone-200">
-                <div className="font-bold text-xs text-stone-800">Add New Delivery Location</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="Label (e.g. Home, Work)"
-                    className="p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
-                  />
-                  <input
-                    list="checkout-kigali-areas"
-                    value={newDistrict}
-                    onChange={(e) => setNewDistrict(e.target.value.slice(0, 80))}
-                    placeholder="Area (any part of Kigali)"
-                    className="p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
-                  />
-                  <datalist id="checkout-kigali-areas">
-                    {KIGALI_AREAS.map((area) => <option key={area} value={area} />)}
-                  </datalist>
-                </div>
-                <input
-                  type="text"
-                  value={newStreet}
-                  onChange={(e) => setNewStreet(e.target.value)}
-                  placeholder="Street / Landmark (e.g. KG 11 Ave, near Simba Supermarket)"
-                  className="w-full p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
-                />
-                <input
-                  type="text"
-                  value={newInstructions}
-                  onChange={(e) => setNewInstructions(e.target.value)}
-                  placeholder="Delivery instructions for the delivery worker (e.g. Gate color, floor number)"
-                  className="w-full p-2.5 text-xs rounded-xl border border-stone-200 bg-white outline-none focus:border-[#542813]"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-gradient-to-r from-[#2b1206] to-[#542813] text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95"
-                  >
-                    Save Address
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewAddressForm(false)}
-                    className="px-4 py-2 bg-stone-200 text-stone-700 rounded-xl text-xs font-bold hover:bg-stone-300 transition"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          {/* 2. Timing confirmation */}
-          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center font-black text-xs">
-                2
-              </div>
-              <h3 className="font-extrabold text-gray-900 text-base">
-                {isPickup ? 'Pickup Time' : 'Delivery Schedule'}
-              </h3>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] flex items-center gap-3">
-              <Clock className="w-5 h-5 text-[#8a5332] flex-shrink-0" />
-              <div className="text-xs">
-                <span className="font-bold text-[#3d1b0c]">{scheduleLabel}</span>
-                <p className="text-stone-600 mt-0.5">{scheduleDescription}</p>
-                {orderType === 'preorder' && preorderSpecial && (
-                  <p className="text-[11px] font-semibold text-[#8a5332] mt-1">
-                    Order before {preorderSpecial.cutoffLabel} · you pay now, the kitchen is notified straight away
-                  </p>
-                )}
-              </div>
-            </div>
-            {apiEnabled && orderType !== 'immediate' && !isPickup && (
-              <p className="text-xs font-semibold text-stone-500">
-                Please keep this delivery time free — your delivery worker is dispatched close to the scheduled time.
-              </p>
-            )}
-          </div>
-
-          {/* 3. Payment Method */}
-          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#faf6f2] text-[#542813] border border-[#ebd7c5] flex items-center justify-center font-black text-xs">
-                3
-              </div>
-              <h3 className="font-extrabold text-gray-900 text-base">
-                Payment Method
-              </h3>
-            </div>
-
-            <div className="space-y-2.5">
-              {PAYMENT_METHODS.map((method) => {
-                const Icon = method.icon;
-                const selected = paymentMethod === method.code;
-                const inputClass =
-                  'w-full text-xs p-3 rounded-xl border border-stone-200 bg-white text-gray-900 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition';
-                return (
-                  <div
-                    key={method.code}
-                    className={`rounded-2xl border transition ${
-                      selected
-                        ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm'
-                        : 'border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    <label className="flex items-center justify-between p-4 cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="pay_method"
-                          checked={selected}
-                          onChange={() => setPaymentMethod(method.code)}
-                          className="accent-[#542813]"
-                        />
-                        <div>
-                          <div className="font-bold text-xs text-gray-900">{method.label}</div>
-                          <p className="text-[11px] text-stone-500">{method.hint}</p>
-                        </div>
-                      </div>
-                      <Icon className="w-5 h-5 text-stone-400" />
-                    </label>
-
-                    {selected && (
-                      <div className="px-4 pb-4 space-y-2">
-                        {method.code === 'card' ? (
-                          <>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              autoComplete="cc-number"
-                              value={paymentInputs.card.card_number}
-                              onChange={(e) =>
-                                setPaymentInput('card', 'card_number', formatCardNumber(e.target.value))
-                              }
-                              placeholder="Card number"
-                              className={inputClass}
-                            />
-                            <div className="grid grid-cols-2 gap-2">
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                autoComplete="cc-exp"
-                                value={paymentInputs.card.card_expiry}
-                                onChange={(e) =>
-                                  setPaymentInput('card', 'card_expiry', formatCardExpiry(e.target.value))
-                                }
-                                placeholder="Expiry (MM/YY)"
-                                className={inputClass}
-                              />
-                              <input
-                                type="password"
-                                inputMode="numeric"
-                                autoComplete="cc-csc"
-                                value={paymentInputs.card.card_cvv}
-                                onChange={(e) =>
-                                  setPaymentInput(
-                                    'card',
-                                    'card_cvv',
-                                    e.target.value.replace(/[^\d]/g, '').slice(0, 4)
-                                  )
-                                }
-                                placeholder="CVV"
-                                className={inputClass}
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <input
-                              type="tel"
-                              inputMode="tel"
-                              autoComplete="tel"
-                              maxLength={PHONE_MAX_LENGTH}
-                              value={paymentInputs[method.code].phone}
-                              onChange={(e) => setPaymentInput(method.code, 'phone', sanitizePhoneInput(e.target.value))}
-                              placeholder={
-                                method.code === 'mobile_money'
-                                  ? 'Phone number e.g. +250788123456'
-                                  : 'Phone number e.g. 0788123456'
-                              }
-                              className={inputClass}
-                            />
-                            {method.code === 'mobile_money' && (
-                              <p className="text-[10px] font-medium text-stone-500">
-                                Supported networks: MTN (+25078, +25079) and Airtel (+25073).
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <PaymentSection
+            paymentMethod={paymentMethod}
+            onMethodChange={setPaymentMethod}
+            paymentInputs={paymentInputs}
+            onInputChange={setPaymentInput}
+          />
 
           {/* 4. Notes for Kitchen or Rider */}
           <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-2">
@@ -674,90 +250,19 @@ export default function CheckoutPage() {
 
         {/* Right Column: Order Summary & Placement */}
         <div className="lg:col-span-5">
-          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xl sticky top-[calc(var(--app-header-h,112px)+1rem)] space-y-6">
-            
-            <div className="border-b border-stone-100 pb-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#542813]">
-                Order Review
-              </span>
-              <h3 className="font-black text-lg text-gray-900 mt-0.5">
-                From: {activeVendor?.name}
-              </h3>
-              <p className="text-xs text-stone-500">
-                {activeVendor?.type} · {activeVendor?.location}
-              </p>
-            </div>
-
-            {/* Items in order */}
-            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-              {cartItems.map((item) => (
-                <div key={item.itemKey} className="flex items-center justify-between text-xs">
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="font-bold text-gray-900 truncate">
-                      {item.quantity}x {item.name}
-                    </div>
-                    {item.selectedOptions && Object.keys(item.selectedOptions).length > 0 && (
-                      <div className="text-[10px] text-stone-400 truncate">
-                        {Object.values(item.selectedOptions).join(', ')}
-                      </div>
-                    )}
-                  </div>
-                  <div className="font-extrabold text-stone-800 flex-shrink-0">
-                    {(item.price * item.quantity).toLocaleString()} RWF
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Price Breakdown */}
-            <div className="space-y-2 pt-4 border-t border-stone-100 text-xs">
-              <div className="flex justify-between text-stone-600">
-                <span>Items Subtotal</span>
-                <span className="font-bold">{subtotal.toLocaleString()} RWF</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>{deliveryFeeLabel(deliveryQuote)}</span>
-                <span className="font-bold">{deliveryFeeValue(deliveryFee, deliveryQuote)}</span>
-              </div>
-              <p className="text-[10px] leading-relaxed text-stone-400 font-medium">
-                {isPickup
-                  ? "You collect your order at the kitchen, so there's no delivery fee."
-                  : deliveryQuote.unavailableReason
-                    ? deliveryQuote.unavailableReason
-                    : deliveryQuote.kitchenDelivers
-                      ? "You're beyond the delivery workers' range, so the kitchen brings your order itself and charges its own travel fee. Far orders are scheduled ahead. At handover, give the kitchen the code we send you."
-                      : 'The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.'}
-              </p>
-              <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
-                <span>Total Due</span>
-                <span className="text-[#4e2410]">{grandTotal.toLocaleString()} RWF</span>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            {(errorMsg || apiError || cartApiError) && (
-              <div role="alert" className="mb-3 rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-semibold text-red-700">
-                {errorMsg || apiError || cartApiError}
-              </div>
-            )}
-            <button
-              onClick={handleConfirmOrder}
-              disabled={isSubmitting || isSyncing || deliveryQuote.isLoading}
-              className={`w-full py-4 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-black text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 ${
-                isSubmitting ? 'opacity-75 cursor-wait' : ''
-              }`}
-            >
-              {isSubmitting ? (
-                <span>Placing your order...</span>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>Place Order · {grandTotal.toLocaleString()} RWF</span>
-                </>
-              )}
-            </button>
-
-          </div>
+          <OrderSummary
+            activeVendor={activeVendor}
+            cartItems={cartItems}
+            subtotal={subtotal}
+            deliveryFee={deliveryFee}
+            deliveryQuote={deliveryQuote}
+            grandTotal={grandTotal}
+            isPickup={isPickup}
+            error={errorMsg || apiError || cartApiError}
+            onPlaceOrder={handleConfirmOrder}
+            isSubmitting={isSubmitting}
+            disabled={isSubmitting || isSyncing || deliveryQuote.isLoading}
+          />
         </div>
 
       </div>
