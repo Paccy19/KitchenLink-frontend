@@ -83,6 +83,7 @@ export default function CheckoutPage() {
     grandTotal,
     clearCart,
     clearAfterCheckout,
+    waitForCartSync,
     apiError: cartApiError,
     isSyncing,
     orderType,
@@ -271,6 +272,10 @@ export default function CheckoutPage() {
     clearApiError();
     const method = PAYMENT_METHODS.find((m) => m.code === paymentMethod);
     try {
+      if (!(await waitForCartSync())) {
+        setErrorMsg('Your basket changed. Please check it and confirm again.');
+        return;
+      }
       const orderId = await placeOrder({
         items: cartItems,
         vendor: activeVendor,

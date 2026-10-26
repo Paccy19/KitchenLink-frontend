@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { addCartItem as addRemoteCartItem, clearRemoteCart, fetchCart, fetchDeliveryQuote, removeCartItem as removeRemoteCartItem, replaceRemoteCart, updateCartItem as updateRemoteCartItem } from '../api/endpoints';
 import { useAuth } from './AuthContext';
 import { useLocation } from './LocationContext';
+import { useToast } from '../components/common/Toast';
 import { orderingRulesFor } from '../data/vendorTypes';
 import { scheduleDayOptions, scheduleTimeSlots } from '../utils/schedule';
 
@@ -24,6 +25,7 @@ const readStoredCart = () => {
 export const CartProvider = ({ children }) => {
   const { accessToken } = useAuth();
   const { coords } = useLocation();
+  const toast = useToast();
   const [cartItems, setCartItems] = useState(readStoredCart);
 
   const [activeVendor, setActiveVendor] = useState(() => {
@@ -48,6 +50,9 @@ export const CartProvider = ({ children }) => {
   const guestCartForSync = useRef(readStoredCart());
   const previousAccessToken = useRef(accessToken);
   const cartSyncToken = useRef(null);
+  const remoteQueue = useRef(Promise.resolve());
+  const pendingRemote = useRef(0);
+  const syncFailed = useRef(false);
 
   const applyRemoteCart = (payload) => {
     const vendor = payload.vendor
@@ -119,6 +124,66 @@ export const CartProvider = ({ children }) => {
     if (!accessToken) guestCartForSync.current = cartItems;
   }, [cartItems, accessToken]);
 
+  // Signed-in changes show on screen first, then go to the server one at a
+  // time in click order. The server's cart replaces the on-screen one once
+  // nothing else is waiting; a failed change brings back the server's cart.
+  const syncRemote = (request) => {
+    setApiError('');
+    pendingRemote.current += 1;
+    const step = remoteQueue.current.then(() =>
+      request().catch((error) => {
+        syncFailed.current = true;
+        setApiError(error.message);
+        toast.error(error.message);
+        return fetchCart().catch(() => null);
+      }),
+    );
+    remoteQueue.current = step;
+    return step.then((payload) => {
+      pendingRemote.current -= 1;
+      if (payload && pendingRemote.current === 0) applyRemoteCart(payload);
+    });
+  };
+
+  // Checkout waits on this so the order uses the saved basket. False when a
+  // change it waited for failed, so the customer can check the basket first.
+  const waitForCartSync = async () => {
+    if (pendingRemote.current === 0) return true;
+    syncFailed.current = false;
+    await remoteQueue.current;
+    return !syncFailed.current;
+  };
+
+  const addItemLocally = (itemKey, dish, vendor, selectedOptions, quantity, specialInstructions) => {
+    setCartItems(prev => {
+      const existing = prev.find(item => item.itemKey === itemKey);
+      if (existing) {
+        return prev.map(item => item.itemKey !== itemKey ? item : {
+          ...item,
+          quantity: Math.min(MAX_CART_QUANTITY, item.quantity + quantity),
+          ...(specialInstructions ? { specialInstructions } : {}),
+        });
+      }
+      return [
+        ...prev,
+        {
+          itemKey,
+          id: dish.id,
+          dishId: dish.id,
+          name: dish.name,
+          price: dish.price,
+          image: dish.image,
+          quantity,
+          selectedOptions,
+          specialInstructions,
+          vendorId: vendor.id,
+          vendorName: vendor.name,
+          isPreorder: dish.isPreorder || false
+        }
+      ];
+    });
+  };
+
   const addToCart = async (dish, vendor, selectedOptions = {}, quantity = 1, specialInstructions = '') => {
     const safeQuantity = Math.max(1, Math.min(MAX_CART_QUANTITY, Math.floor(Number(quantity) || 1)));
 
@@ -155,53 +220,10 @@ export const CartProvider = ({ children }) => {
       setPreorderSpecial(null);
     }
 
-    const itemKey = `${dish.id}-${JSON.stringify(selectedOptions)}`;
-
-    if (accessToken) {
-      setApiError('');
-      try {
-        const response = await addRemoteCartItem(dish.id, safeQuantity);
-        applyRemoteCart(response);
-        setIsCartOpen(true);
-        return true;
-      } catch (error) {
-        setApiError(error.message);
-        setIsCartOpen(true);
-        return false;
-      }
-    }
-
-    setCartItems(prev => {
-      const existingIndex = prev.findIndex(item => item.itemKey === itemKey);
-      if (existingIndex > -1) {
-        const updated = [...prev];
-        updated[existingIndex].quantity = Math.min(
-          MAX_CART_QUANTITY,
-          updated[existingIndex].quantity + safeQuantity,
-        );
-        if (specialInstructions) {
-          updated[existingIndex].specialInstructions = specialInstructions;
-        }
-        return updated;
-      } else {
-        return [
-          ...prev,
-          {
-            itemKey,
-            dishId: dish.id,
-            name: dish.name,
-            price: dish.price,
-            image: dish.image,
-            quantity: safeQuantity,
-            selectedOptions,
-            specialInstructions,
-            vendorId: vendor.id,
-            vendorName: vendor.name,
-            isPreorder: dish.isPreorder || false
-          }
-        ];
-      }
-    });
+    // The account basket keys items by dish; the guest basket also by options.
+    const itemKey = accessToken ? dish.id : `${dish.id}-${JSON.stringify(selectedOptions)}`;
+    addItemLocally(itemKey, dish, vendor, selectedOptions, safeQuantity, specialInstructions);
+    if (accessToken) syncRemote(() => addRemoteCartItem(dish.id, safeQuantity));
 
     setIsCartOpen(true);
     return true;
@@ -211,19 +233,12 @@ export const CartProvider = ({ children }) => {
     if (!vendorConflict) return;
     const { incomingDish, incomingVendor, incomingOptions, incomingQuantity, incomingInstructions } = vendorConflict;
     
-    const itemKey = `${incomingDish.id}-${JSON.stringify(incomingOptions)}`;
+    const itemKey = accessToken ? incomingDish.id : `${incomingDish.id}-${JSON.stringify(incomingOptions)}`;
     if (accessToken) {
-      setApiError('');
-      try {
-        applyRemoteCart(await clearRemoteCart());
-        applyRemoteCart(await addRemoteCartItem(incomingDish.id, incomingQuantity));
-        setVendorConflict(null);
-        setIsCartOpen(true);
-      } catch (error) {
-        setApiError(error.message);
-        setIsCartOpen(true);
-      }
-      return;
+      syncRemote(async () => {
+        await clearRemoteCart();
+        return addRemoteCartItem(incomingDish.id, incomingQuantity);
+      });
     }
 
     setActiveVendor({
@@ -239,6 +254,7 @@ export const CartProvider = ({ children }) => {
     setCartItems([
       {
         itemKey,
+        id: incomingDish.id,
         dishId: incomingDish.id,
         name: incomingDish.name,
         price: incomingDish.price,
@@ -265,37 +281,19 @@ export const CartProvider = ({ children }) => {
       return removeFromCart(itemKey);
     }
     const safeQuantity = Math.min(MAX_CART_QUANTITY, Math.floor(Number(newQuantity)));
-    if (accessToken) {
-      const item = cartItems.find((cartItem) => cartItem.itemKey === itemKey);
-      if (!item) return false;
-      setApiError('');
-      try {
-        applyRemoteCart(await updateRemoteCartItem(item.dishId, safeQuantity));
-        return true;
-      } catch (error) {
-        setApiError(error.message);
-        return false;
-      }
-    }
+    const item = cartItems.find((cartItem) => cartItem.itemKey === itemKey);
+    if (!item) return false;
     setCartItems(prev =>
       prev.map(item => item.itemKey === itemKey ? { ...item, quantity: safeQuantity } : item)
     );
+    if (accessToken) syncRemote(() => updateRemoteCartItem(item.dishId, safeQuantity));
     return true;
   };
 
   const removeFromCart = async (itemKey) => {
-    if (accessToken) {
-      const item = cartItems.find((cartItem) => cartItem.itemKey === itemKey);
-      if (!item) return false;
-      setApiError('');
-      try {
-        applyRemoteCart(await removeRemoteCartItem(item.dishId));
-        return true;
-      } catch (error) {
-        setApiError(error.message);
-        return false;
-      }
-    }
+    const item = cartItems.find((cartItem) => cartItem.itemKey === itemKey);
+    if (!item) return false;
+    if (accessToken) syncRemote(() => removeRemoteCartItem(item.dishId));
     setCartItems(prev => {
       const filtered = prev.filter(item => item.itemKey !== itemKey);
       if (filtered.length === 0) {
@@ -307,16 +305,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearCart = async () => {
-    if (accessToken) {
-      setApiError('');
-      try {
-        applyRemoteCart(await clearRemoteCart());
-        return true;
-      } catch (error) {
-        setApiError(error.message);
-        return false;
-      }
-    }
+    if (accessToken) syncRemote(clearRemoteCart);
     setCartItems([]);
     setActiveVendor(null);
     return true;
@@ -392,6 +381,7 @@ export const CartProvider = ({ children }) => {
       removeFromCart,
       clearCart,
       clearAfterCheckout,
+      waitForCartSync,
       subtotal,
       deliveryFee,
       deliveryQuote,

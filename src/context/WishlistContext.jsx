@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { addWishlistItem, fetchWishlist, removeWishlistItem } from '../api/endpoints';
 import { useAuth } from './AuthContext';
+import { useToast } from '../components/common/Toast';
 
 const WishlistContext = createContext(null);
 const STORAGE_KEY = 'ofk_wishlist';
@@ -45,6 +46,9 @@ export function WishlistProvider({ children }) {
   const [apiError, setApiError] = useState('');
   const previousAccessToken = useRef(accessToken);
   const guestWishlistForSync = useRef(items);
+  const remoteQueue = useRef(Promise.resolve());
+  const pendingRemote = useRef(0);
+  const toast = useToast();
 
   useEffect(() => {
     if (!accessToken) {
@@ -76,37 +80,48 @@ export function WishlistProvider({ children }) {
     if (!accessToken) guestWishlistForSync.current = items;
   }, [items, accessToken]);
 
-  const addToWishlist = useCallback(async (dish, vendor) => {
-    if (accessToken) {
-      setApiError('');
-      try {
-        const payload = await addWishlistItem(dish.id);
-        setItems(normalizeWishlist(payload));
-      } catch (error) {
+  // Signed-in changes show on screen first, then go to the server one at a
+  // time in click order. The server's list replaces the on-screen one once
+  // nothing else is waiting; a failed change is undone.
+  const syncRemote = useCallback((request, undo) => {
+    setApiError('');
+    pendingRemote.current += 1;
+    remoteQueue.current = remoteQueue.current
+      .then(request)
+      .then((payload) => {
+        if (pendingRemote.current === 1) setItems(normalizeWishlist(payload));
+      })
+      .catch((error) => {
+        undo();
         setApiError(error.message);
-        throw error;
-      }
-      return;
+        toast.error(error.message);
+      })
+      .finally(() => {
+        pendingRemote.current -= 1;
+      });
+  }, [toast]);
+
+  const addToWishlist = useCallback(async (dish, vendor) => {
+    const entry = { dish, vendor, addedAt: new Date().toISOString() };
+    setItems((current) => (current.some((saved) => saved.dish.id === dish.id) ? current : [...current, entry]));
+    if (accessToken) {
+      syncRemote(
+        () => addWishlistItem(dish.id),
+        () => setItems((current) => current.filter((saved) => saved !== entry)),
+      );
     }
-    setItems((current) => {
-      if (current.some((entry) => entry.dish.id === dish.id)) return current;
-      return [...current, { dish, vendor, addedAt: new Date().toISOString() }];
-    });
-  }, [accessToken]);
+  }, [accessToken, syncRemote]);
 
   const removeFromWishlist = useCallback(async (dishId) => {
-    if (accessToken) {
-      setApiError('');
-      try {
-        setItems(normalizeWishlist(await removeWishlistItem(dishId)));
-      } catch (error) {
-        setApiError(error.message);
-        throw error;
-      }
-      return;
-    }
+    const removed = items.find((entry) => entry.dish.id === dishId);
     setItems((current) => current.filter((entry) => entry.dish.id !== dishId));
-  }, [accessToken]);
+    if (accessToken && removed) {
+      syncRemote(
+        () => removeWishlistItem(dishId),
+        () => setItems((current) => (current.some((entry) => entry.dish.id === dishId) ? current : [...current, removed])),
+      );
+    }
+  }, [accessToken, items, syncRemote]);
 
   const isInWishlist = useCallback(
     (dishId) => items.some((entry) => entry.dish.id === dishId),
