@@ -5,6 +5,7 @@ import Footer from './components/common/Footer';
 import CartDrawer from './components/cart/CartDrawer';
 import AuthModal from './components/auth/AuthModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ScrollManager from './components/common/ScrollManager';
 import ThemeToggle from './components/common/ThemeToggle';
 import { HomeFeedSkeleton } from './components/common/Skeleton';
 import { loadCheckoutPage, loadVendorPage, loadVendorsPage, preloadCustomerPages } from './utils/preload';
@@ -91,6 +92,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex flex-col bg-gray-50/50 ${themeScope}`}>
+      <ScrollManager />
       {!isVendorArea && <Navbar />}
 
       <main className="flex-1">
