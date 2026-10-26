@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CalendarClock, Clock } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
+import usePrefetchVendor from '../../hooks/usePrefetchVendor';
 import VendorTypeBadge from '../common/VendorTypeBadge';
 import { useCart } from '../../context/CartContext';
 import { buildPreorderSpecial, formatScheduledFor } from '../../utils/schedule';
@@ -16,6 +17,7 @@ import { buildPreorderSpecial, formatScheduledFor } from '../../utils/schedule';
 export default function SpecialCard({ vendor, special }) {
   const navigate = useNavigate();
   const { setOrderType, setPreorderSpecial } = useCart();
+  const prefetchProps = usePrefetchVendor(vendor?.id);
 
   if (!vendor || !special) return null;
 
@@ -30,6 +32,7 @@ export default function SpecialCard({ vendor, special }) {
   return (
     <Link
       to={`/vendor/${vendor.id}`}
+      {...prefetchProps}
       aria-label={`${vendor.name} special: ${special.text}`}
       className="group min-w-[300px] max-w-[300px] snap-start bg-white rounded-3xl border border-[#d9dcc0] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col"
     >

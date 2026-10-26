@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Gift } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
+import usePrefetchVendor from '../../hooks/usePrefetchVendor';
 import VendorTypeBadge from '../common/VendorTypeBadge';
 import { formatOfferDay, offerCountdown } from '../../utils/offerDays';
 
@@ -13,11 +14,13 @@ import { formatOfferDay, offerCountdown } from '../../utils/offerDays';
  */
 export default function OfferDayCard({ offer }) {
   const { vendor } = offer;
+  const prefetchProps = usePrefetchVendor(vendor?.id);
   if (!vendor?.id) return null;
 
   return (
     <Link
       to={`/vendor/${vendor.id}`}
+      {...prefetchProps}
       aria-label={`${vendor.name} offer on ${formatOfferDay(offer.offerDate, { long: true })}: ${offer.title}`}
       className="group min-w-[300px] max-w-[300px] snap-start bg-white rounded-3xl border border-amber-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col"
     >

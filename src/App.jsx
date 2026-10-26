@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
@@ -7,14 +7,15 @@ import AuthModal from './components/auth/AuthModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ThemeToggle from './components/common/ThemeToggle';
 import { HomeFeedSkeleton } from './components/common/Skeleton';
+import { loadCheckoutPage, loadVendorPage, loadVendorsPage, preloadCustomerPages } from './utils/preload';
 
 import HomePage from './pages/HomePage';
 
 // Route-level code splitting for the heavier screens.
-const VendorsPage = lazy(() => import('./pages/VendorsPage'));
+const VendorsPage = lazy(loadVendorsPage);
 const VendorsMapPage = lazy(() => import('./pages/VendorsMapPage'));
-const VendorPage = lazy(() => import('./pages/VendorPage'));
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const VendorPage = lazy(loadVendorPage);
+const CheckoutPage = lazy(loadCheckoutPage);
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrdersHistoryPage = lazy(() => import('./pages/OrdersHistoryPage'));
@@ -81,6 +82,12 @@ export default function App() {
 
   // Every area now offers dark mode, each with its own palette scope.
   const themeScope = isDriverArea ? 'app-theme-driver' : isAdminArea ? 'app-theme-admin' : 'app-theme';
+
+  // Customers get the kitchen, kitchens list and checkout pages ready in the
+  // background; staff dashboards don't need them.
+  useEffect(() => {
+    if (!isVendorArea) preloadCustomerPages();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={`min-h-screen flex flex-col bg-gray-50/50 ${themeScope}`}>

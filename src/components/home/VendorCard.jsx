@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { Bike, Clock, Globe2, MapPin, Navigation, Star } from 'lucide-react';
 import FadeImage from '../common/FadeImage';
 import LazyImage from '../common/LazyImage';
+import usePrefetchVendor from '../../hooks/usePrefetchVendor';
 import VendorTypeBadge from '../common/VendorTypeBadge';
 import { formatRwf } from '../../api/normalize';
 import { useLocation } from '../../context/LocationContext';
@@ -43,10 +44,12 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
   // not from the city-centre fallback or a picked neighbourhood.
   const { isGps } = useLocation();
   const showDistance = isGps && vendor.hasDistance;
+  const prefetchProps = usePrefetchVendor(vendor.id);
 
   return (
     <Link
       to={`/vendor/${vendor.id}`}
+      {...prefetchProps}
       aria-label={`${vendor.name}, ${vendor.type}, rated ${vendor.rating}${showDistance ? `, ${vendor.distanceKm} kilometres away` : ''}`}
       className={clsx(
         'group block bg-white overflow-hidden border border-stone-200/80 shadow-sm hover:shadow-2xl hover:border-[#ebd7c5] hover:-translate-y-1.5 transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#542813]/25 rounded-3xl',
