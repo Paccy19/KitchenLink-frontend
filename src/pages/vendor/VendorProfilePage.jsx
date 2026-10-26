@@ -19,6 +19,7 @@ import KitchenLocationCard from '../../components/vendor-dashboard/KitchenLocati
 import VendorTypeCard from '../../components/vendor-dashboard/VendorTypeCard';
 import OrderingRulesCard from '../../components/vendor-dashboard/OrderingRulesCard';
 import NationwideEventsCard from '../../components/vendor-dashboard/NationwideEventsCard';
+import FadeImage from '../../components/common/FadeImage';
 import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function VendorProfilePage() {
@@ -96,17 +97,17 @@ export default function VendorProfilePage() {
       <div className="rounded-3xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] text-white shadow-md p-6 sm:p-7">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="relative">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={vendor.name}
-                className="w-16 h-16 rounded-3xl object-cover ring-1 ring-white/30"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-3xl bg-white/15 ring-1 ring-white/30 flex items-center justify-center text-2xl font-black">
-                {(vendor.name || 'K').slice(0, 1).toUpperCase()}
-              </div>
-            )}
+            <FadeImage
+              src={avatarUrl}
+              alt={vendor.name}
+              priority
+              className="w-16 h-16 rounded-3xl object-cover ring-1 ring-white/30"
+              fallback={
+                <div className="w-16 h-16 rounded-3xl bg-white/15 ring-1 ring-white/30 flex items-center justify-center text-2xl font-black">
+                  {(vendor.name || 'K').slice(0, 1).toUpperCase()}
+                </div>
+              }
+            />
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}

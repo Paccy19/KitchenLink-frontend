@@ -23,6 +23,7 @@ import SpecialComposer from '../../components/vendor-dashboard/SpecialComposer';
 import OfferDayComposer from '../../components/vendor-dashboard/OfferDayComposer';
 import TypeTipsCard from '../../components/vendor-dashboard/TypeTipsCard';
 import OrderingRulesCard from '../../components/vendor-dashboard/OrderingRulesCard';
+import FadeImage from '../../components/common/FadeImage';
 
 const money = (value) => `${value.toLocaleString()} RWF`;
 
@@ -85,17 +86,17 @@ export default function VendorOverviewPage() {
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="relative">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={vendor.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white/30 shadow-lg bg-white/10"
-                />
-              ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 ring-2 ring-white/30 flex items-center justify-center text-2xl font-black text-white/90">
-                  {(vendor.name || 'K').slice(0, 1).toUpperCase()}
-                </div>
-              )}
+              <FadeImage
+                src={avatarUrl}
+                alt={vendor.name}
+                priority
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white/30 shadow-lg bg-white/10"
+                fallback={
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/10 ring-2 ring-white/30 flex items-center justify-center text-2xl font-black text-white/90">
+                    {(vendor.name || 'K').slice(0, 1).toUpperCase()}
+                  </div>
+                }
+              />
               <button
                 type="button"
                 onClick={() => avatarInputRef.current?.click()}

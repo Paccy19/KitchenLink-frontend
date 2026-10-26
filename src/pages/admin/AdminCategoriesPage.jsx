@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Plus, Tags, Trash2 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import Can from '../../components/admin-dashboard/Can';
+import FadeImage from '../../components/common/FadeImage';
 import {
   Badge,
   Button,
@@ -162,13 +163,15 @@ export default function AdminCategoriesPage() {
               <tr key={category.id} className="hover:bg-stone-50/60">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2.5">
-                    {category.icon_url ? (
-                      <img src={category.icon_url} alt="" className="w-8 h-8 rounded-lg object-cover" />
-                    ) : (
-                      <span className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
-                        <Tags className="w-4 h-4 text-stone-400" />
-                      </span>
-                    )}
+                    <FadeImage
+                      src={category.icon_url}
+                      className="w-8 h-8 rounded-lg object-cover"
+                      fallback={
+                        <span className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
+                          <Tags className="w-4 h-4 text-stone-400" />
+                        </span>
+                      }
+                    />
                     <div>
                       <p className="font-bold text-gray-900 flex items-center gap-1.5 flex-wrap">
                         {category.name}

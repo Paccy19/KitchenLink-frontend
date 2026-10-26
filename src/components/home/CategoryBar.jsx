@@ -16,6 +16,7 @@ import {
   Cake, 
   UtensilsCrossed 
 } from 'lucide-react';
+import FadeImage from '../common/FadeImage';
 import { CategoryBarSkeleton } from '../common/Skeleton';
 
 const isImageUrl = (value = '') =>
@@ -43,18 +44,6 @@ const iconKeyFromName = (name = '') => {
 };
 
 function CategoryIcon({ iconKey, categoryId, name, active }) {
-  if (isImageUrl(iconKey)) {
-    return (
-      <img
-        src={iconKey}
-        alt=""
-        aria-hidden="true"
-        loading="lazy"
-        className="h-6 w-6 object-contain"
-      />
-    );
-  }
-
   const lookupKey = (iconKey || categoryId || '').toLowerCase().replace(/_/g, '-');
   const IconComponent =
     CATEGORY_ICON_MAP[lookupKey] ||
@@ -62,7 +51,7 @@ function CategoryIcon({ iconKey, categoryId, name, active }) {
     CATEGORY_ICON_MAP[iconKeyFromName(name)] ||
     UtensilsCrossed;
 
-  return (
+  const icon = (
     <IconComponent
       className={clsx(
         'w-5 h-5 transition-transform duration-200 group-hover:scale-110',
@@ -71,6 +60,12 @@ function CategoryIcon({ iconKey, categoryId, name, active }) {
       aria-hidden="true"
     />
   );
+
+  // Uploaded icon image; a broken link falls back to the matching built-in icon.
+  if (isImageUrl(iconKey)) {
+    return <FadeImage src={iconKey} aria-hidden="true" className="h-6 w-6 object-contain" fallback={icon} />;
+  }
+  return icon;
 }
 
 /**

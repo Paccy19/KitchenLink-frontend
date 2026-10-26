@@ -32,6 +32,7 @@ import { useDriver } from '../../context/DriverContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { notificationLink } from '../../utils/notificationLink';
+import FadeImage from './FadeImage';
 import NotificationPopups from './NotificationPopups';
 import RoleSelectModal from '../auth/RoleSelectModal';
 import ThemeToggle from './ThemeToggle';
@@ -371,17 +372,17 @@ export default function Navbar() {
                   }}
                   className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 text-sm font-medium transition"
                 >
-                  {accountAvatar ? (
-                    <img
-                      src={accountAvatar}
-                      alt={accountName}
-                      className="w-7 h-7 rounded-full object-cover ring-2 ring-[#8a5332]/30"
-                    />
-                  ) : (
-                    <span className="w-7 h-7 rounded-full bg-[#542813] text-white ring-2 ring-[#8a5332]/30 flex items-center justify-center text-[10px] font-black">
-                      {accountInitials}
-                    </span>
-                  )}
+                  <FadeImage
+                    src={accountAvatar}
+                    alt={accountName}
+                    priority
+                    className="w-7 h-7 rounded-full object-cover ring-2 ring-[#8a5332]/30"
+                    fallback={
+                      <span className="w-7 h-7 rounded-full bg-[#542813] text-white ring-2 ring-[#8a5332]/30 flex items-center justify-center text-[10px] font-black">
+                        {accountInitials}
+                      </span>
+                    }
+                  />
                   <span className="hidden lg:inline font-bold text-stone-800 text-xs max-w-[100px] truncate">
                     {accountFirstName}
                   </span>

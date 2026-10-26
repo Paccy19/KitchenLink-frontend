@@ -14,6 +14,7 @@ import {
   Zap,
   ArrowLeft
 } from 'lucide-react';
+import FadeImage from '../common/FadeImage';
 import { useCart, deliveryFeeLabel, deliveryFeeValue } from '../../context/CartContext';
 import { basketRuleProblem, formatLead, vendorTypeLabel } from '../../data/vendorTypes';
 
@@ -292,10 +293,11 @@ export default function CartDrawer() {
                     key={item.itemKey}
                     className="p-3.5 bg-white rounded-2xl border border-stone-200/80 shadow-sm flex gap-3 items-start"
                   >
-                    <img
+                    <FadeImage
                       src={item.image}
                       alt={item.name}
-                      className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                      className="w-16 h-16 rounded-xl object-cover flex-shrink-0 bg-stone-100"
+                      fallback={<span className="w-16 h-16 rounded-xl flex-shrink-0 bg-stone-100 flex items-center justify-center"><ChefHat className="w-6 h-6 text-stone-300" /></span>}
                     />
 
                     <div className="flex-1 min-w-0">

@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   LogOut,
 } from 'lucide-react';
+import FadeImage from './FadeImage';
 import { useVendor } from '../../context/VendorContext';
 import { useDriver } from '../../context/DriverContext';
 import { useAdmin } from '../../context/AdminContext';
@@ -74,27 +75,27 @@ export default function RoleAccountMenu({ role }) {
         aria-label="Account menu"
         className="flex items-center gap-2 p-1 sm:pl-1 sm:pr-3 sm:py-1 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 transition"
       >
-        {avatar ? (
-          <img
-            src={avatar}
-            alt={name}
-            className={`w-9 h-9 rounded-full object-cover ring-2 ${
-              isVendor ? 'ring-[#ebd7c5]' : isAdmin ? 'ring-stone-300' : 'ring-[#d9e5d0]'
-            }`}
-          />
-        ) : (
-          <span
-            className={`w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-black ring-2 ${
-              isVendor
-                ? 'bg-[#542813] ring-[#ebd7c5]'
-                : isAdmin
-                  ? 'bg-gradient-to-br from-[#111827] to-[#0b1220] ring-stone-300'
-                  : 'bg-gradient-to-br from-[#3b5327] to-[#1c2b12] ring-[#d9e5d0]'
-            }`}
-          >
-            {initials}
-          </span>
-        )}
+        <FadeImage
+          src={avatar}
+          alt={name}
+          priority
+          className={`w-9 h-9 rounded-full object-cover ring-2 ${
+            isVendor ? 'ring-[#ebd7c5]' : isAdmin ? 'ring-stone-300' : 'ring-[#d9e5d0]'
+          }`}
+          fallback={
+            <span
+              className={`w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-black ring-2 ${
+                isVendor
+                  ? 'bg-[#542813] ring-[#ebd7c5]'
+                  : isAdmin
+                    ? 'bg-gradient-to-br from-[#111827] to-[#0b1220] ring-stone-300'
+                    : 'bg-gradient-to-br from-[#3b5327] to-[#1c2b12] ring-[#d9e5d0]'
+              }`}
+            >
+              {initials}
+            </span>
+          }
+        />
         <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-stone-400" />
       </button>
 

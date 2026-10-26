@@ -27,6 +27,7 @@ import { VendorAvatar } from '../components/home/VendorCard';
 import DishHoverPreview from '../components/common/DishHoverPreview';
 import VendorTypeBadge from '../components/common/VendorTypeBadge';
 import MessageKitchenButton from '../components/chat/MessageKitchenButton';
+import FadeImage from '../components/common/FadeImage';
 import { getVendorType, orderingRuleLines } from '../data/vendorTypes';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
@@ -156,18 +157,14 @@ export default function VendorPage() {
       {/* ── Header banner ─────────────────────────────────────── */}
       <div className="relative h-60 sm:h-72 w-full bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] overflow-hidden">
         {/* No banner (or a broken link): keep the chocolate background instead of a broken-image icon. */}
-        {(vendor.bannerUrl || vendor.avatarUrl) && (
-          <img
+        <div className="absolute inset-0 opacity-90">
+          <FadeImage
             src={vendor.bannerUrl || vendor.avatarUrl}
             alt={`${vendor.name} storefront`}
-            className="w-full h-full object-cover object-center opacity-90"
-            loading="eager"
-            decoding="async"
-            onError={(event) => {
-              event.currentTarget.style.display = 'none';
-            }}
+            priority
+            className="w-full h-full object-cover object-center"
           />
-        )}
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/25" />
 
         <div className="absolute top-5 left-4 sm:left-8 z-10">

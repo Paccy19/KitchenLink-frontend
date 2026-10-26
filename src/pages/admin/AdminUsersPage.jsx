@@ -20,6 +20,7 @@ import {
   toTitle,
 } from '../../components/admin-dashboard/ui';
 import StatusModal from '../../components/admin-dashboard/StatusModal';
+import FadeImage from '../../components/common/FadeImage';
 
 const ROLE_STATUSES = {
   customer: ['active', 'suspended'],
@@ -180,17 +181,16 @@ export default function AdminUsersPage() {
                 <tr key={`${user.role}-${user.id}`} className="hover:bg-stone-50/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      {user.avatar_url ? (
-                        <img
-                          src={user.avatar_url}
-                          alt={user.name}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="w-8 h-8 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-[11px] font-black">
-                          {String(user.name || 'U').slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
+                      <FadeImage
+                        src={user.avatar_url}
+                        alt={user.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                        fallback={
+                          <span className="w-8 h-8 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-[11px] font-black">
+                            {String(user.name || 'U').slice(0, 2).toUpperCase()}
+                          </span>
+                        }
+                      />
                       <span className="font-bold text-gray-900">{user.name}</span>
                     </div>
                   </td>

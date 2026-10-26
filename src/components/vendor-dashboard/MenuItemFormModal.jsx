@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { shrinkImage } from '../../utils/shrinkImage';
 import { X, Upload, Plus, Trash2, ImageOff, Clock, Sparkles } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
+import FadeImage from '../common/FadeImage';
 
 const EMPTY = {
   name: '',
@@ -223,14 +224,18 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
             <label className="text-xs font-bold text-stone-500 block mb-1.5">Dish Image</label>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="w-full sm:w-40 h-32 rounded-2xl overflow-hidden border border-stone-200 bg-stone-50 flex items-center justify-center flex-shrink-0">
-                {form.image ? (
-                  <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="text-stone-300 flex flex-col items-center gap-1">
-                    <ImageOff className="w-6 h-6" />
-                    <span className="text-[10px] font-semibold">No image</span>
-                  </div>
-                )}
+                <FadeImage
+                  src={form.image}
+                  alt="Preview"
+                  priority
+                  className="w-full h-full object-cover"
+                  fallback={
+                    <div className="text-stone-300 flex flex-col items-center gap-1">
+                      <ImageOff className="w-6 h-6" />
+                      <span className="text-[10px] font-semibold">No image</span>
+                    </div>
+                  }
+                />
               </div>
               <div className="flex-1 space-y-2">
                 <input

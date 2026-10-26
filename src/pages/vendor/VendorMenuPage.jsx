@@ -5,6 +5,7 @@ import { useToast } from '../../components/common/Toast';
 import MenuItemFormModal from '../../components/vendor-dashboard/MenuItemFormModal';
 import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
+import FadeImage from '../../components/common/FadeImage';
 
 export default function VendorMenuPage() {
   const { vendor, menuItems, categoryNames, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability } = useVendor();
@@ -149,13 +150,16 @@ export default function VendorMenuPage() {
               }`}
             >
               <div className="relative h-40 bg-stone-100">
-                {item.image ? (
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-stone-300">
-                    <ImageOff className="w-8 h-8" />
-                  </div>
-                )}
+                <FadeImage
+                  src={item.image}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                  fallback={
+                    <div className="w-full h-full flex items-center justify-center text-stone-300">
+                      <ImageOff className="w-8 h-8" />
+                    </div>
+                  }
+                />
                 <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/90 backdrop-blur text-[#3d1b0c] shadow-sm">
                     {item.category}

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { X, Plus, Minus, ShoppingBag, Clock, Sparkles, Heart, Store, ChevronRight } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import FadeImage from '../common/FadeImage';
 import { useToast } from '../common/Toast';
 import { formatRwf } from '../../api/normalize';
 
@@ -108,16 +109,7 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose, showKitch
       >
         {/* Photo with name; close + save over it */}
         <div className="relative h-48 sm:h-60 w-full bg-stone-100 flex-shrink-0">
-          {item.image && (
-            <img
-              src={item.image}
-              alt={item.name}
-              className="w-full h-full object-cover"
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
-            />
-          )}
+          <FadeImage src={item.image} alt={item.name} priority className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
           {/* Grab handle on phones (bottom sheet) */}

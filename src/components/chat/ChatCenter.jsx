@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, MessageCircle, Send, ShieldCheck, Store, User } from 'lucide-react';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
+import FadeImage from '../common/FadeImage';
 import VendorTypeBadge from '../common/VendorTypeBadge';
 
 const MAX_LENGTH = 1000;
@@ -28,13 +29,16 @@ const dayLabel = (iso) => {
 
 function Avatar({ person, side }) {
   const Icon = side === 'customer' ? Store : User;
-  if (person?.avatar_url) {
-    return <img src={person.avatar_url} alt="" className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-stone-200" />;
-  }
   return (
-    <span className="w-10 h-10 rounded-xl flex-shrink-0 bg-[#f5ebe1] border border-[#ebd7c5] text-[#542813] flex items-center justify-center">
-      <Icon className="w-5 h-5" />
-    </span>
+    <FadeImage
+      src={person?.avatar_url}
+      className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-stone-200"
+      fallback={
+        <span className="w-10 h-10 rounded-xl flex-shrink-0 bg-[#f5ebe1] border border-[#ebd7c5] text-[#542813] flex items-center justify-center">
+          <Icon className="w-5 h-5" />
+        </span>
+      }
+    />
   );
 }
 

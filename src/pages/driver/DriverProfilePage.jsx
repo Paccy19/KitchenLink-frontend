@@ -3,6 +3,7 @@ import { shrinkAvatar } from '../../utils/shrinkImage';
 import { useNavigate } from 'react-router-dom';
 import { Bike, User, Phone, Mail, Truck, Star, Power, LogOut, MapPin, Camera } from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
+import FadeImage from '../../components/common/FadeImage';
 
 const VEHICLE_LABEL = {
   motorcycle: 'Motorcycle',
@@ -47,17 +48,17 @@ export default function DriverProfilePage() {
       <div className="rounded-3xl bg-gradient-to-br from-[#1c2b12] via-[#3b5327] to-[#12200b] text-white shadow-md p-6 sm:p-7">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="relative">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={driver.name}
-                className="w-16 h-16 rounded-3xl object-cover ring-1 ring-white/30"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-3xl bg-white/15 ring-1 ring-white/30 flex items-center justify-center text-2xl font-black">
-                {driver.name.slice(0, 1).toUpperCase()}
-              </div>
-            )}
+            <FadeImage
+              src={avatarUrl}
+              alt={driver.name}
+              priority
+              className="w-16 h-16 rounded-3xl object-cover ring-1 ring-white/30"
+              fallback={
+                <div className="w-16 h-16 rounded-3xl bg-white/15 ring-1 ring-white/30 flex items-center justify-center text-2xl font-black">
+                  {driver.name.slice(0, 1).toUpperCase()}
+                </div>
+              }
+            />
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Bike, Crosshair, Map as MapIcon, Radio, Star, X } from 'lucide-react';
 import { fetchOrderLive } from '../../api/endpoints';
 import { formatDistance, formatMinutes } from '../../utils/routeMath';
+import FadeImage from '../common/FadeImage';
 import LiveRouteMap from './LiveRouteMap';
 import CallKitchenButton from '../orders/CallKitchenButton';
 import useFullScreenOverlay from '../../hooks/useFullScreenOverlay';
@@ -146,13 +147,15 @@ export default function LiveDeliveryTracker({ orderId, enabled = true }) {
           style={safeBottom(full)}
         >
           <div className="flex items-center gap-3 min-w-0">
-            {driver.avatar_url ? (
-              <img src={driver.avatar_url} alt="" className="w-12 h-12 rounded-2xl object-cover border border-stone-200" />
-            ) : (
-              <span className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-                <Bike className="w-6 h-6 text-blue-700" />
-              </span>
-            )}
+            <FadeImage
+              src={driver.avatar_url}
+              className="w-12 h-12 rounded-2xl object-cover border border-stone-200"
+              fallback={
+                <span className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                  <Bike className="w-6 h-6 text-blue-700" />
+                </span>
+              }
+            />
             <div className="min-w-0">
               <p className="font-extrabold text-gray-900 truncate">{driver.name}</p>
               <p className="text-xs text-stone-500 font-medium truncate">

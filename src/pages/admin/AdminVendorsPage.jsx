@@ -35,6 +35,7 @@ import LiveRouteMap from '../../components/tracking/LiveRouteMap';
 import { KIGALI_CENTER } from '../../lib/mapStyle';
 import VendorTypeBadge from '../../components/common/VendorTypeBadge';
 import VendorTypeFilter from '../../components/common/VendorTypeFilter';
+import FadeImage from '../../components/common/FadeImage';
 import { VENDOR_TYPES, getVendorType } from '../../data/vendorTypes';
 
 const EMPTY = { items: [], total: 0, page: 1, limit: 20 };
@@ -413,11 +414,12 @@ export default function AdminVendorsPage() {
                         className="flex items-center gap-3 rounded-xl border border-stone-100 bg-stone-50/60 p-2.5"
                       >
                         <span className="w-10 h-10 rounded-lg overflow-hidden bg-white border border-stone-100 flex items-center justify-center flex-shrink-0">
-                          {isImage ? (
-                            <img src={doc.url} alt={doc.label} className="w-full h-full object-cover" />
-                          ) : (
-                            <FileText className="w-5 h-5 text-stone-400" />
-                          )}
+                          <FadeImage
+                            src={isImage ? doc.url : null}
+                            alt={doc.label}
+                            className="w-full h-full object-cover"
+                            fallback={<FileText className="w-5 h-5 text-stone-400" />}
+                          />
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-bold text-gray-900 truncate">

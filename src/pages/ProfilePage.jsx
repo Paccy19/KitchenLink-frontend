@@ -15,6 +15,7 @@ import {
   Camera
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import FadeImage from '../components/common/FadeImage';
 import { KIGALI_AREAS } from '../utils/kigaliAreas';
 import {
   NAME_MAX_LENGTH,
@@ -110,17 +111,17 @@ export default function ProfilePage() {
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200/80 shadow-sm mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="relative">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={user.name}
-                className="w-20 h-20 rounded-2xl object-cover ring-4 ring-[#ebd7c5]"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#faf6f2] to-[#f5ebe1] ring-4 ring-[#ebd7c5] flex items-center justify-center text-xl font-black text-[#542813]">
-                {initialsOf(user.name)}
-              </div>
-            )}
+            <FadeImage
+              src={avatarUrl}
+              alt={user.name}
+              priority
+              className="w-20 h-20 rounded-2xl object-cover ring-4 ring-[#ebd7c5]"
+              fallback={
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#faf6f2] to-[#f5ebe1] ring-4 ring-[#ebd7c5] flex items-center justify-center text-xl font-black text-[#542813]">
+                  {initialsOf(user.name)}
+                </div>
+              }
+            />
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}

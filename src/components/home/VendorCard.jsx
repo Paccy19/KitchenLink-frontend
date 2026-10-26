@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 import { Bike, Clock, Globe2, MapPin, Navigation, Star } from 'lucide-react';
+import FadeImage from '../common/FadeImage';
 import LazyImage from '../common/LazyImage';
 import VendorTypeBadge from '../common/VendorTypeBadge';
 import { formatRwf } from '../../api/normalize';
@@ -9,29 +10,23 @@ import { useLocation } from '../../context/LocationContext';
 
 /** Vendor's uploaded profile picture / logo, falling back to their initial. */
 export function VendorAvatar({ vendor, className = 'w-9 h-9 rounded-xl text-sm' }) {
-  const [failed, setFailed] = useState(false);
-  if (vendor.avatarUrl && !failed) {
-    return (
-      <img
-        src={vendor.avatarUrl}
-        alt={`${vendor.name} logo`}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-        className={clsx('flex-shrink-0 object-cover border border-stone-200 bg-stone-100', className)}
-      />
-    );
-  }
   return (
-    <span
-      aria-hidden="true"
-      className={clsx(
-        'flex-shrink-0 flex items-center justify-center font-black bg-[#f5ebe1] text-[#542813] border border-[#ebd7c5]',
-        className,
-      )}
-    >
-      {(vendor.name || 'K').slice(0, 1).toUpperCase()}
-    </span>
+    <FadeImage
+      src={vendor.avatarUrl}
+      alt={`${vendor.name} logo`}
+      className={clsx('flex-shrink-0 object-cover border border-stone-200 bg-stone-100', className)}
+      fallback={
+        <span
+          aria-hidden="true"
+          className={clsx(
+            'flex-shrink-0 flex items-center justify-center font-black bg-[#f5ebe1] text-[#542813] border border-[#ebd7c5]',
+            className,
+          )}
+        >
+          {(vendor.name || 'K').slice(0, 1).toUpperCase()}
+        </span>
+      }
+    />
   );
 }
 
