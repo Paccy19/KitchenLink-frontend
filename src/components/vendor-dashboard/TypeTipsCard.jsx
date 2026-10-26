@@ -4,6 +4,7 @@ import { ArrowUpRight, Lightbulb, LocateFixed } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import VendorTypeBadge from '../common/VendorTypeBadge';
 import { TYPE_FEATURES, getVendorType } from '../../data/vendorTypes';
+import { scrollBehavior } from '../../utils/motion';
 
 /**
  * Kitchen dashboard: the features that suit this kitchen's type best (e.g.
@@ -24,7 +25,7 @@ export default function TypeTipsCard() {
     const target = document.getElementById(hash);
     if (target) {
       event.preventDefault();
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
     }
   };
 

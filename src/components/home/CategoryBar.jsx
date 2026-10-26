@@ -17,6 +17,7 @@ import {
   UtensilsCrossed 
 } from 'lucide-react';
 import FadeImage from '../common/FadeImage';
+import { scrollBehavior } from '../../utils/motion';
 import { CategoryBarSkeleton } from '../common/Skeleton';
 
 const isImageUrl = (value = '') =>
@@ -79,7 +80,7 @@ export default function CategoryBar({ categories = [], activeId = null, onSelect
   const scrollerRef = useRef(null);
 
   const scrollBy = (amount) => {
-    scrollerRef.current?.scrollBy({ left: amount, behavior: 'smooth' });
+    scrollerRef.current?.scrollBy({ left: amount, behavior: scrollBehavior() });
   };
 
   if (loading && categories.length === 0) return <CategoryBarSkeleton />;

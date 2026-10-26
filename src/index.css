@@ -93,6 +93,39 @@
   transform: translateY(0) scale(0.98);
 }
 
+/* ── Reduce motion: honour the device's accessibility setting ──
+   Things still appear and change colour, just without zooming, sliding,
+   lifting or looping. Spinners keep turning so loading never looks frozen. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+  /* No lifting or growing on hover/press (Tailwind uses translate/scale; ours use transform). */
+  [class*="hover:-translate-"]:hover,
+  [class*="hover:translate-"]:hover,
+  [class*="hover:scale-"]:hover,
+  [class*="active:scale-"]:active,
+  .group:hover [class*="group-hover:scale-"],
+  .group:hover [class*="group-hover:translate-"] {
+    translate: none !important;
+    scale: none !important;
+  }
+  .hover-card-lift:hover,
+  .btn-gradient-brown:hover,
+  .btn-gradient-brown:active {
+    transform: none !important;
+  }
+}
+
 /* =============================================================================
    Dark mode — Chocolate + White (customers & vendors)
 
