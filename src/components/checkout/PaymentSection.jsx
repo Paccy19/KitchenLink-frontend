@@ -7,7 +7,7 @@ const inputClass =
   'w-full text-xs p-3 rounded-xl border border-stone-200 bg-white text-gray-900 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition';
 
 /** Checkout step 3: pick a payment method and fill in its card or phone details. */
-export default function PaymentSection({ paymentMethod, onMethodChange, paymentInputs, onInputChange }) {
+export default function PaymentSection({ paymentMethod, onMethodChange, paymentInputs, onInputChange, accountPhone = '' }) {
   return (
     <StepCard step={3} title="Payment Method">
       <div className="space-y-2.5">
@@ -101,9 +101,16 @@ export default function PaymentSection({ paymentMethod, onMethodChange, paymentI
                         className={inputClass}
                       />
                       {method.code === 'mobile_money' && (
-                        <p className="text-[10px] font-medium text-stone-500">
-                          Supported networks: MTN (+25078, +25079) and Airtel (+25073).
-                        </p>
+                        <>
+                          {accountPhone && paymentInputs.mobile_money.phone === accountPhone && (
+                            <p className="text-[11px] font-semibold text-[#8a5332]">
+                              This is the number you signed in with. Change it if you'll pay from another number.
+                            </p>
+                          )}
+                          <p className="text-[10px] font-medium text-stone-500">
+                            Supported networks: MTN (+25078, +25079) and Airtel (+25073).
+                          </p>
+                        </>
                       )}
                     </>
                   )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -7,6 +7,7 @@ import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
 import { buildScheduledFor } from '../utils/schedule';
 import { basketRuleProblem } from '../data/vendorTypes';
+import { sanitizePhoneInput } from '../utils/validation';
 import FulfillmentSection from '../components/checkout/FulfillmentSection';
 import ScheduleSection from '../components/checkout/ScheduleSection';
 import PaymentSection from '../components/checkout/PaymentSection';
@@ -56,9 +57,22 @@ export default function CheckoutPage() {
     return user.addresses && user.addresses.length > 0 ? user.addresses[0].id : 'new';
   });
 
-  // Payment method state
+  // Payment method state. Mobile Money starts with the number the customer
+  // signed in with; they can still change it.
+  const accountPhone = sanitizePhoneInput(user.phone);
   const [paymentMethod, setPaymentMethod] = useState('mobile_money');
-  const [paymentInputs, setPaymentInputs] = useState(EMPTY_PAYMENT_INPUTS);
+  const [paymentInputs, setPaymentInputs] = useState(() => ({
+    ...EMPTY_PAYMENT_INPUTS,
+    mobile_money: { phone: accountPhone },
+  }));
+
+  // Signing in on this page fills the number in, unless one was already typed.
+  useEffect(() => {
+    if (!accountPhone) return;
+    setPaymentInputs((prev) =>
+      prev.mobile_money.phone ? prev : { ...prev, mobile_money: { phone: accountPhone } },
+    );
+  }, [accountPhone]);
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -230,6 +244,7 @@ export default function CheckoutPage() {
             onMethodChange={setPaymentMethod}
             paymentInputs={paymentInputs}
             onInputChange={setPaymentInput}
+            accountPhone={accountPhone}
           />
 
           {/* 4. Notes for Kitchen or Rider */}
