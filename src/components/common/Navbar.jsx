@@ -3,8 +3,7 @@ import { Link, useLocation as useRouterLocation } from 'react-router-dom';
 import { 
   ShoppingBag, 
   User, 
-  Clock, 
-  ChevronDown, 
+  Clock,
   UtensilsCrossed, 
   LogOut, 
   ListOrdered,
@@ -13,8 +12,6 @@ import {
   Store,
   Bike,
   Map,
-  Menu,
-  X,
   Wallet,
   ExternalLink,
   LayoutDashboard,
@@ -91,7 +88,6 @@ export default function Navbar() {
   const showBackToAdmin = adminSignedIn && isMarketplacePath;
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isRoleSelectOpen, setIsRoleSelectOpen] = useState(false);
 
@@ -165,7 +161,6 @@ export default function Navbar() {
         : accountRole === 'admin' ? admin?.email || 'Admin account'
           : accountRole === 'customer' ? user?.phone
             : '';
-  const accountFirstName = String(accountName).split(' ')[0] || 'Account';
   const accountInitials = String(accountName || 'U')
     .split(' ')
     .map((part) => part[0])
@@ -259,13 +254,13 @@ export default function Navbar() {
             {/* Cart Trigger Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="theme-primary-pill relative flex items-center gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] font-bold text-sm border border-[#ebd7c5] transition group active:scale-95"
-              aria-label="View Cart"
+              className="theme-primary-pill relative flex items-center p-2.5 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] transition group active:scale-95"
+              aria-label={`View cart${totalItemCount ? `, ${totalItemCount} ${totalItemCount === 1 ? 'item' : 'items'}` : ''}`}
+              title="Cart"
             >
               <ShoppingBag className="w-4 h-4 group-hover:scale-110 text-[#6d391d] transition-transform" />
-              <span className="hidden sm:inline">Cart</span>
               {totalItemCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-gradient-to-r from-[#2b1206] to-[#542813] text-white text-xs flex items-center justify-center font-bold animate-soft-pulse">
+                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-gradient-to-r from-[#2b1206] to-[#542813] text-white text-[10px] flex items-center justify-center font-bold animate-soft-pulse">
                   {totalItemCount}
                 </span>
               )}
@@ -370,23 +365,21 @@ export default function Navbar() {
                     setIsUserMenuOpen(!isUserMenuOpen);
                     setIsNotificationsOpen(false);
                   }}
-                  className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-stone-50 hover:bg-[#faf6f2] border border-stone-200 text-sm font-medium transition"
+                  aria-label={`Account menu for ${accountName}`}
+                  title={accountName}
+                  className="flex items-center rounded-full hover:ring-2 hover:ring-[#8a5332]/40 transition active:scale-95"
                 >
                   <FadeImage
                     src={accountAvatar}
                     alt={accountName}
                     priority
-                    className="w-7 h-7 rounded-full object-cover ring-2 ring-[#8a5332]/30"
+                    className="w-9 h-9 rounded-full object-cover ring-2 ring-[#8a5332]/30"
                     fallback={
-                      <span className="w-7 h-7 rounded-full bg-[#542813] text-white ring-2 ring-[#8a5332]/30 flex items-center justify-center text-[10px] font-black">
+                      <span className="w-9 h-9 rounded-full bg-[#542813] text-white ring-2 ring-[#8a5332]/30 flex items-center justify-center text-xs font-black">
                         {accountInitials}
                       </span>
                     }
                   />
-                  <span className="hidden lg:inline font-bold text-stone-800 text-xs max-w-[100px] truncate">
-                    {accountFirstName}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-stone-400 hidden lg:inline" />
                 </button>
 
                 {isUserMenuOpen && (
@@ -552,13 +545,6 @@ export default function Navbar() {
               </button>
             )}
 
-            {/* Mobile menu hamburger */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="xl:hidden p-2 text-stone-600 hover:text-stone-900 rounded-lg"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
           </div>
 
         </div>
@@ -604,94 +590,6 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile Dropdown Menu */}
-        {isMobileMenuOpen && (
-          <div className="xl:hidden py-3 border-t border-stone-100 space-y-2">
-            <div className="flex items-center justify-between p-2 bg-stone-50 rounded-lg">
-              <span className="text-xs text-stone-500 font-medium">Appearance</span>
-              <ThemeToggle />
-            </div>
-            <Link
-              to="/orders"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
-            >
-              Order History
-            </Link>
-            <Link
-              to="/wishlist"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-orange-50 rounded-lg"
-            >
-              <Heart className="w-4 h-4 text-rose-500" />
-              Saved Dishes
-            </Link>
-            <Link
-              to="/track"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
-            >
-              Track Order
-            </Link>
-            <Link
-              to="/vendors?filter=preorder"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
-            >
-              <CalendarDays className="w-4 h-4 text-[#8a5332]" />
-              Tomorrow's Specials
-            </Link>
-            <Link
-              to="/vendors/map"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
-            >
-              <Map className="w-4 h-4 text-[#8a5332]" />
-              Nearby Map
-            </Link>
-            <Link
-              to="/profile"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="block px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
-            >
-              My Profile
-            </Link>
-            <Link
-              to="/messages"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
-            >
-              <MessageCircle className="w-4 h-4 text-[#8a5332]" />
-              Messages
-              {chatUnread > 0 && (
-                <span className="min-w-5 h-5 px-1.5 rounded-full bg-[#542813] text-white text-[10px] font-black flex items-center justify-center">
-                  {chatUnread}
-                </span>
-              )}
-            </Link>
-            <Link
-              to="/support"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-[#faf6f2] hover:text-[#542813] rounded-lg"
-            >
-              <LifeBuoy className="w-4 h-4 text-[#8a5332]" />
-              Help &amp; Support
-            </Link>
-            {showBackToDriver && (
-              <Link
-                to="/driver-dashboard"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  exitDriverMarketplace();
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-[#3b5327] hover:bg-[#f2f8ee] rounded-lg"
-              >
-                <Bike className="w-4 h-4" />
-                Back to Delivery Worker Dashboard
-              </Link>
-            )}
-          </div>
-        )}
       </div>
     </header>
       <RoleSelectModal
