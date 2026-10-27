@@ -31,7 +31,7 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
             {order.event ? (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
                 <img src="/icons/party-popper.png" alt="" aria-hidden="true" className="w-3 h-3" />
-                Big event · {order.event.guests} guests
+                Big event · {order.event.guests} guests{order.event.package_name ? ` · ${order.event.package_name}` : ''}
               </span>
             ) : order.orderTypeCode && order.orderTypeCode !== 'immediate' && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#faf6f2] text-[#542813] border border-[#ebd7c5]">

@@ -43,6 +43,8 @@ export default function EventOrderPage() {
   const { coords, source } = useLocation();
 
   const [guests, setGuests] = useState(searchParams.get('guests') || '');
+  // The kitchen's package being ordered (from the list); none = the server's pick.
+  const [packageId, setPackageId] = useState(searchParams.get('package') || '');
   const [pickup, setPickup] = useState(searchParams.get('pickup') === '1');
   const [eventAt, setEventAt] = useState('');
   // The venue pin starts at the customer's position when it is known.
@@ -82,6 +84,7 @@ export default function EventOrderPage() {
     setQuoting(true);
     fetchEventQuote({
       vendor_id: vendorId,
+      ...(packageId ? { package_id: packageId } : {}),
       guests: debouncedGuests,
       fulfillment: pickup ? 'pickup' : 'delivery',
       ...(!pickup && lat != null ? { delivery_location: { latitude: lat, longitude: lng } } : {}),
@@ -104,7 +107,7 @@ export default function EventOrderPage() {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vendorId, debouncedGuests, pickup, debouncedPin]);
+  }, [vendorId, packageId, debouncedGuests, pickup, debouncedPin]);
 
   if (loadError && !data) {
     return (
@@ -122,6 +125,7 @@ export default function EventOrderPage() {
   }
 
   const { vendor, offer, quote } = data;
+  const pkg = offer.package;
   const leadDays = Math.round((quote.min_lead_hours ?? 48) / 24);
   const minEvent = earliestEventInput(quote.min_lead_hours ?? 48);
   const maxEvent = earliestEventInput(365 * 24).slice(0, 10) + 'T23:59';
@@ -155,6 +159,7 @@ export default function EventOrderPage() {
     try {
       const order = await createEventOrder({
         vendor_id: vendorId,
+        package_id: packageId || quote.package_id,
         guests: guestCount,
         fulfillment: pickup ? 'pickup' : 'delivery',
         event_at: when.toISOString(),
@@ -228,9 +233,37 @@ export default function EventOrderPage() {
                 />
               </label>
             </div>
+            {/* The kitchen's packages: switch between them here. */}
+            {offer.packages.length > 1 && (
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-stone-500 uppercase">Package</span>
+                <div role="radiogroup" aria-label="Event package" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {offer.packages.map((option) => {
+                    const selected = option.id === pkg.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setPackageId(option.id)}
+                        className={`p-3 rounded-2xl border text-left transition ${
+                          selected ? 'border-[#542813] bg-[#faf6f2] ring-1 ring-[#542813]/20 shadow-sm' : 'border-stone-200 hover:bg-stone-50'
+                        }`}
+                      >
+                        <span className="block font-bold text-xs text-gray-900">{option.name}</span>
+                        <span className="block text-[11px] text-stone-500 mt-0.5">
+                          {option.min_guests}–{option.max_guests} guests · from {rwf(option.from_price_per_plate_rwf)}/plate
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <p className="text-[11px] text-stone-500">
-              This kitchen hosts{' '}
-              {offer.tiers.map((t) => `${t.min_guests}–${t.max_guests} guests (${rwf(t.price_per_plate_rwf)}/plate)`).join(', ')}. Book
+              <span className="font-bold text-gray-700">{pkg.name}</span>:{' '}
+              {pkg.tiers.map((t) => `${t.min_guests}–${t.max_guests} guests (${rwf(t.price_per_plate_rwf)}/plate)`).join(', ')}. Book
               at least {leadDays} days ahead — even months before your event.
             </p>
             {quoteError && <p className="text-xs font-semibold text-red-600">{quoteError}</p>}
@@ -325,12 +358,14 @@ export default function EventOrderPage() {
             <h2 className="text-sm font-black text-gray-900 uppercase tracking-wider">Order summary</h2>
 
             <div className="text-xs text-stone-600 space-y-1.5">
-              <p className="font-bold text-gray-800">{offer.menu.join(' · ')}</p>
-              {offer.portion && <p>{offer.portion}</p>}
-              {!pickup && offer.service_style_label && (
+              <p className="text-sm font-black text-gray-900">{pkg.name}</p>
+              {pkg.description && <p>{pkg.description}</p>}
+              <p className="font-bold text-gray-800">{pkg.menu.join(' · ')}</p>
+              {pkg.portion && <p>{pkg.portion}</p>}
+              {!pickup && pkg.service_style_label && (
                 <p>
-                  <span className="font-bold text-gray-800">{offer.service_style_label}</span>
-                  {offer.service_details && ` — ${offer.service_details}`}
+                  <span className="font-bold text-gray-800">{pkg.service_style_label}</span>
+                  {pkg.service_details && ` — ${pkg.service_details}`}
                 </p>
               )}
             </div>
