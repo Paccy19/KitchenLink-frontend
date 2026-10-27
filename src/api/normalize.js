@@ -104,6 +104,9 @@ export function normalizeVendor(raw = {}) {
     deliveryAvailable: toBool(raw.delivery_available ?? raw.delivery, true),
     // Takes orders anywhere in Rwanda (big events), bringing far orders itself.
     nationwide: toBool(raw.nationwide, false),
+    // Big Event list only: the kitchen's event offer and the quote for the
+    // customer's guest count (raw API shape, see backend config/eventPackages.js).
+    event: raw.event ?? null,
     isOpen: toBool(raw.is_open ?? raw.open ?? raw.is_open_now, true),
     isNearby: toBool(raw.is_nearby, false),
     hasDistance: raw.distance_km != null || raw.distance != null,

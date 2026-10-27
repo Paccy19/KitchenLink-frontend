@@ -4,6 +4,17 @@ import { Bike, Plus, Trash2 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 import { useAdmin } from '../../context/AdminContext';
 import { Badge, Button, Card, ErrorNote, Input, formatDate, formatRwf } from './ui';
+import {
+  addRangeRow,
+  feeInput,
+  kmInput,
+  rangeLabel,
+  rangeProblems,
+  rangesToPayload,
+  rangesToRows,
+  removeRangeRow,
+  rowsToRanges,
+} from '../../utils/distanceFeeRanges';
 
 const MIN_FEE = 500;
 
@@ -24,29 +35,18 @@ export default function DeliveryFeesCard() {
 
   useEffect(() => {
     if (!query.data || rows) return;
-    const ranges = query.data.ranges || [];
     setRows(
-      ranges.length
-        ? ranges.map((range) => ({ to: range.to_km == null ? '' : String(range.to_km), fee: String(range.fee_rwf) }))
-        : [
-            // Suggested start: same feel as today's formula.
-            { to: '3', fee: '800' },
-            { to: '6', fee: '1500' },
-            { to: '', fee: '2500' },
-          ],
+      rangesToRows(query.data.ranges, [
+        // Suggested start: same feel as today's formula.
+        { to: '3', fee: '800' },
+        { to: '6', fee: '1500' },
+        { to: '', fee: '2500' },
+      ]),
     );
   }, [query.data, rows]);
 
-  const ranges = (rows || []).map((row, index) => {
-    const from = index === 0 ? 0 : Number(rows[index - 1].to) || 0;
-    return { from, to: index === rows.length - 1 ? null : row.to === '' ? NaN : Number(row.to), fee: Number(row.fee) };
-  });
-  const problems = [];
-  ranges.forEach((range, index) => {
-    const label = `Range ${index + 1}`;
-    if (range.to !== null && !(range.to > range.from)) problems.push(`${label}: the end must be more than ${range.from} km.`);
-    if (!Number.isInteger(range.fee) || range.fee < MIN_FEE) problems.push(`${label}: the fee must be at least ${MIN_FEE} RWF.`);
-  });
+  const ranges = rowsToRanges(rows);
+  const problems = rangeProblems(ranges, MIN_FEE);
 
   const mutation = useMutation({
     mutationFn: (payload) => adminApi.saveDeliveryFees(payload),
@@ -57,32 +57,19 @@ export default function DeliveryFeesCard() {
     },
   });
 
-  const save = () =>
-    mutation.mutate({ ranges: ranges.map((range) => ({ from_km: range.from, to_km: range.to, fee_rwf: range.fee })) });
+  const save = () => mutation.mutate({ ranges: rangesToPayload(ranges) });
 
   const update = (index, patch) => {
     setSaved(false);
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   };
-  const kmInput = (value) => value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 5);
-  const feeInput = (value) => value.replace(/\D/g, '').slice(0, 6);
-
   const addRange = () => {
     setSaved(false);
-    setRows((prev) => {
-      const last = prev[prev.length - 1];
-      const lastFrom = prev.length > 1 ? Number(prev[prev.length - 2].to) || 0 : 0;
-      // The old open range gets an end; a new open range follows it.
-      return [...prev.slice(0, -1), { ...last, to: String(lastFrom + 3) }, { to: '', fee: last.fee }];
-    });
+    setRows((prev) => addRangeRow(prev));
   };
   const removeRange = (index) => {
     setSaved(false);
-    setRows((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      if (next.length) next[next.length - 1] = { ...next[next.length - 1], to: '' };
-      return next;
-    });
+    setRows((prev) => removeRangeRow(prev, index));
   };
 
   const usingRanges = (query.data?.ranges || []).length > 0;
@@ -172,7 +159,7 @@ export default function DeliveryFeesCard() {
               <p className="text-xs font-black uppercase tracking-wider text-stone-400 mb-1">Customers will pay</p>
               {ranges.map((range, index) => (
                 <p key={index}>
-                  {range.to === null ? `${range.from} km and more` : `${range.from} km up to ${range.to} km`}:{' '}
+                  {rangeLabel(range.from, range.to)}:{' '}
                   <strong>{formatRwf(range.fee)}</strong>
                 </p>
               ))}

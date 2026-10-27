@@ -384,6 +384,9 @@ export const vendorApi = {
   nationwide: async () => (await vendorRequest('/vendor/nationwide'))?.nationwide,
   saveNationwide: async (payload) =>
     (await vendorRequest('/vendor/nationwide', { method: 'PUT', body: payload }))?.nationwide,
+  // Big events: the kitchen's offer (guest ranges, plate, service, delivery) and form options.
+  eventPackage: () => vendorRequest('/vendor/event-package'),
+  saveEventPackage: (payload) => vendorRequest('/vendor/event-package', { method: 'PUT', body: payload }),
   // Open (with live GPS position) / close the store, or refresh the position.
   setAvailability: (payload) =>
     vendorRequest('/vendor/availability', { method: 'PATCH', body: payload }),

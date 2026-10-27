@@ -111,6 +111,10 @@ export default function VendorsMapPage() {
   const categoryId = searchParams.get('category');
   const [vendorTypes, setVendorTypes] = useVendorTypeParam();
   const typeParam = vendorTypes.length ? vendorTypes.join(',') : undefined;
+  // ?events=1 (Big Event button): only kitchens that take event orders.
+  const eventsOnly = searchParams.get('events') === '1';
+  const guestsRaw = Number(searchParams.get('guests'));
+  const guests = eventsOnly && Number.isInteger(guestsRaw) && guestsRaw >= 1 ? guestsRaw : null;
 
   const setParam = (key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -127,12 +131,16 @@ export default function VendorsMapPage() {
       located ? round(coords.lng) : null,
       categoryId ?? 'all',
       typeParam ?? 'all-types',
+      eventsOnly,
+      guests,
     ],
     queryFn: () =>
       fetchMapVendors({
         ...(located ? { lat: coords.lat, lng: coords.lng } : {}),
         category_id: categoryId ?? undefined,
         vendor_type: typeParam,
+        events: eventsOnly ? 1 : undefined,
+        guests: guests ?? undefined,
       }),
     staleTime: 30_000,
     refetchInterval: MAP_REFRESH_MS,
@@ -305,7 +313,7 @@ export default function VendorsMapPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-20 animate-fade-in">
       <Link
-        to="/vendors"
+        to={{ pathname: '/vendors', search: searchParams.toString() }}
         className="inline-flex items-center gap-2 text-xs font-bold text-stone-500 hover:text-[#542813] transition mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -314,11 +322,22 @@ export default function VendorsMapPage() {
 
       <div className="mb-5">
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-          Open Kitchens · Map
+          {eventsOnly ? 'Big Event Kitchens · Map' : 'Open Kitchens · Map'}
         </h1>
         <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
           <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
-          Every kitchen that is open right now. Move and zoom the map to explore.
+          {eventsOnly
+            ? `Open kitchens that can host ${guests ? `${guests} guests` : 'big events'}. Move and zoom the map to explore.`
+            : 'Every kitchen that is open right now. Move and zoom the map to explore.'}
+          {eventsOnly && (
+            <button
+              type="button"
+              onClick={() => setParam('events', null)}
+              className="font-bold text-[#542813] hover:underline"
+            >
+              Show all kitchens
+            </button>
+          )}
           {!query.isPending && !query.isError && (
             <span className="bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] px-2.5 py-0.5 rounded-full font-extrabold text-[11px]">
               {total} open
@@ -414,7 +433,9 @@ export default function VendorsMapPage() {
                     <ChefHat className="w-7 h-7 text-[#542813] mx-auto" />
                     <p className="text-xs text-stone-500 mt-2">
                       {vendors.length === 0
-                        ? 'No kitchens are open right now. Check back soon.'
+                        ? eventsOnly
+                          ? 'No event kitchen is open right now. Check back soon.'
+                          : 'No kitchens are open right now. Check back soon.'
                         : 'No open kitchens in this area. Zoom out or tap “Show all kitchens”.'}
                     </p>
                   </div>
