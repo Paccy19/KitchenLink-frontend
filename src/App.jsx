@@ -17,6 +17,7 @@ const VendorsPage = lazy(loadVendorsPage);
 const VendorsMapPage = lazy(() => import('./pages/VendorsMapPage'));
 const VendorPage = lazy(loadVendorPage);
 const CheckoutPage = lazy(loadCheckoutPage);
+const EventOrderPage = lazy(() => import('./pages/EventOrderPage'));
 const OrderTrackingPage = lazy(() => import('./pages/OrderTrackingPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OrdersHistoryPage = lazy(() => import('./pages/OrdersHistoryPage'));
@@ -110,6 +111,7 @@ export default function App() {
               <Route path="/vendors/map" element={<VendorsMapPage />} />
               <Route path="/vendor/:vendorId" element={<VendorPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/event-order/:vendorId" element={<EventOrderPage />} />
               <Route path="/track" element={<OrderTrackingPage />} />
               <Route path="/track/:orderId" element={<OrderTrackingPage />} />
               <Route path="/profile" element={<ProfilePage />} />

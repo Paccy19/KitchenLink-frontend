@@ -261,6 +261,8 @@ export function mapOrder(raw = {}) {
     orderTypeCode: raw.order_type || 'immediate',
     scheduledFor: raw.scheduled_for || null,
     specialText: raw.special_text || '',
+    // Big-event orders: guests, plate, service (null for other orders).
+    event: raw.event || null,
     paymentStatus: paymentStatusLabel(raw.payment_status),
     paymentMethod:
       PAYMENT_METHOD_LABELS[raw.payment_method] || raw.payment_method || 'Payment',

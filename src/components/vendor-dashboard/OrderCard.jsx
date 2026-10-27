@@ -28,7 +28,12 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
         <div>
           <div className="flex items-center gap-2">
             <h3 className="font-black text-sm text-gray-900">{order.id}</h3>
-            {order.orderTypeCode && order.orderTypeCode !== 'immediate' && (
+            {order.event ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
+                <img src="/icons/party-popper.png" alt="" aria-hidden="true" className="w-3 h-3" />
+                Big event · {order.event.guests} guests
+              </span>
+            ) : order.orderTypeCode && order.orderTypeCode !== 'immediate' && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#faf6f2] text-[#542813] border border-[#ebd7c5]">
                 <CalendarClock className="w-3 h-3" />
                 {order.orderTypeCode === 'preorder' ? 'Pre-order' : 'Scheduled'}

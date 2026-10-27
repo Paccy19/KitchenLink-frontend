@@ -42,6 +42,15 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
                 Special: {order.specialText}
               </p>
             )}
+            {order.event && (
+              <p className="text-[11px] font-bold text-amber-900 mt-0.5">
+                Big event · {order.event.guests} guests
+                {order.event.portion ? ` · ${order.event.portion}` : ''}
+                {!order.isPickup && order.event.service_style_label
+                  ? ` · ${order.event.service_style_label}${order.event.service_details ? ` (${order.event.service_details})` : ''}`
+                  : ''}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <OrderStatusBadge status={order.status} />

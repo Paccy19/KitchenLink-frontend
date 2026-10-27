@@ -176,6 +176,9 @@ export const fetchOrder = (orderId) =>
 export const fetchOrderTracking = (orderId) =>
   apiJson('GET', `/orders/${encodeURIComponent(orderId)}/track`);
 export const createOrder = (payload) => apiJson('POST', '/orders/checkout', payload);
+// Big events: a kitchen's offer and price (guests, delivery or pick-up, venue), then the order.
+export const fetchEventQuote = (payload) => apiJson('POST', '/orders/event-quote', payload);
+export const createEventOrder = (payload) => apiJson('POST', '/orders/event-checkout', payload);
 export const cancelRemoteOrder = (orderId, reason = '') =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/cancel`, { reason });
 export const payRemoteOrder = (orderId, payload = {}) =>

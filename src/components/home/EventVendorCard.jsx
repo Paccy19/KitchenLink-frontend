@@ -122,10 +122,17 @@ export default function EventVendorCard({ vendor, pickup = false }) {
         )}
       </div>
 
+      {/* Book this kitchen for the event (guests and delivery / pick-up carry over). */}
+      <Link
+        to={`/event-order/${vendor.id}?guests=${quote?.guests ?? event.min_guests}${pickup ? '&pickup=1' : ''}`}
+        className="mx-4 text-center px-4 py-2.5 rounded-xl bg-[#542813] text-white text-sm font-black hover:bg-[#2b1206] transition active:scale-[0.98]"
+      >
+        Place order
+      </Link>
       <Link
         to={`/vendor/${vendor.id}`}
         {...prefetchProps}
-        className="m-4 mt-0 text-center px-4 py-2.5 rounded-xl bg-[#542813] text-white text-sm font-black hover:bg-[#2b1206] transition active:scale-[0.98]"
+        className="mx-4 mt-2 mb-4 text-center text-xs font-bold text-stone-500 hover:text-[#542813] transition"
       >
         View kitchen
       </Link>

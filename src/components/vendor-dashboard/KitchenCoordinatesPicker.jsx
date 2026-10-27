@@ -76,8 +76,9 @@ const PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)\s*$/;
  * `value` is `{ lat, lng }` as strings; `onChange` receives the same shape.
  * `focus` ({ bounds?, center?, zoom?, maxZoom?, zone?, line? }) moves the map
  * to a searched area or street and outlines it; pass a new object to re-apply.
+ * `place` names the spot in the help text (also used for a big event's venue).
  */
-export default function KitchenCoordinatesPicker({ value, onChange, error, inputClass, focus }) {
+export default function KitchenCoordinatesPicker({ value, onChange, error, inputClass, focus, place = 'your kitchen' }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
@@ -202,7 +203,7 @@ export default function KitchenCoordinatesPicker({ value, onChange, error, input
         </div>
       )}
       <p className="text-[11px] text-stone-500">
-        Tap the map where your kitchen is, or drag the pin. You can also paste "latitude, longitude" from
+        Tap the map where {place} is, or drag the pin. You can also paste "latitude, longitude" from
         Google Maps into either box.
         {coords && (
           <>
