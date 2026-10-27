@@ -164,6 +164,7 @@ export default function App() {
                 <Route path="wallet" element={<VendorWalletPage />} />
                 <Route path="notifications" element={<VendorNotificationsPage />} />
                 <Route path="profile" element={<VendorProfilePage />} />
+                <Route path="profile/:section" element={<VendorProfilePage />} />
                 <Route path="support" element={<VendorSupportPage />} />
                 <Route path="messages" element={<VendorMessagesPage />} />
               </Route>

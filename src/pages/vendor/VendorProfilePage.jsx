@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { shrinkAvatar } from '../../utils/shrinkImage';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   Store,
   User,
@@ -21,9 +21,15 @@ import OrderingRulesCard from '../../components/vendor-dashboard/OrderingRulesCa
 import NationwideEventsCard from '../../components/vendor-dashboard/NationwideEventsCard';
 import BigEventsCard from '../../components/vendor-dashboard/BigEventsCard';
 import FadeImage from '../../components/common/FadeImage';
+import { VENDOR_SETTINGS_BASE, VENDOR_SETTINGS_SECTIONS } from '../../data/vendorSettings';
 import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
+/**
+ * The kitchen's settings: one page per section (/vendor-dashboard/profile/:section),
+ * opened from "Settings" in the sidebar. Account details is the default.
+ */
 export default function VendorProfilePage() {
+  const { section } = useParams();
   const navigate = useNavigate();
   const { vendor, updateVendorProfile, logout } = useVendor();
   const [form, setForm] = useState({ name: '', ownerName: '', phone: '', description: '' });
@@ -44,6 +50,9 @@ export default function VendorProfilePage() {
     setAvatarUrl(vendor.avatar || '');
   }, [vendor]);
 
+  // /vendor-dashboard/profile (or an unknown section) opens Account details.
+  const current = VENDOR_SETTINGS_SECTIONS.find((s) => s.id === section);
+  if (!current) return <Navigate to={`${VENDOR_SETTINGS_BASE}/account`} replace />;
   if (!vendor) return null;
 
   const update = (patch) => {
@@ -92,7 +101,10 @@ export default function VendorProfilePage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-black text-gray-900 tracking-tight">Kitchen Profile</h1>
+      <div>
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">Settings</h1>
+        <p className="text-xs text-stone-500 font-medium mt-0.5">{current.label}</p>
+      </div>
 
       {/* Identity card */}
       <div className="rounded-3xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] text-white shadow-md p-6 sm:p-7">
@@ -146,6 +158,7 @@ export default function VendorProfilePage() {
         </div>
       </div>
 
+      {section === 'account' && (
       <form onSubmit={handleSave} className="rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 sm:p-6 space-y-4">
         <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400">Account details</p>
 
@@ -229,14 +242,17 @@ export default function VendorProfilePage() {
           )}
         </div>
       </form>
+      )}
 
-      <VendorTypeCard />
-
-      <OrderingRulesCard />
-      <BigEventsCard />
-      <NationwideEventsCard />
-
-      <KitchenLocationCard />
+      {section === 'type' && <VendorTypeCard />}
+      {section === 'orders' && <OrderingRulesCard />}
+      {section === 'events' && (
+        <>
+          <NationwideEventsCard />
+          <BigEventsCard />
+        </>
+      )}
+      {section === 'location' && <KitchenLocationCard />}
 
       <button
         type="button"

@@ -129,7 +129,7 @@ export const TYPE_FEATURES = {
   offer_days: { label: 'Offer Days', hint: 'Announce a deal for a coming day; customers get a reminder the day before.', to: '/vendor-dashboard#offer-days' },
   scheduled: { label: 'Scheduled orders', hint: 'Customers can order for a later time — set your opening hours so they know when.', to: '/vendor-dashboard/profile' },
   immediate: { label: 'Orders for now', hint: 'Keep your store open and your menu up to date so you show up for quick orders.', to: '/vendor-dashboard/menu' },
-  pickup: { label: 'Customer pick-up', hint: 'Customers can collect at your kitchen — keep your kitchen location correct.', to: '/vendor-dashboard/profile' },
+  pickup: { label: 'Customer pick-up', hint: 'Customers can collect at your kitchen — keep your kitchen location correct.', to: '/vendor-dashboard/profile/location' },
   delivery: { label: 'Delivery', hint: 'Nearby delivery workers bring your food to customers.', to: '/vendor-dashboard/orders' },
 };
 

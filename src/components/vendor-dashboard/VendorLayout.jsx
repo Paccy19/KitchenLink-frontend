@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet, Navigate } from 'react-router-dom';
+import { NavLink, Outlet, Navigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -17,6 +17,8 @@ import {
   LifeBuoy,
   FileSearch,
   MessageCircle,
+  Settings,
+  ChevronDown,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { vendorApi } from '../../api/vendorApi';
@@ -25,6 +27,7 @@ import useVendorRealtime from '../../hooks/useVendorRealtime';
 import RoleAccountMenu from '../common/RoleAccountMenu';
 import ThemeToggle from '../common/ThemeToggle';
 import VendorNotificationBell from './VendorNotificationBell';
+import { VENDOR_SETTINGS_BASE, VENDOR_SETTINGS_SECTIONS } from '../../data/vendorSettings';
 
 const NAV = [
   { to: '/vendor-dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -33,6 +36,8 @@ const NAV = [
   { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet },
   { to: '/vendor-dashboard/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'chats' },
   { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications' },
+  // A group: opens to list the settings pages.
+  { to: VENDOR_SETTINGS_BASE, label: 'Settings', icon: Settings, children: VENDOR_SETTINGS_SECTIONS },
   { to: '/vendor-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support' },
 ];
 
@@ -54,6 +59,13 @@ export default function VendorLayout() {
   // Unread customer messages.
   const chatUnread = useSupportUnread(vendorApi.chats, { enabled: Boolean(hasToken && isAuthenticated) });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // The Settings group stays open while one of its pages is showing.
+  const { pathname } = useLocation();
+  const onSettings = pathname.startsWith(VENDOR_SETTINGS_BASE);
+  const [settingsOpen, setSettingsOpen] = useState(onSettings);
+  useEffect(() => {
+    if (onSettings) setSettingsOpen(true);
+  }, [onSettings]);
   const isPending = vendor?.verificationStatus === 'Pending';
   // Pending vendors see the review popup on arrival and whenever they try an action.
   const [reviewPopupOpen, setReviewPopupOpen] = useState(true);
@@ -96,7 +108,9 @@ export default function VendorLayout() {
     }`;
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    // min-h-0 lets the menu list scroll inside the sidebar when it is taller
+    // than the screen (e.g. with Settings open), instead of running off it.
+    <div className="flex flex-col h-full flex-1 min-h-0">
       <div className="flex items-center gap-3 px-2 pb-5">
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] flex items-center justify-center flex-shrink-0 shadow-md">
           <Store className="w-6 h-6 text-[#f5ebe1]" />
@@ -120,10 +134,48 @@ export default function VendorLayout() {
         />
       </div>
 
-      <nav className="space-y-1.5 flex-1">
+      <nav className="space-y-1.5 flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
         {NAV.map((item) => {
           const Icon = item.icon;
           const count = badgeValue(item);
+          if (item.children) {
+            return (
+              <div key={item.to}>
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen((open) => !open)}
+                  aria-expanded={settingsOpen}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all ${
+                    onSettings ? 'text-[#542813] bg-[#faf6f2]' : 'text-stone-600 hover:bg-[#faf6f2] hover:text-[#542813]'
+                  }`}
+                >
+                  <Icon className="w-[18px] h-[18px]" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {settingsOpen && (
+                  <div className="mt-1 ml-6 pl-3 border-l border-stone-200 space-y-1">
+                    {item.children.map((child) => (
+                      <NavLink
+                        key={child.id}
+                        to={`${item.to}/${child.id}`}
+                        onClick={() => setDrawerOpen(false)}
+                        className={({ isActive }) =>
+                          `block px-3 py-2 rounded-xl text-[13px] font-bold transition-all ${
+                            isActive
+                              ? 'bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white shadow-md shadow-[#2b1206]/20'
+                              : 'text-stone-500 hover:bg-[#faf6f2] hover:text-[#542813]'
+                          }`
+                        }
+                      >
+                        {child.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
           return (
             <NavLink
               key={item.to}
@@ -169,7 +221,7 @@ export default function VendorLayout() {
         {drawerOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
-            <div className="absolute left-0 top-0 h-full w-72 max-w-[85%] bg-white p-5 shadow-2xl animate-fade-in">
+            <div className="absolute left-0 top-0 h-full w-72 max-w-[85%] bg-white p-5 shadow-2xl animate-fade-in flex flex-col">
               <div className="flex justify-end mb-2">
                 <button
                   type="button"

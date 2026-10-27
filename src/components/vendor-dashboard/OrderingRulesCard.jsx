@@ -116,7 +116,7 @@ export default function OrderingRulesCard({ compact = false }) {
       )}
 
       {compact ? (
-        <Link to="/vendor-dashboard/profile" className="inline-block text-xs font-bold text-[#542813] hover:underline">
+        <Link to="/vendor-dashboard/profile/orders" className="inline-block text-xs font-bold text-[#542813] hover:underline">
           Change your daily limit or minimum order
         </Link>
       ) : (
