@@ -179,6 +179,9 @@ export const createOrder = (payload) => apiJson('POST', '/orders/checkout', payl
 // Big events: a kitchen's offer and price (guests, delivery or pick-up, venue), then the order.
 export const fetchEventQuote = (payload) => apiJson('POST', '/orders/event-quote', payload);
 export const createEventOrder = (payload) => apiJson('POST', '/orders/event-checkout', payload);
+// Big events: pay the second half (due a day before the event).
+export const payEventBalance = (orderId, payload = {}) =>
+  apiJson('POST', `/orders/${encodeURIComponent(orderId)}/pay-balance`, payload);
 export const cancelRemoteOrder = (orderId, reason = '') =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/cancel`, { reason });
 export const payRemoteOrder = (orderId, payload = {}) =>

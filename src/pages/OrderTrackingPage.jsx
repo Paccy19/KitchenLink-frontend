@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES, KITCHEN_DELIVERY_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
+import EventBalanceCard from '../components/orders/EventBalanceCard';
 import SwitchToDeliveryModal from '../components/orders/SwitchToDeliveryModal';
 import CallKitchenButton from '../components/orders/CallKitchenButton';
 import KitchenDirectionsModal from '../components/orders/KitchenDirectionsModal';
@@ -226,6 +227,16 @@ export default function OrderTrackingPage() {
             )}
           </div>
         </div>
+
+        {/* Big events: deposit paid, balance due a day before the event */}
+        {order.deposit && !isCancelled && (
+          <EventBalanceCard
+            orderId={order.id}
+            deposit={order.deposit}
+            paymentLabel={[order.payment.method, order.payment.details?.phone].filter(Boolean).join(' · ')}
+            onPaid={() => refreshOrder(order.id)}
+          />
+        )}
 
         {/* Step-by-Step Progress Tracker */}
         {isCancelled ? (
@@ -499,9 +510,21 @@ export default function OrderTrackingPage() {
                 <span>{isPickup ? 'Free' : `${order.pricing.deliveryFee.toLocaleString()} RWF`}</span>
               </div>
               <div className="flex justify-between text-sm font-black text-gray-900 pt-2 border-t border-stone-200">
-                <span>Total Paid</span>
+                <span>{order.deposit && !order.deposit.balance_paid_at ? 'Total' : 'Total Paid'}</span>
                 <span className="text-[#4e2410]">{order.pricing.total.toLocaleString()} RWF</span>
               </div>
+              {order.deposit && !order.deposit.balance_paid_at && (
+                <>
+                  <div className="flex justify-between text-stone-600">
+                    <span>Paid so far (deposit)</span>
+                    <span>{Number(order.deposit.amount_paid_rwf || 0).toLocaleString()} RWF</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-[#8a5332]">
+                    <span>Balance due</span>
+                    <span>{Number(order.deposit.balance_rwf || 0).toLocaleString()} RWF</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="p-3 bg-stone-50 rounded-xl text-[11px] text-stone-500 font-medium border border-stone-100">

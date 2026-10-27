@@ -57,6 +57,13 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
             {timeAgo(order.createdAt)}
             {order.scheduledFor ? ` · for ${formatScheduledFor(order.scheduledFor)}` : ''}
           </p>
+          {order.deposit && (
+            <p className={`text-[11px] font-bold mt-0.5 ${order.deposit.balance_unpaid ? 'text-amber-700' : 'text-emerald-700'}`}>
+              {order.deposit.balance_unpaid
+                ? `Half paid · balance ${Number(order.deposit.balance_rwf).toLocaleString()} RWF due ${formatScheduledFor(order.deposit.balance_due_at)}`
+                : 'Fully paid'}
+            </p>
+          )}
         </div>
         <OrderStatusBadge status={order.status} />
       </div>

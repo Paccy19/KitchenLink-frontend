@@ -42,6 +42,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
                 Special: {order.specialText}
               </p>
             )}
+            {order.deposit && (
+              <p className={`text-[11px] font-bold mt-0.5 ${order.deposit.balance_unpaid ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {order.deposit.balance_unpaid
+                  ? `Customer paid half (${Number(order.deposit.deposit_rwf).toLocaleString()} RWF). Balance ${Number(order.deposit.balance_rwf).toLocaleString()} RWF due ${formatScheduledFor(order.deposit.balance_due_at)} — don't hand the food over until it's paid.`
+                  : 'Fully paid (deposit and balance).'}
+              </p>
+            )}
             {order.event && (
               <p className="text-[11px] font-bold text-amber-900 mt-0.5">
                 Big event · {order.event.guests} guests

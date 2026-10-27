@@ -249,6 +249,10 @@ export function normalizeOrder(raw = {}) {
       : null,
     scheduledFor: toText(raw.scheduled_for),
     specialText: toText(raw.special_text),
+    // Big events (raw API shape): the booking, and the two-part payment
+    // (deposit now, balance a day before the event). Null on other orders.
+    event: raw.event ?? null,
+    deposit: raw.deposit ?? null,
     vendorId: toText(vendor.id),
     vendorName: toText(vendor.name, 'Kitchen'),
     vendorType: toText(vendor.vendor_type_label, vendorTypeLabel(vendor.vendor_type)),

@@ -28,9 +28,11 @@ function earliestEventInput(hours) {
 /**
  * Big Event order: the customer books a kitchen's event offer — number of
  * guests, delivery (the kitchen brings it to the venue they pin; they pay its
- * delivery fee) or pick-up (no fee), the date and time, and payment. Prices
- * always come from the server (POST /orders/event-quote) and the order is
- * placed with POST /orders/event-checkout.
+ * delivery fee) or pick-up (no fee), the date and time (weeks or months
+ * ahead, like a pre-order), and payment. They pay half now and the balance a
+ * day before the event (from their order page). Prices always come from the
+ * server (POST /orders/event-quote) and the order is placed with
+ * POST /orders/event-checkout.
  */
 export default function EventOrderPage() {
   const { vendorId } = useParams();
@@ -120,8 +122,16 @@ export default function EventOrderPage() {
   }
 
   const { vendor, offer, quote } = data;
-  const minEvent = earliestEventInput(quote.min_lead_hours ?? 24);
+  const leadDays = Math.round((quote.min_lead_hours ?? 48) / 24);
+  const minEvent = earliestEventInput(quote.min_lead_hours ?? 48);
+  const maxEvent = earliestEventInput(365 * 24).slice(0, 10) + 'T23:59';
   const quoteMatches = !quoteError && quote.guests === guestCount;
+  // Paid in two parts: the deposit now, the balance a day before the event.
+  const balanceDueAt = eventAt
+    ? new Date(new Date(eventAt).getTime() - (quote.balance_due_hours_before ?? 24) * 60 * 60 * 1000)
+    : null;
+  const formatDue = (date) =>
+    date.toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   const placeOrder = async () => {
     setErrorMsg('');
@@ -134,7 +144,7 @@ export default function EventOrderPage() {
     if (!eventAt) return setErrorMsg('Choose the date and time of your event.');
     const when = new Date(eventAt);
     if (Number.isNaN(when.getTime()) || eventAt < minEvent) {
-      return setErrorMsg(`Big events must be booked at least ${quote.min_lead_hours ?? 24} hours ahead. Pick a later date.`);
+      return setErrorMsg(`Big events must be booked at least ${leadDays} days ahead. Pick a later date.`);
     }
     if (!pickup && !venueAddress.trim()) return setErrorMsg('Enter the address of the event venue.');
     if (!pickup && !pin) return setErrorMsg('Pin the event venue on the map.');
@@ -211,6 +221,7 @@ export default function EventOrderPage() {
                 <input
                   type="datetime-local"
                   min={minEvent}
+                  max={maxEvent}
                   value={eventAt}
                   onChange={(e) => setEventAt(e.target.value)}
                   className={`${inputClass} mt-1`}
@@ -219,8 +230,8 @@ export default function EventOrderPage() {
             </div>
             <p className="text-[11px] text-stone-500">
               This kitchen hosts{' '}
-              {offer.tiers.map((t) => `${t.min_guests}–${t.max_guests} guests (${rwf(t.price_per_plate_rwf)}/plate)`).join(', ')}. Book at
-              least {quote.min_lead_hours ?? 24} hours ahead.
+              {offer.tiers.map((t) => `${t.min_guests}–${t.max_guests} guests (${rwf(t.price_per_plate_rwf)}/plate)`).join(', ')}. Book
+              at least {leadDays} days ahead — even months before your event.
             </p>
             {quoteError && <p className="text-xs font-semibold text-red-600">{quoteError}</p>}
           </StepCard>
@@ -259,7 +270,7 @@ export default function EventOrderPage() {
                       : ''}
                   </p>
                   <p className="text-stone-600 mt-0.5">
-                    You'll get a 6-digit code. Give it to the kitchen when you collect the food.
+                    Once you've paid the balance you'll get a 6-digit code. Give it to the kitchen when you collect the food.
                   </p>
                 </div>
               </div>
@@ -350,6 +361,18 @@ export default function EventOrderPage() {
                     <dt>Total</dt>
                     <dd>{rwf(quote.total_rwf)}</dd>
                   </div>
+                  {(pickup || quote.delivery_fee_rwf != null) && (
+                    <div className="mt-2 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-3 space-y-1 text-xs">
+                      <div className="flex justify-between font-black text-[#3d1b0c]">
+                        <dt>Pay now ({quote.deposit_percent}%)</dt>
+                        <dd>{rwf(quote.deposit_rwf)}</dd>
+                      </div>
+                      <div className="flex justify-between text-stone-600">
+                        <dt>Balance, {balanceDueAt ? `by ${formatDue(balanceDueAt)}` : 'a day before the event'}</dt>
+                        <dd>{rwf(quote.balance_rwf)}</dd>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <p className="text-xs text-stone-500">{quoteError || 'Enter your number of guests to see the price.'}</p>
@@ -365,10 +388,11 @@ export default function EventOrderPage() {
               className="w-full px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white text-sm font-black shadow-md disabled:opacity-50 active:scale-[0.98] transition flex items-center justify-center gap-2"
             >
               {(submitting || quoting) && <Loader2 className="w-4 h-4 animate-spin" />}
-              {submitting ? 'Placing your order…' : quoteMatches ? `Place order · ${rwf(quote.total_rwf)}` : 'Place order'}
+              {submitting ? 'Placing your order…' : quoteMatches ? `Place order · pay ${rwf(quote.deposit_rwf)} now` : 'Place order'}
             </button>
             <p className="text-[11px] text-stone-400 text-center">
-              Your payment is held safely until the kitchen hands over the food with your code.
+              You pay half now and the rest a day before your event, from your order page. Your money is held safely until
+              the kitchen hands over the food with your code.
             </p>
           </div>
         </div>

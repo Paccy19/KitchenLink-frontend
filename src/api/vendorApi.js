@@ -263,6 +263,8 @@ export function mapOrder(raw = {}) {
     specialText: raw.special_text || '',
     // Big-event orders: guests, plate, service (null for other orders).
     event: raw.event || null,
+    // Big events: deposit paid; `balance_unpaid` blocks handing the food over.
+    deposit: raw.deposit || null,
     paymentStatus: paymentStatusLabel(raw.payment_status),
     paymentMethod:
       PAYMENT_METHOD_LABELS[raw.payment_method] || raw.payment_method || 'Payment',
