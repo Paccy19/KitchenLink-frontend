@@ -124,7 +124,8 @@ export default function HomeFeed() {
           onSubmit={(value) => setQuery(value)}
           className="flex-1"
         />
-        <div className="flex items-center gap-2 justify-between sm:justify-start">
+        {/* Grid so the event button's column is exactly as wide as the location pill */}
+        <div className="grid grid-cols-[auto_auto] items-center gap-2 justify-between sm:justify-start">
           <LocationIndicator />
           <button
             type="button"
@@ -135,6 +136,14 @@ export default function HomeFeed() {
           >
             <RefreshCw className={`w-4 h-4 ${pull.refreshing ? 'animate-spin' : ''}`} />
           </button>
+          {/* Big events → caterers (the kitchen type built for bulk orders and events) */}
+          <Link
+            to="/vendors?type=caterer"
+            className="col-start-1 w-full flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full bg-[#542813] text-white text-sm font-black tracking-tight shadow-sm hover:bg-[#2b1206] hover:shadow-md transition active:scale-95"
+          >
+            <img src="/icons/party-popper.png" alt="" aria-hidden="true" className="w-5 h-5 drop-shadow" />
+            Big Event
+          </Link>
         </div>
       </div>
 
