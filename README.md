@@ -1,13 +1,27 @@
-# Online Food Kitchen — Frontend
+# KitchenLink — Frontend
 
-Mobile-first customer storefront for the Online Food Kitchen multi-vendor
-marketplace: discover nearby kitchens and home cooks, browse menus, search
-dishes and order food.
+The KitchenLink website: the customer marketplace, the kitchen dashboard, the
+delivery worker app and the admin panel, in one React (Vite) app.
+
+## Connecting a backend
+
+This website works with **any backend that follows [API_CONTRACT.md](API_CONTRACT.md)**
+— every request the website makes, who must be signed in, and the response
+rules. The reference backend is **KitchenLink-backend**.
+
+Which backend it talks to is one setting in `.env` (copy `.env.example`):
+
+```bash
+VITE_API_PROXY=http://localhost:4000      # development: the backend's address
+# VITE_API_BASE_URL=https://api.example.rw/api/v1   # live builds
+```
+
+Change it, restart `npm run dev`, and the website uses the other backend. No
+code changes.
 
 ## Quick start
 
 ```bash
-cd frontend
 npm install
 npm run dev        # http://localhost:3000
 ```
