@@ -111,7 +111,9 @@ export default function VendorsPage() {
   const firstLoad = query.isPending;
 
   // Nearby kitchens lead the list (sorted by distance); split them into their own group.
-  const groupByDistance = sort === 'distance' && locationUsed;
+  // Big events stay in one grid (still nearest first): the kitchen brings the food
+  // anyway, and splitting so few kitchens left each group a single, lonely card.
+  const groupByDistance = !eventsOnly && sort === 'distance' && locationUsed;
   const nearby = groupByDistance ? vendors.filter((vendor) => vendor.isNearby) : [];
   const others = groupByDistance ? vendors.filter((vendor) => !vendor.isNearby) : vendors;
 
@@ -210,8 +212,14 @@ export default function VendorsPage() {
     );
   }
 
+  // Event cards hold every package with its prices, so they need more room:
+  // one per row on phones and small tablets, two from 768px, three from 1280px.
+  const gridClass = eventsOnly
+    ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6'
+    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6';
+
   const renderGrid = (list) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className={gridClass}>
       {list.map((vendor) =>
         eventsOnly ? <EventVendorCard key={vendor.id} vendor={vendor} pickup={pickup} /> : <VendorCard key={vendor.id} vendor={vendor} />,
       )}
@@ -228,8 +236,13 @@ export default function VendorsPage() {
         <span>Back to home</span>
       </Link>
 
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
-        <div>
+      <div
+        className={`flex flex-col justify-between gap-3 mb-5 ${
+          // The events header also holds the delivery / pick-up choice: side by side only on wide screens.
+          eventsOnly ? 'lg:flex-row lg:items-end' : 'sm:flex-row sm:items-end'
+        }`}
+      >
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
             {activeCategory
               ? activeCategory.name
@@ -261,7 +274,12 @@ export default function VendorsPage() {
             </p>
           )}
           {eventsOnly && (
-            <FulfilmentChoice pickup={pickup} onChange={(wantsPickup) => setParam('pickup', wantsPickup ? '1' : null)} className="mt-3" />
+            <FulfilmentChoice
+              pickup={pickup}
+              onChange={(wantsPickup) => setParam('pickup', wantsPickup ? '1' : null)}
+              className="mt-3 w-full sm:w-auto"
+              stretch="mobile"
+            />
           )}
           <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">
             <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
@@ -329,7 +347,7 @@ export default function VendorsPage() {
 
       {/* Results */}
       {firstLoad ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true">
+        <div className={gridClass} aria-busy="true">
           {Array.from({ length: 6 }).map((_, index) => (
             <VendorCardSkeleton key={index} />
           ))}
@@ -400,7 +418,7 @@ export default function VendorsPage() {
               </section>
             )}
             {isFetchingNextPage && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className={gridClass}>
                 {Array.from({ length: 3 }).map((_, index) => (
                   <VendorCardSkeleton key={`loading-${index}`} />
                 ))}
@@ -438,7 +456,9 @@ export default function VendorsPage() {
  * delivers it (they pay the kitchen's delivery fee for the distance) or they
  * pick it up at the kitchen (no delivery fee).
  */
+/** stretch: true = buttons share the width, 'mobile' = only on phones. */
 function FulfilmentChoice({ pickup, onChange, className = '', stretch = false }) {
+  const widthClass = stretch === 'mobile' ? 'flex-1 sm:flex-none' : stretch ? 'flex-1' : '';
   const options = [
     { value: false, label: 'Delivery', hint: 'Kitchen brings it · delivery fee' },
     { value: true, label: 'Pick up', hint: 'You collect it · no delivery fee' },
@@ -454,7 +474,7 @@ function FulfilmentChoice({ pickup, onChange, className = '', stretch = false })
             role="radio"
             aria-checked={active}
             onClick={() => onChange(option.value)}
-            className={`${stretch ? 'flex-1' : ''} text-left px-3.5 py-2 rounded-xl border transition active:scale-95 ${
+            className={`${widthClass} min-w-0 text-left px-3.5 py-2 rounded-xl border transition active:scale-95 ${
               active ? 'bg-[#542813] text-white border-[#542813] shadow-md' : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
             }`}
           >
@@ -478,13 +498,13 @@ function GuestCountStep({ initialPickup, onSubmit, onCancel }) {
   const valid = Number.isInteger(count) && count >= 1 && count <= 100000;
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-10 pb-20 animate-fade-in">
+    <div className="max-w-md mx-auto px-4 pt-6 sm:pt-10 pb-20 animate-fade-in">
       <form
         onSubmit={(event) => {
           event.preventDefault();
           if (valid) onSubmit(count, wantsPickup);
         }}
-        className="rounded-3xl bg-white border border-stone-200/80 shadow-sm p-6 text-center space-y-4"
+        className="rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 sm:p-6 text-center space-y-4"
       >
         <img src="/icons/party-popper.png" alt="" aria-hidden="true" className="w-16 h-16 mx-auto" />
         <div>

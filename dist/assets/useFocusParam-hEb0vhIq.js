@@ -1,0 +1,1 @@
+import{u as f,r as u}from"./index-DNpXlZGA.js";function h(e){const[t,r]=f(),[c,n]=u.useState(()=>t.get(e));return u.useEffect(()=>{const s=t.get(e);s&&(n(s),r(o=>{const a=new URLSearchParams(o);return a.delete(e),a},{replace:!0}))},[t,r,e]),c}export{h as u};

@@ -1,0 +1,1 @@
+const e=[{id:"account",label:"Account details"},{id:"type",label:"Vendor type"},{id:"orders",label:"How you take orders"},{id:"events",label:"Events"},{id:"location",label:"Kitchen location"}],o="/vendor-dashboard/profile";export{o as V,e as a};

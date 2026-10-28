@@ -26,6 +26,51 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
+## Demo mode (no backend needed)
+
+```bash
+npm run demo       # http://localhost:3000, running on demo data
+```
+
+The website answers its own API calls in the browser with demo data
+(`src/demo/`): kitchens and menus around Kigali, orders, delivery workers and
+an admin panel. Nothing is sent to a server.
+
+| Sign in as | How |
+| --- | --- |
+| Customer | Any phone number, code `123456` |
+| Kitchen (`/vendor-login`) | Any phone number, code `123456` — opens *Inzu Heritage Kitchen* |
+| Delivery worker (`/driver-login`) | Any phone number, code `123456` |
+| Admin (`/admin-login`) | Any email and password |
+
+Changes (orders, menu edits, withdrawals…) are kept in the browser until you
+press **Reset demo data** in the "Demo data" badge, bottom left. An order a
+customer places moves through the kitchen and delivery steps by itself over a
+few minutes, unless you act on it from the kitchen or delivery worker
+dashboards (sign in as them in turn — one role at a time). Pick-up codes and
+delivery codes are shown in the error message if you type a wrong one.
+
+Every endpoint in [API_CONTRACT.md](API_CONTRACT.md) has demo data: browsing,
+cart, checkout, big events (deposit and balance), pick-up → delivery switch,
+refunds, live delivery tracking and navigation, chats, support, the kitchen
+and delivery worker dashboards, and every admin screen (payouts, refunds,
+platform wallet and books, analytics, complaints, team and invitations, audit
+log, delivery rules and fees, SMS sign-in codes). Any SMS code is `123456`.
+
+`npm run build:demo` builds a demo copy of the site (`dist/`) to host
+anywhere without a backend. Ordinary builds don't include the demo code.
+
+### Removing demo mode
+
+Demo mode lives in `src/demo/` and touches nothing else except these lines:
+
+1. Delete the `src/demo/` folder and the `.env.demo` file.
+2. In `src/main.jsx`, replace the `if (import.meta.env.VITE_DEMO_MODE === 'true') { … } else { render(); }`
+   block at the bottom with `render();`.
+3. In `package.json`, remove the `demo` and `build:demo` scripts.
+4. Remove `VITE_DEMO_MODE` from `.env.example` and this "Demo mode" section
+   (and its row in the environment variables table) from the README.
+
 Production build:
 
 ```bash
@@ -41,6 +86,7 @@ Copy `.env.example` to `.env.local`:
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | `/api/v1` | Base URL for all API calls. In development, Vite proxies `/api` to `http://localhost:4000`; set `VITE_API_PROXY` to override the backend host. |
 | `VITE_API_TIMEOUT` | `8000` | Request timeout in ms. |
+| `VITE_DEMO_MODE` | `false` | `true` runs the website on built-in demo data, no backend (set by `npm run demo`). |
 | `VITE_CARTO_API_KEY` | _(empty)_ | Optional CARTO basemap key for the nearby-kitchens map at `/vendors/map` (CARTO Voyager tiles rendered with MapLibre GL). The map works without a key on CARTO's free tier; commercial use requires a CARTO plan. |
 
 Start the backend and MongoDB alongside Vite to use the connected API. Customer

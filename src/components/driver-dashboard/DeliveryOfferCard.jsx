@@ -10,7 +10,7 @@ export default function DeliveryOfferCard({ delivery, busy = false, onAccept, on
   const heading = delivery.vendor?.name || 'Food order ready for pickup';
 
   return (
-    <div className="rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 hover:shadow-md transition flex flex-col gap-4">
+    <div className="min-w-0 rounded-3xl bg-white border border-stone-200/80 shadow-sm p-4 sm:p-5 hover:shadow-md transition flex flex-col gap-4">
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#3b5327] to-[#1c2b12] flex items-center justify-center flex-shrink-0">
           <Bike className="w-6 h-6 text-[#eef5e5]" />

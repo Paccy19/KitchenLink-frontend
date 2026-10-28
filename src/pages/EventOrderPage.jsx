@@ -185,7 +185,7 @@ export default function EventOrderPage() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-fade-in">
       <Link
         to={`/vendors?events=1&guests=${guestCount || ''}${pickup ? '&pickup=1' : ''}`}
         className="inline-flex items-center gap-2 text-xs font-bold text-stone-600 hover:text-[#542813] transition mb-6"
@@ -194,7 +194,7 @@ export default function EventOrderPage() {
         <span>Back to event kitchens</span>
       </Link>
 
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-6 sm:mb-8">
         <img src="/icons/party-popper.png" alt="" aria-hidden="true" className="w-10 h-10" />
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Order for your event</h1>
@@ -205,7 +205,7 @@ export default function EventOrderPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         <div className="lg:col-span-7 space-y-6">
           {/* 1. Guests and date */}
           <StepCard step={1} title="Your event">
@@ -340,7 +340,7 @@ export default function EventOrderPage() {
             accountPhone={accountPhone}
           />
 
-          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-2">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-stone-200/80 shadow-sm space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-stone-600">Notes for the kitchen</label>
             <textarea
               value={note}
@@ -354,7 +354,7 @@ export default function EventOrderPage() {
 
         {/* Summary */}
         <div className="lg:col-span-5">
-          <div className="lg:sticky lg:top-24 bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm space-y-4">
+          <div className="lg:sticky lg:top-24 bg-white rounded-3xl p-4 sm:p-6 border border-stone-200/80 shadow-sm space-y-4">
             <h2 className="text-sm font-black text-gray-900 uppercase tracking-wider">Order summary</h2>
 
             <div className="text-xs text-stone-600 space-y-1.5">
@@ -373,38 +373,38 @@ export default function EventOrderPage() {
             <dl className="text-sm text-stone-600 space-y-1.5 pt-3 border-t border-stone-100">
               {quoteMatches ? (
                 <>
-                  <div className="flex justify-between">
-                    <dt>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <dt className="min-w-0">
                       {quote.guests} {quote.guests === 1 ? 'plate' : 'plates'} × {rwf(quote.price_per_plate_rwf)}
                     </dt>
-                    <dd>{rwf(quote.food_total_rwf)}</dd>
+                    <dd className="whitespace-nowrap text-right">{rwf(quote.food_total_rwf)}</dd>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-baseline justify-between gap-3">
                     {pickup ? (
                       <>
-                        <dt>Pick up</dt>
-                        <dd>No delivery fee</dd>
+                        <dt className="min-w-0">Pick up</dt>
+                        <dd className="whitespace-nowrap text-right">No delivery fee</dd>
                       </>
                     ) : (
                       <>
-                        <dt>{quote.distance_km != null ? `Delivery (${quote.distance_km} km)` : 'Delivery'}</dt>
-                        <dd>{quote.delivery_fee_rwf != null ? rwf(quote.delivery_fee_rwf) : 'Pin the venue'}</dd>
+                        <dt className="min-w-0">{quote.distance_km != null ? `Delivery (${quote.distance_km} km)` : 'Delivery'}</dt>
+                        <dd className="whitespace-nowrap text-right">{quote.delivery_fee_rwf != null ? rwf(quote.delivery_fee_rwf) : 'Pin the venue'}</dd>
                       </>
                     )}
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-stone-100 text-lg font-black text-gray-900">
-                    <dt>Total</dt>
-                    <dd>{rwf(quote.total_rwf)}</dd>
+                  <div className="flex items-baseline justify-between gap-3 pt-2 border-t border-stone-100 text-base sm:text-lg font-black text-gray-900">
+                    <dt className="min-w-0">Total</dt>
+                    <dd className="whitespace-nowrap text-right">{rwf(quote.total_rwf)}</dd>
                   </div>
                   {(pickup || quote.delivery_fee_rwf != null) && (
                     <div className="mt-2 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-3 space-y-1 text-xs">
-                      <div className="flex justify-between font-black text-[#3d1b0c]">
-                        <dt>Pay now ({quote.deposit_percent}%)</dt>
-                        <dd>{rwf(quote.deposit_rwf)}</dd>
+                      <div className="flex items-baseline justify-between gap-3 font-black text-[#3d1b0c]">
+                        <dt className="min-w-0">Pay now ({quote.deposit_percent}%)</dt>
+                        <dd className="whitespace-nowrap text-right">{rwf(quote.deposit_rwf)}</dd>
                       </div>
-                      <div className="flex justify-between text-stone-600">
-                        <dt>Balance, {balanceDueAt ? `by ${formatDue(balanceDueAt)}` : 'a day before the event'}</dt>
-                        <dd>{rwf(quote.balance_rwf)}</dd>
+                      <div className="flex items-baseline justify-between gap-3 text-stone-600">
+                        <dt className="min-w-0">Balance, {balanceDueAt ? `by ${formatDue(balanceDueAt)}` : 'a day before the event'}</dt>
+                        <dd className="whitespace-nowrap text-right">{rwf(quote.balance_rwf)}</dd>
                       </div>
                     </div>
                   )}

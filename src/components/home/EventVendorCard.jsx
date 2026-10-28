@@ -7,6 +7,9 @@ import usePrefetchVendor from '../../hooks/usePrefetchVendor';
 import { rangeLabel } from '../../utils/distanceFeeRanges';
 
 const rwf = (value) => `${Math.round(Number(value) || 0).toLocaleString()} RWF`;
+// Price rows: the label wraps if it must, the amount never breaks across lines.
+const ROW = 'flex items-baseline justify-between gap-3';
+const AMOUNT = 'whitespace-nowrap text-right';
 
 /** One of the kitchen's event packages, priced for the customer's guests. */
 function PackageOption({ vendor, pkg, pickup }) {
@@ -14,9 +17,10 @@ function PackageOption({ vendor, pkg, pickup }) {
   return (
     <div className="rounded-2xl border border-[#ebd7c5] overflow-hidden">
       <div className="bg-[#faf6f2] p-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-black text-gray-900">{pkg.name}</p>
+        {/* On narrow cards the price drops under the name instead of squeezing it. */}
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+          <div className="min-w-0 flex-1 basis-40">
+            <p className="text-sm font-black text-gray-900 break-words">{pkg.name}</p>
             {pkg.description && <p className="text-[11px] text-stone-500 mt-0.5">{pkg.description}</p>}
           </div>
           <span className="text-xs font-bold text-stone-600 whitespace-nowrap">
@@ -26,28 +30,28 @@ function PackageOption({ vendor, pkg, pickup }) {
         </div>
         {quote ? (
           <dl className="mt-2 text-xs text-stone-600 space-y-0.5">
-            <div className="flex justify-between">
-              <dt>
+            <div className={ROW}>
+              <dt className="min-w-0">
                 {quote.guests} {quote.guests === 1 ? 'plate' : 'plates'}
               </dt>
-              <dd>{rwf(quote.food_total_rwf)}</dd>
+              <dd className={AMOUNT}>{rwf(quote.food_total_rwf)}</dd>
             </div>
-            <div className="flex justify-between">
+            <div className={ROW}>
               {pickup ? (
                 <>
-                  <dt>You pick it up</dt>
-                  <dd>No delivery fee</dd>
+                  <dt className="min-w-0">You pick it up</dt>
+                  <dd className={AMOUNT}>No delivery fee</dd>
                 </>
               ) : (
                 <>
-                  <dt>{quote.distance_km != null ? `Delivery (about ${quote.distance_km} km)` : 'Delivery'}</dt>
-                  <dd>{quote.delivery_fee_rwf != null ? rwf(quote.delivery_fee_rwf) : 'by distance'}</dd>
+                  <dt className="min-w-0">{quote.distance_km != null ? `Delivery (about ${quote.distance_km} km)` : 'Delivery'}</dt>
+                  <dd className={AMOUNT}>{quote.delivery_fee_rwf != null ? rwf(quote.delivery_fee_rwf) : 'by distance'}</dd>
                 </>
               )}
             </div>
-            <div className="flex justify-between pt-1.5 mt-1 border-t border-[#ebd7c5] text-base font-black text-gray-900">
-              <dt>{!pickup && quote.delivery_fee_rwf == null ? 'Total (+ delivery)' : 'Total'}</dt>
-              <dd>{rwf(pickup ? quote.pickup_total_rwf : quote.total_rwf)}</dd>
+            <div className={`${ROW} pt-1.5 mt-1 border-t border-[#ebd7c5] text-sm sm:text-base font-black text-gray-900`}>
+              <dt className="min-w-0">{!pickup && quote.delivery_fee_rwf == null ? 'Total (+ delivery)' : 'Total'}</dt>
+              <dd className={AMOUNT}>{rwf(pickup ? quote.pickup_total_rwf : quote.total_rwf)}</dd>
             </div>
           </dl>
         ) : (
@@ -78,7 +82,7 @@ function PackageOption({ vendor, pkg, pickup }) {
         {/* Book this package (guests and delivery / pick-up carry over). */}
         <Link
           to={`/event-order/${vendor.id}?package=${pkg.id}&guests=${quote?.guests ?? pkg.min_guests}${pickup ? '&pickup=1' : ''}`}
-          className="block text-center px-4 py-2.5 rounded-xl bg-[#542813] text-white text-sm font-black hover:bg-[#2b1206] transition active:scale-[0.98]"
+          className="block text-center px-4 py-3 sm:py-2.5 rounded-xl bg-[#542813] text-white text-sm font-black hover:bg-[#2b1206] transition active:scale-[0.98]"
         >
           Place order
         </Link>
@@ -107,15 +111,15 @@ export default function EventVendorCard({ vendor, pickup = false }) {
       <div className="p-4 flex items-start gap-3">
         <VendorAvatar vendor={vendor} className="w-11 h-11 rounded-xl text-base" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-extrabold text-base text-gray-900 line-clamp-1">{vendor.name}</h3>
+          <h3 className="font-extrabold text-base text-gray-900 line-clamp-2 break-words">{vendor.name}</h3>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-stone-500">
             <VendorTypeBadge type={vendor.typeCode || vendor.type} />
             <span className="inline-flex items-center gap-0.5 font-bold text-gray-800">
               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
               {vendor.rating}
             </span>
-            <span className="inline-flex items-center gap-0.5">
-              <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
+            <span className="inline-flex items-center gap-0.5 min-w-0">
+              <MapPin className="w-3.5 h-3.5 text-[#8a5332] flex-shrink-0" aria-hidden="true" />
               <span className="line-clamp-1">{vendor.neighborhood}</span>
             </span>
           </div>
@@ -157,7 +161,7 @@ export default function EventVendorCard({ vendor, pickup = false }) {
       <Link
         to={`/vendor/${vendor.id}`}
         {...prefetchProps}
-        className="mx-4 mt-3 mb-4 text-center text-xs font-bold text-stone-500 hover:text-[#542813] transition"
+        className="mx-4 mt-2 mb-2 py-2 text-center text-xs font-bold text-stone-500 hover:text-[#542813] transition"
       >
         View kitchen
       </Link>

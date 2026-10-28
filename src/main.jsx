@@ -36,7 +36,7 @@ onDataChanged(() => {
   queryClient.invalidateQueries({ refetchType: 'active' });
 });
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const render = () => ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <ThemeProvider>
@@ -69,3 +69,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+
+// Demo mode (`npm run demo`): API calls are answered with built-in demo data.
+// The demo code is only loaded, and only bundled, when it is switched on.
+if (import.meta.env.VITE_DEMO_MODE === 'true') {
+  import('./demo').then(({ installDemoMode }) => {
+    installDemoMode();
+    render();
+  });
+} else {
+  render();
+}
