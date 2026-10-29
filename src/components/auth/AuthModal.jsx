@@ -93,6 +93,9 @@ export default function AuthModal() {
                   required
                   className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 text-sm font-semibold outline-none transition"
                 />
+                <p className="mt-1 text-[11px] text-stone-400">
+                  Also a kitchen or delivery worker on KitchenLink? Use the same name you registered with.
+                </p>
               </div>
 
               <div>

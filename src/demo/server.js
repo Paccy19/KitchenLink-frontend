@@ -564,6 +564,29 @@ const me = {
   driver: (request) => findDriver(signedIn(request, 'driver')) || fail(401, 'Please sign in again.'),
 };
 
+/** "  UWASE  aline" and "Aline Uwase" are the same name (case, spacing, accents, word order). */
+const nameKey = (value) =>
+  String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/\s+/).filter(Boolean).sort().join(' ');
+
+/**
+ * Same rule as the backend: a kitchen owner or delivery worker signing in as a
+ * customer must give the name they registered with. Returns that name (null
+ * for an ordinary phone); the error never reveals it.
+ */
+function linkedName(phone, name) {
+  const accounts = [
+    ...state.vendors.filter((v) => v.phone === phone).map((v) => ({ role: 'kitchen', name: v.owner_name || v.name })),
+    ...state.drivers.filter((d) => d.phone === phone).map((d) => ({ role: 'delivery worker', name: d.name })),
+  ].filter((a) => a.name);
+  if (!accounts.length) return null;
+  const roles = accounts.map((a) => a.role).join(' and ');
+  if (!nameKey(name)) fail(400, `This phone number is registered as a ${roles} on KitchenLink. Enter the full name you registered with.`, 'NAME_REQUIRED');
+  if (accounts.some((a) => nameKey(a.name) !== nameKey(name))) {
+    fail(400, `This phone number is registered as a ${roles} on KitchenLink. Enter the same full name you used when you registered as a ${roles}.`, 'NAME_DOES_NOT_MATCH');
+  }
+  return accounts[0].name;
+}
+
 function checkOtp(code) {
   if (String(code).trim() !== DEMO_OTP) fail(400, `Wrong code. In demo mode the code is ${DEMO_OTP}.`, 'OTP_INVALID');
 }
@@ -918,12 +941,20 @@ const KIGALI_PLACES = [
 ];
 
 const customerRoutes = [
-  ['POST', '/auth/send-otp', (r) => ({ phone_number: r.body.phone_number, dev_otp: DEMO_OTP, expires_in_seconds: 300 })],
+  ['POST', '/auth/send-otp', (r) => {
+    linkedName(String(r.body.phone_number || ''), r.body.name);
+    return { phone_number: r.body.phone_number, dev_otp: DEMO_OTP, expires_in_seconds: 300 };
+  }],
   ['POST', '/auth/verify-otp', (r) => {
     checkOtp(r.body.code);
     const phone = String(r.body.phone_number || '');
+    const registeredName = linkedName(phone, r.body.name);
     let customer = state.customers.find((c) => c.phone_number === phone);
-    if (!customer) {
+    if (!customer && registeredName) {
+      // A kitchen owner or delivery worker gets their own customer account.
+      customer = { id: nextId('cus'), name: registeredName, phone_number: phone, email: '', status: 'active', created_at: nowIso() };
+      state.customers.push(customer);
+    } else if (!customer) {
       customer = state.customers.find((c) => c.id === DEMO_IDS.customer);
       customer.phone_number = phone || customer.phone_number;
       if (r.body.name) customer.name = r.body.name;
