@@ -319,7 +319,7 @@ function customerOrder(order) {
     fulfillment: order.fulfillment,
     scheduled_for: order.scheduled_for,
     special_text: order.special_text,
-    vendor: { id: vendor.id, name: vendor.name, vendor_type: vendor.vendor_type, neighborhood: vendor.neighborhood },
+    vendor: { id: vendor.id, name: vendor.name, vendor_type: vendor.vendor_type, neighborhood: vendor.neighborhood, phone: vendor.phone },
     items: order.items,
     subtotal_rwf: order.subtotal_rwf,
     delivery_fee_rwf: order.delivery_fee_rwf,
@@ -1150,6 +1150,10 @@ const customerRoutes = [
   ['POST', '/chats/with/:vendorId', (r, p) => {
     const customer = me.customer(r);
     findVendor(p.vendorId) || fail(404, 'Kitchen not found.');
+    // Customers can only message kitchens they have placed an order with.
+    if (!state.orders.some((o) => o.customer_id === customer.id && o.vendor_id === p.vendorId)) {
+      fail(403, 'Place an order with this kitchen first, then you can message it.', 'NO_ORDER_WITH_VENDOR');
+    }
     let chat = state.chats.find((c) => c.customer_id === customer.id && c.vendor_id === p.vendorId);
     if (!chat) {
       chat = { id: nextId('chat'), customer_id: customer.id, vendor_id: p.vendorId, messages: [], read_by_customer: true, read_by_vendor: true };

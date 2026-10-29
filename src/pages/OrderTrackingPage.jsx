@@ -26,7 +26,7 @@ import EventBalanceCard from '../components/orders/EventBalanceCard';
 import SwitchToDeliveryModal from '../components/orders/SwitchToDeliveryModal';
 import CallKitchenButton from '../components/orders/CallKitchenButton';
 import KitchenDirectionsModal from '../components/orders/KitchenDirectionsModal';
-import MessageKitchenButton from '../components/chat/MessageKitchenButton';
+import ContactKitchen from '../components/orders/ContactKitchen';
 import LiveDeliveryTracker from '../components/tracking/LiveDeliveryTracker';
 import { formatScheduledFor } from '../utils/schedule';
 
@@ -220,11 +220,7 @@ export default function OrderTrackingPage() {
               {order.vendorName}
               {order.vendorLocation ? ` (${order.vendorLocation})` : ''}
             </span>
-            {order.vendorId && (
-              <div className="mt-2">
-                <MessageKitchenButton vendorId={order.vendorId} label="Message the kitchen" />
-              </div>
-            )}
+            <ContactKitchen order={order} className="mt-2 sm:justify-end" />
           </div>
         </div>
 
@@ -443,9 +439,7 @@ export default function OrderTrackingPage() {
                       <Navigation className="w-3.5 h-3.5 text-[#6d391d]" /> Directions
                     </button>
                   )}
-                  {order.pickup?.vendorPhone && (
-                    <CallKitchenButton phone={order.pickup.vendorPhone} kitchenName={order.vendorName} />
-                  )}
+                  {order.vendorPhone && <CallKitchenButton phone={order.vendorPhone} kitchenName={order.vendorName} />}
                 </div>
               </div>
             </div>

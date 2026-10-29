@@ -258,6 +258,8 @@ export function normalizeOrder(raw = {}) {
     vendorType: toText(vendor.vendor_type_label, vendorTypeLabel(vendor.vendor_type)),
     vendorTypeCode: toVendorTypeCode(vendor.vendor_type),
     vendorLocation: toText(deliveryLocation.neighborhood, vendor.neighborhood),
+    // The kitchen's phone: a customer who ordered can always call it.
+    vendorPhone: toText(vendor.phone, raw.pickup?.vendor_phone),
     status: toText(raw.status, 'placed'),
     items: (Array.isArray(raw.items) ? raw.items : []).map((item) => ({
       id: toText(item.menu_item_id, item.id),

@@ -13,6 +13,7 @@ import {
 import { ORDER_STATUSES, useOrders } from '../context/OrderContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../components/common/Toast';
+import ContactKitchen from '../components/orders/ContactKitchen';
 
 export default function OrdersHistoryPage() {
   const navigate = useNavigate();
@@ -201,7 +202,8 @@ export default function OrdersHistoryPage() {
                     Total: <span className="font-black text-[#4e2410] text-sm">{order.pricing.total.toLocaleString()} RWF</span> via {order.payment.method}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ContactKitchen order={order} />
                     <button
                       onClick={() => handleTrackClick(order.id)}
                       className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs transition active:scale-95"

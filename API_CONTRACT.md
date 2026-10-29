@@ -146,7 +146,7 @@ Called from `src/api/endpoints.js` (60 endpoints). The function names are in tha
 | POST | `/chats/:id/messages` | Customer | `send` |  |
 | POST | `/chats/:id/read` | Customer | `markRead` |  |
 | GET | `/chats/unread-count` | Customer | `unreadCount` |  |
-| POST | `/chats/with/:vendorId` | Customer | `openWithVendor` |  |
+| POST | `/chats/with/:vendorId` | Customer | `openWithVendor` | Only for a kitchen the customer has placed an order with; otherwise **403** (`NO_ORDER_WITH_VENDOR`) with a message to show. |
 
 ### /geo
 
@@ -180,8 +180,8 @@ Called from `src/api/endpoints.js` (60 endpoints). The function names are in tha
 
 | Method | Path | Sign-in | Website function | Notes |
 | --- | --- | --- | --- | --- |
-| GET | `/orders` | Customer | `fetchOrders` |  |
-| GET | `/orders/:orderId` | Customer | `fetchOrder` |  |
+| GET | `/orders` | Customer | `fetchOrders` | Each order's `vendor` includes `phone`, so the customer can call a kitchen they ordered from. |
+| GET | `/orders/:orderId` | Customer | `fetchOrder` | Same order shape (with `vendor.phone`). |
 | POST | `/orders/:orderId/cancel` | Customer | `cancelRemoteOrder` |  |
 | GET | `/orders/:orderId/live` | Customer | `fetchOrderLive` | the delivery worker's live position, the road route to where they are heading (kitchen, then you) and the ETA. |
 | POST | `/orders/:orderId/pay` | Customer | `payRemoteOrder` |  |

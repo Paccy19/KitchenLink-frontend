@@ -8,6 +8,7 @@ import {
   Heart,
   Info,
   MapPin,
+  MessageCircle,
   Minus,
   Plus,
   ShoppingBag,
@@ -26,7 +27,7 @@ import { formatRwf } from '../api/normalize';
 import { VendorAvatar } from '../components/home/VendorCard';
 import DishHoverPreview from '../components/common/DishHoverPreview';
 import VendorTypeBadge from '../components/common/VendorTypeBadge';
-import MessageKitchenButton from '../components/chat/MessageKitchenButton';
+import ContactKitchen, { useOrderWithKitchen } from '../components/orders/ContactKitchen';
 import FadeImage from '../components/common/FadeImage';
 import { getVendorType, orderingRuleLines } from '../data/vendorTypes';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
@@ -43,6 +44,8 @@ export default function VendorPage() {
   const { addToCart, updateQuantity, setIsCartOpen, cartItems, subtotal, totalItemCount, orderType, setOrderType, preorderSpecial, setPreorderSpecial } = useCart();
   const navigate = useNavigate();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  // The customer's latest order here: it unlocks messaging and calling the kitchen.
+  const orderHere = useOrderWithKitchen(vendorId);
 
   const { data: vendor, isPending, isError, error, refetch, isFetching } =
     useVendorStorefront(vendorId);
@@ -246,7 +249,15 @@ export default function VendorPage() {
               </div>
             )}
 
-            <MessageKitchenButton vendorId={vendor.id} className="sm:ml-auto" />
+            {/* Only customers who have ordered here can message or call the kitchen. */}
+            {orderHere ? (
+              <ContactKitchen order={orderHere} className="sm:ml-auto" />
+            ) : (
+              <p className="sm:ml-auto text-[11px] font-semibold text-stone-400 flex items-center gap-1.5">
+                <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                Place an order to message or call this kitchen
+              </p>
+            )}
           </div>
 
           {/* What this kind of kitchen is like (from its vendor type). */}
