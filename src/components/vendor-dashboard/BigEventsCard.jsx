@@ -175,7 +175,8 @@ export default function BigEventsCard() {
           delivery_details: form.delivery_details,
         }),
       );
-      toast.success(form.enabled ? 'Big events saved. Customers can now find your packages.' : 'Big events saved.');
+      if (form.enabled) toast.success('Big events saved. Customers can now find your packages.');
+      else toast.info('Saved, but Big events is off: customers can’t find your kitchen until you turn it on.');
     } catch (error) {
       toast.error(error.message || 'Could not save your big events settings.');
     } finally {
@@ -214,6 +215,11 @@ export default function BigEventsCard() {
         its own guests, prices, menu and service. Customers who tap <strong>Big Event</strong> see every package that fits their
         number of guests.
       </p>
+      {!form.enabled && (
+        <p className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          Big events is off, so customers can’t find your kitchen. Tick the box above and save to show your packages.
+        </p>
+      )}
 
       {/* Packages */}
       <div className={sectionClass}>

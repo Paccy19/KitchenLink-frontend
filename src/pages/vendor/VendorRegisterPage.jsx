@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
-import { VENDOR_TYPES, vendorTypeLabel, vendorTypeTitle } from '../../data/vendorTypes';
+import { VENDOR_TYPES, suggestedCategories, vendorTypeLabel, vendorTypeTitle } from '../../data/vendorTypes';
 import VendorTypeProfile from '../../components/common/VendorTypeProfile';
 import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinatesPicker';
 import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
@@ -92,6 +92,16 @@ export default function VendorRegisterPage() {
   const [errors, setErrors] = useState({});
   const [created, setCreated] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
+  // The categories that suit the chosen type come first; the rest stay one tap
+  // away (any kitchen may sell any food). Picked ones always stay visible.
+  const typeCategories = useMemo(() => suggestedCategories(form.type, categoryNames), [form.type, categoryNames]);
+  const narrowCategories = typeCategories.length > 0 && !showAllCategories;
+  const shownCategories = narrowCategories
+    ? categoryNames.filter((category) => typeCategories.includes(category) || form.foodCategories.includes(category))
+    : categoryNames;
+  const hiddenCategoryCount = categoryNames.length - shownCategories.length;
 
   useEffect(() => {
     if (categoryNames.length === 0) loadCategories();
@@ -150,7 +160,13 @@ export default function VendorRegisterPage() {
   };
 
   const goNext = () => {
-    if (!validateStep(step)) return;
+    if (!validateStep(step)) {
+      // Bring the first problem into view: it may be above or below the button.
+      requestAnimationFrame(() =>
+        document.querySelector('form .text-red-500')?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      );
+      return;
+    }
     setStep((prev) => Math.min(3, prev + 1));
   };
   const goBack = () => {
@@ -386,13 +402,13 @@ export default function VendorRegisterPage() {
               />
             </Field>
 
-            <Field label="Description" icon={FileText}>
+            <Field label="Description" error={errors.description} icon={FileText}>
               <textarea
                 value={form.description}
                 onChange={(event) => update({ description: event.target.value })}
                 rows={3}
                 placeholder="Describe your food, story and what makes it special…"
-                className={`${inputClass()} resize-none`}
+                className={`${inputClass(errors.description)} resize-none`}
               />
             </Field>
           </div>
@@ -423,9 +439,14 @@ export default function VendorRegisterPage() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-stone-500 block mb-2">Food categories</label>
+              <label className="text-xs font-bold text-stone-500 block mb-1">Food categories</label>
+              <p className="text-[11px] text-stone-500 mb-2">
+                {typeCategories.length > 0
+                  ? `Categories for ${vendorTypeLabel(form.type)} kitchens. Pick the ones you serve.`
+                  : 'Pick the categories you serve.'}
+              </p>
               <div className="flex flex-wrap gap-2">
-                {categoryNames.map((category) => {
+                {shownCategories.map((category) => {
                   const active = form.foodCategories.includes(category);
                   return (
                     <button
@@ -443,6 +464,15 @@ export default function VendorRegisterPage() {
                   );
                 })}
               </div>
+              {typeCategories.length > 0 && (hiddenCategoryCount > 0 || showAllCategories) && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllCategories((all) => !all)}
+                  className="mt-2 text-[11px] font-bold text-[#542813] hover:underline"
+                >
+                  {showAllCategories ? `Show only ${vendorTypeLabel(form.type)} categories` : `Show all categories (${hiddenCategoryCount} more)`}
+                </button>
+              )}
               {errors.foodCategories && (
                 <p className="text-[11px] text-red-500 font-semibold mt-1.5">{errors.foodCategories}</p>
               )}

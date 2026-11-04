@@ -14,7 +14,8 @@ import {
 /**
  * Vendor (kitchen) business types. `code` is what the API stores and filters
  * by; keep in sync with backend/src/config/vendorTypes.js. Menu categories are
- * not tied to a type — a Home Cook can sell any kind of food.
+ * not tied to a type — a Home Cook can sell any kind of food — but sign-up
+ * suggests the ones that suit it (see `suggestedCategories`).
  *
  * `badge` is the badge colour on light surfaces; the dark theme re-tints it
  * (see `.vendor-type-badge` in index.css).
@@ -132,6 +133,34 @@ export const TYPE_FEATURES = {
   pickup: { label: 'Customer pick-up', hint: 'Customers can collect at your kitchen — keep your kitchen location correct.', to: '/vendor-dashboard/profile/location' },
   delivery: { label: 'Delivery', hint: 'Nearby delivery workers bring your food to customers.', to: '/vendor-dashboard/orders' },
 };
+
+/**
+ * Food categories that suit each type, as keywords: categories are managed by
+ * the admin, so a category matches when its name contains one ("Healthy Food"
+ * matches `healthy`). Other has none: every category suits it.
+ */
+const TYPE_CATEGORY_KEYWORDS = {
+  home_cook: ['local', 'african', 'rwandan', 'breakfast', 'lunch', 'dinner', 'healthy'],
+  restaurant: ['local', 'african', 'rwandan', 'fastfood', 'lunch', 'dinner', 'seafood', 'grill', 'pizza', 'burger', 'dessert', 'drink'],
+  cafe: ['breakfast', 'bakery', 'dessert', 'drink', 'juice', 'healthy'],
+  bakery: ['bakery', 'dessert', 'breakfast'],
+  caterer: ['local', 'african', 'rwandan', 'lunch', 'dinner', 'grill', 'dessert', 'drink'],
+  food_truck: ['fastfood', 'burger', 'pizza', 'grill', 'drink'],
+  chef: ['african', 'local', 'seafood', 'lunch', 'dinner', 'dessert', 'healthy'],
+  meal_prep: ['healthy', 'breakfast', 'lunch', 'dinner'],
+  juice_drinks: ['drink', 'juice', 'healthy'],
+  other: [],
+};
+
+/** The category names (from `names`) that suit a type; [] when every one does. */
+export function suggestedCategories(typeValue, names) {
+  const keywords = TYPE_CATEGORY_KEYWORDS[toVendorTypeCode(typeValue)] || [];
+  if (!keywords.length) return [];
+  return names.filter((name) => {
+    const flat = String(name).toLowerCase().replace(/[^a-z]/g, '');
+    return keywords.some((keyword) => flat.includes(keyword));
+  });
+}
 
 const BY_CODE = new Map(VENDOR_TYPES.map((type) => [type.code, type]));
 
