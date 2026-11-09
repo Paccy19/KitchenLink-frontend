@@ -1,1 +1,0 @@
-import{j as r,bk as p}from"./index-DNpXlZGA.js";import{S as t}from"./SupportCenter-DWE9rDG4.js";import"./send-CseMNCpK.js";function s(){return r.jsx(t,{api:p.support,role:"driver"})}export{s as default};

@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { shrinkImage } from '../../utils/shrinkImage';
 import { X, Upload, Plus, Trash2, ImageOff, Clock, Sparkles } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import FadeImage from '../common/FadeImage';
+import { suggestedCategories, vendorTypeLabel } from '../../data/vendorTypes';
 
 const EMPTY = {
   name: '',
@@ -49,7 +50,18 @@ const Toggle = ({ checked, onChange, label, hint }) => (
 );
 
 export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
-  const { categoryNames, createCategory } = useVendor();
+  const { vendor, categories, categoryNames, createCategory } = useVendor();
+  // Categories that suit the kitchen's type (e.g. Breads, Pastries, Cakes and
+  // Cookies for a Bakery) are listed first; every other one stays available.
+  const typeCode = vendor?.typeCode;
+  const typeCategoryNames = useMemo(
+    () => (typeCode ? suggestedCategories(typeCode, categoryNames, categories) : []),
+    [typeCode, categoryNames, categories],
+  );
+  const otherCategoryNames = useMemo(
+    () => categoryNames.filter((name) => !typeCategoryNames.includes(name)),
+    [categoryNames, typeCategoryNames],
+  );
   // "+ New category": the kitchen names a category of its own.
   const [newCategory, setNewCategory] = useState(null); // null = closed, string = draft name
   const [categoryBusy, setCategoryBusy] = useState(false);
@@ -76,11 +88,16 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
-  const categoryNamesRef = useRef(categoryNames);
+  // Type categories first, so a new dish defaults to one of them.
+  const orderedCategoryNames = useMemo(
+    () => [...typeCategoryNames, ...otherCategoryNames],
+    [typeCategoryNames, otherCategoryNames],
+  );
+  const categoryNamesRef = useRef(orderedCategoryNames);
 
   useEffect(() => {
-    categoryNamesRef.current = categoryNames;
-  }, [categoryNames]);
+    categoryNamesRef.current = orderedCategoryNames;
+  }, [orderedCategoryNames]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -298,11 +315,32 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
                   }}
                   className={inputClass('category')}
                 >
-                  {categoryNames.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
+                  {typeCategoryNames.length > 0 ? (
+                    <>
+                      <optgroup label={`For ${vendorTypeLabel(typeCode)} kitchens`}>
+                        {typeCategoryNames.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {otherCategoryNames.length > 0 && (
+                        <optgroup label="Other categories">
+                          {otherCategoryNames.map((category) => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </>
+                  ) : (
+                    categoryNames.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))
+                  )}
                   <option value="__new__">+ New category…</option>
                 </select>
               ) : (

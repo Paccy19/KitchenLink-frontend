@@ -143,7 +143,7 @@ const TYPE_CATEGORY_KEYWORDS = {
   home_cook: ['local', 'african', 'rwandan', 'breakfast', 'lunch', 'dinner', 'healthy'],
   restaurant: ['local', 'african', 'rwandan', 'fastfood', 'lunch', 'dinner', 'seafood', 'grill', 'pizza', 'burger', 'dessert', 'drink'],
   cafe: ['breakfast', 'bakery', 'dessert', 'drink', 'juice', 'healthy'],
-  bakery: ['bakery', 'dessert', 'breakfast'],
+  bakery: ['bakery', 'bread', 'pastr', 'cake', 'cookie', 'dessert', 'breakfast'],
   caterer: ['local', 'african', 'rwandan', 'lunch', 'dinner', 'grill', 'dessert', 'drink'],
   food_truck: ['fastfood', 'burger', 'pizza', 'grill', 'drink'],
   chef: ['african', 'local', 'seafood', 'lunch', 'dinner', 'dessert', 'healthy'],
@@ -152,11 +152,21 @@ const TYPE_CATEGORY_KEYWORDS = {
   other: [],
 };
 
-/** The category names (from `names`) that suit a type; [] when every one does. */
-export function suggestedCategories(typeValue, names) {
-  const keywords = TYPE_CATEGORY_KEYWORDS[toVendorTypeCode(typeValue)] || [];
+/**
+ * The category names (from `names`) that suit a type; [] when every one does.
+ * `categories` (optional, the API objects) lets the admin's explicit
+ * `vendor_types` tags count too: a category tagged for this type is always
+ * suggested (e.g. Breads, Pastries, Cakes and Cookies for Bakery).
+ */
+export function suggestedCategories(typeValue, names, categories = []) {
+  const code = toVendorTypeCode(typeValue);
+  const keywords = TYPE_CATEGORY_KEYWORDS[code] || [];
   if (!keywords.length) return [];
+  const tagged = new Set(
+    categories.filter((category) => (category.vendor_types || []).includes(code)).map((category) => category.name),
+  );
   return names.filter((name) => {
+    if (tagged.has(name)) return true;
     const flat = String(name).toLowerCase().replace(/[^a-z]/g, '');
     return keywords.some((keyword) => flat.includes(keyword));
   });

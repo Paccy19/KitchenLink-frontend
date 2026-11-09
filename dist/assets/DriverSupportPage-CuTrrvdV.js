@@ -1,0 +1,1 @@
+import{j as r,bj as p}from"./index-B5XNyOJp.js";import{S as t}from"./SupportCenter-BjnZZWIR.js";import"./send-DA6sFXWn.js";function s(){return r.jsx(t,{api:p.support,role:"driver"})}export{s as default};

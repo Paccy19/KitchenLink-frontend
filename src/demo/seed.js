@@ -52,6 +52,11 @@ const CATEGORIES = [
   { id: 'cat-bakery', name: 'Bakery', slug: 'bakery', icon_url: '🥐', description: 'Bread, cakes and pastries.' },
   { id: 'cat-drinks', name: 'Drinks', slug: 'drinks', icon_url: '🥤', description: 'Fresh juices and smoothies.' },
   { id: 'cat-healthy', name: 'Healthy', slug: 'healthy', icon_url: '🥗', description: 'Salads and balanced bowls.' },
+  // Bakery-type categories: Bakery kitchens see these first.
+  { id: 'cat-breads', name: 'Breads', slug: 'breads', icon_url: '🍞', description: 'Loaves, rolls and baguettes.', vendor_types: ['bakery'] },
+  { id: 'cat-pastries', name: 'Pastries', slug: 'pastries', icon_url: '🥐', description: 'Croissants, samosas and puff pastries.', vendor_types: ['bakery'] },
+  { id: 'cat-cakes', name: 'Cakes', slug: 'cakes', icon_url: '🎂', description: 'Birthday, wedding and sponge cakes.', vendor_types: ['bakery'] },
+  { id: 'cat-cookies', name: 'Cookies', slug: 'cookies', icon_url: '🍪', description: 'Biscuits and cookies.', vendor_types: ['bakery'] },
 ];
 
 const HOURS = (open = '08:00', close = '21:00') =>
@@ -195,7 +200,7 @@ const VENDORS = [
     longitude: 30.0874,
     banner: IMAGES.bread,
     avatar: IMAGES.cake,
-    categories: ['cat-bakery'],
+    categories: ['cat-bakery', 'cat-breads', 'cat-pastries', 'cat-cakes', 'cat-cookies'],
     is_open: true,
     status: 'approved',
     total_sales_rwf: 398000,

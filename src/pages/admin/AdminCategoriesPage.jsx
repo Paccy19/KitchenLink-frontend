@@ -18,8 +18,9 @@ import {
   Table,
   Textarea,
 } from '../../components/admin-dashboard/ui';
+import { VENDOR_TYPES, vendorTypeLabel } from '../../data/vendorTypes';
 
-const empty = { name: '', description: '', icon_url: '', sort_order: 0, is_active: true };
+const empty = { name: '', description: '', icon_url: '', sort_order: 0, is_active: true, vendor_types: [] };
 
 export default function AdminCategoriesPage() {
   const queryClient = useQueryClient();
@@ -44,6 +45,7 @@ export default function AdminCategoriesPage() {
         icon_url: form.icon_url.trim(),
         sort_order: Number(form.sort_order) || 0,
         is_active: Boolean(form.is_active),
+        vendor_types: form.vendor_types,
       };
       return editing?.id
         ? adminApi.updateCategory(editing.id, payload)
@@ -81,10 +83,19 @@ export default function AdminCategoriesPage() {
       icon_url: category.icon_url || '',
       sort_order: category.sort_order,
       is_active: category.is_active,
+      vendor_types: category.vendor_types || [],
     });
     setFormError('');
     setEditing(category);
   };
+
+  const toggleVendorType = (code) =>
+    setForm((prev) => ({
+      ...prev,
+      vendor_types: prev.vendor_types.includes(code)
+        ? prev.vendor_types.filter((entry) => entry !== code)
+        : [...prev.vendor_types, code],
+    }));
 
   const submit = () => {
     if (form.name.trim().length < 2) {
@@ -183,6 +194,15 @@ export default function AdminCategoriesPage() {
                             Added by {category.created_by_vendor.name}
                           </span>
                         )}
+                        {(category.vendor_types || []).map((code) => (
+                          <span
+                            key={code}
+                            title={`Meant for ${vendorTypeLabel(code)} kitchens`}
+                            className="px-1.5 py-0.5 rounded-md bg-sky-50 border border-sky-200 text-[10px] font-bold text-sky-700"
+                          >
+                            {vendorTypeLabel(code)}
+                          </span>
+                        ))}
                       </p>
                       {category.description && (
                         <p className="text-[11px] text-stone-400 line-clamp-1">{category.description}</p>
@@ -261,6 +281,32 @@ export default function AdminCategoriesPage() {
               value={form.description}
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
             />
+          </Field>
+          <Field label="Vendor types (optional)">
+            <p className="text-[11px] text-stone-400 mb-2">
+              Kitchens of these types see this category first. Leave empty for a general category. Any kitchen can
+              still use it.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {VENDOR_TYPES.filter((type) => type.code !== 'other').map((type) => {
+                const active = form.vendor_types.includes(type.code);
+                return (
+                  <button
+                    key={type.code}
+                    type="button"
+                    onClick={() => toggleVendorType(type.code)}
+                    aria-pressed={active}
+                    className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors ${
+                      active
+                        ? 'bg-[#1f2937] border-[#1f2937] text-white'
+                        : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
+                    }`}
+                  >
+                    {type.label}
+                  </button>
+                );
+              })}
+            </div>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Sort order">

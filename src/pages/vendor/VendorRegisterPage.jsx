@@ -84,7 +84,7 @@ const INITIAL = {
 
 export default function VendorRegisterPage() {
   const navigate = useNavigate();
-  const { registerVendor, categoryNames, loadCategories } = useVendor();
+  const { registerVendor, categories, categoryNames, loadCategories } = useVendor();
   const { success, error } = useToast();
 
   const [step, setStep] = useState(1);
@@ -96,7 +96,10 @@ export default function VendorRegisterPage() {
 
   // The categories that suit the chosen type come first; the rest stay one tap
   // away (any kitchen may sell any food). Picked ones always stay visible.
-  const typeCategories = useMemo(() => suggestedCategories(form.type, categoryNames), [form.type, categoryNames]);
+  const typeCategories = useMemo(
+    () => suggestedCategories(form.type, categoryNames, categories),
+    [form.type, categoryNames, categories],
+  );
   const narrowCategories = typeCategories.length > 0 && !showAllCategories;
   const shownCategories = narrowCategories
     ? categoryNames.filter((category) => typeCategories.includes(category) || form.foodCategories.includes(category))
