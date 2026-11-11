@@ -1684,6 +1684,12 @@ function adminList(list, query) {
   return { items: slice, page, limit, total };
 }
 
+/** Like the backend: approved (or suspended) kitchens change type only on request. */
+function vendorTypeLocked(vendor) {
+  const status = vendor.status || 'approved';
+  return status === 'approved' || status === 'suspended';
+}
+
 function adminVendor(vendor) {
   return {
     id: vendor.id,
@@ -1692,6 +1698,8 @@ function adminVendor(vendor) {
     vendor_type: vendor.vendor_type,
     vendor_type_label: vendorTypeLabel(vendor.vendor_type),
     vendor_type_request: vendor.vendor_type_request || null,
+    // Approved kitchens: the type only changes through the vendor's request.
+    vendor_type_locked: vendorTypeLocked(vendor),
     phone: vendor.phone,
     email: vendor.email || '',
     description: vendor.description,
@@ -1840,7 +1848,12 @@ const adminRoutes = [
   ['PATCH', '/admin/vendors/:id/type', (r, p) => {
     admin(r);
     const vendor = findVendor(p.id) || fail(404, 'Vendor not found.');
-    if (r.body.decision === 'approve' && vendor.vendor_type_request) vendor.vendor_type = vendor.vendor_type_request.vendor_type;
+    const decision = r.body.decision === 'approve' || r.body.decision === 'reject' ? r.body.decision : null;
+    if (decision && !vendor.vendor_type_request) fail(409, 'This vendor has no pending type change request.', 'NO_TYPE_REQUEST');
+    if (!decision && vendorTypeLocked(vendor)) {
+      fail(409, 'This kitchen is approved, so its type can only change when the vendor asks for it from their profile.', 'VENDOR_TYPE_LOCKED');
+    }
+    if (decision === 'approve') vendor.vendor_type = vendor.vendor_type_request.vendor_type;
     if (r.body.vendor_type) vendor.vendor_type = r.body.vendor_type;
     if (r.body.decision || r.body.vendor_type) vendor.vendor_type_request = null;
     return { vendor: adminVendor(vendor) };

@@ -566,10 +566,13 @@ function KitchenLocation({ vendor }) {
 
 /**
  * Vendor type in the detail view: answer the vendor's change request, or set
- * the type directly. The vendor is told either way.
+ * the type directly while the application is still being reviewed. Once the
+ * kitchen is approved (`vendor_type_locked`), the type only changes through
+ * the vendor's own request. The vendor is told either way.
  */
 function VendorTypeAdmin({ vendor, newType, setNewType, mutation }) {
   const request = vendor.vendor_type_request;
+  const locked = Boolean(vendor.vendor_type_locked);
   return (
     <div className="rounded-2xl border border-stone-200 px-4 py-3 space-y-3">
       <p className="text-xs font-black uppercase tracking-wider text-stone-400">Vendor type</p>
@@ -593,6 +596,13 @@ function VendorTypeAdmin({ vendor, newType, setNewType, mutation }) {
           </Can>
         </div>
       )}
+      {locked && !request && (
+        <p className="text-xs text-stone-500 flex flex-wrap items-center gap-1.5">
+          <VendorTypeBadge type={vendor.vendor_type} size="xs" />
+          This kitchen is approved, so its type only changes when the vendor asks for it from their profile.
+        </p>
+      )}
+      {!locked && (
       <Can permission="vendors:write">
         <div className="flex flex-wrap items-center gap-2">
           <Select value={newType} onChange={(event) => setNewType(event.target.value)} className="max-w-xs">
@@ -613,6 +623,7 @@ function VendorTypeAdmin({ vendor, newType, setNewType, mutation }) {
           </Button>
         </div>
       </Can>
+      )}
       {mutation.isError && <ErrorNote error={mutation.error} />}
     </div>
   );
