@@ -279,6 +279,8 @@ export function normalizeOrder(raw = {}) {
       method: toText(payment.method_label, paymentMethod, 'Payment'),
       methodCode: toText(payment.method, raw.payment_method),
       status: toText(raw.payment_status, payment.status, 'pending'),
+      // The latest attempt: processing while a mobile money prompt is out, failed if declined.
+      attempt: toText(payment.status),
       reference: toText(payment.reference),
       details: raw.payment_details ?? payment.details ?? {},
     },

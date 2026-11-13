@@ -186,6 +186,8 @@ Called from `src/api/endpoints.js` (60 endpoints). The function names are in tha
 | GET | `/orders/:orderId/live` | Customer | `fetchOrderLive` | the delivery worker's live position, the road route to where they are heading (kitchen, then you) and the ETA. |
 | POST | `/orders/:orderId/pay` | Customer | `payRemoteOrder` |  |
 | POST | `/orders/:orderId/pay-balance` | Customer | `payEventBalance` | Big events: pay the second half (due a day before the event). |
+| POST | `/orders/:orderId/payment/check` | Customer | `checkOrderPayment` | Mobile money via Paypack: `payment_status` stays `pending` until the customer approves the prompt. Poll this; it asks Paypack when its webhook is late. |
+| POST | `/payments/paypack/webhook` | Paypack (signed) | — | Paypack's report on a payment. Only a valid `X-Paypack-Signature` is trusted; repeats change nothing. |
 | PUT | `/orders/:orderId/refund-destination` | Customer | `changeRefundDestination` |  |
 | POST | `/orders/:orderId/switch-to-delivery` | Customer | `switchOrderToDelivery` |  |
 | POST | `/orders/:orderId/switch-to-delivery/quote` | Customer | `quoteSwitchToDelivery` | A pickup order the customer now wants delivered: price it, then pay the fee and switch. |
