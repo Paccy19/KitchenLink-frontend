@@ -73,6 +73,8 @@ export default function DeliveryFeesCard() {
   };
 
   const usingRanges = (query.data?.ranges || []).length > 0;
+  // Per-meter pricing (card above) takes precedence while it is on.
+  const perMeterOn = query.data?.mode === 'per_meter';
 
   return (
     <Card
@@ -86,7 +88,12 @@ export default function DeliveryFeesCard() {
         <p className="text-sm text-stone-400">Loading…</p>
       ) : (
         <div className="space-y-4">
-          {!usingRanges && (
+          {perMeterOn && (
+            <p className="text-xs font-semibold text-stone-600 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2">
+              Per-meter pricing is on, so new orders don't use these ranges. They apply again if you turn per-meter pricing off.
+            </p>
+          )}
+          {!usingRanges && !perMeterOn && (
             <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
               Not set yet — fees use the standard formula (500 RWF + 200 RWF per km, at least 800 RWF). Save ranges below to use your own prices.
             </p>
@@ -174,7 +181,11 @@ export default function DeliveryFeesCard() {
             ) : (
               <Badge>View only</Badge>
             )}
-            {saved && <span className="text-xs font-bold text-emerald-700">Saved. New orders use these fees.</span>}
+            {saved && (
+              <span className="text-xs font-bold text-emerald-700">
+                {perMeterOn ? 'Saved. Used when per-meter pricing is off.' : 'Saved. New orders use these fees.'}
+              </span>
+            )}
             {query.data?.updated_at && <span className="text-[11px] text-stone-400">Last changed {formatDate(query.data.updated_at)}</span>}
           </div>
           <p className="text-[11px] text-stone-400">

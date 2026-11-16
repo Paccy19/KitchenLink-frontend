@@ -113,7 +113,24 @@ const feeFromRanges = (ranges, km) => {
 
 // The admin's fee ranges when set, otherwise the standard formula
 // (500 RWF + 200 RWF per km, at least 800 RWF).
+const DEMO_PER_METER = { enabled: false, base_fee_rwf: 500, per_meter_rwf: 0.3, min_fee_rwf: 500, max_fee_rwf: null, route_deviation_alert_percent: 50 };
+const perMeterOf = () => state.settings.per_meter || DEMO_PER_METER;
+const perMeterFee = (km) => {
+  const pm = perMeterOf();
+  const fee = Math.max(pm.min_fee_rwf, Math.round(pm.base_fee_rwf + Math.round((km ?? 3) * 1000) * pm.per_meter_rwf));
+  return pm.max_fee_rwf == null ? fee : Math.min(pm.max_fee_rwf, fee);
+};
+const feeMode = () => (perMeterOf().enabled ? "per_meter" : state.settings.delivery_fee_ranges.length ? "ranges" : "formula");
+const deliveryFeeSettings = () => ({
+  mode: feeMode(),
+  ranges: state.settings.delivery_fee_ranges,
+  per_meter: perMeterOf(),
+  per_meter_saved: Boolean(state.settings.per_meter),
+  min_fee_rwf: 500,
+  updated_at: state.settings.delivery_fee_ranges.length || state.settings.per_meter ? state.settings.updated_at : null,
+});
 const feeForKm = (km) =>
+  (perMeterOf().enabled ? perMeterFee(km) : null) ??
   feeFromRanges(state.settings.delivery_fee_ranges, km ?? 3) ??
   Math.max(800, Math.round((500 + 200 * (km ?? 3)) / 100) * 100);
 
@@ -1073,7 +1090,16 @@ const customerRoutes = [
   ['GET', '/vendors/:id/delivery-quote', (r, p) => {
     const vendor = findVendor(p.id) || fail(404, 'Kitchen not found.');
     const km = distanceKm(vendorPoint(vendor), coordsOf(r.query) || KIGALI);
-    return { delivery_fee_rwf: feeForKm(km), distance_km: km, duration_minutes: Math.round(8 + km * 3), distance_source: 'estimate' };
+    return {
+      fulfillment: 'delivery',
+      delivery_fee_rwf: feeForKm(km),
+      distance_km: km,
+      distance_m: Math.round(km * 1000),
+      duration_minutes: Math.round(8 + km * 3),
+      distance_source: 'estimate',
+      pickup: { address: vendor.address || null, neighborhood: vendor.neighborhood || null },
+      pricing: { mode: feeMode() },
+    };
   }],
 
   ['GET', '/banks', () => ({
@@ -3038,13 +3064,19 @@ const extraAdminRoutes = [
   }],
   ['GET', '/admin/settings/delivery-fees', (r) => {
     admin(r);
-    return { ranges: state.settings.delivery_fee_ranges, updated_at: state.settings.delivery_fee_ranges.length ? state.settings.updated_at : null };
+    return deliveryFeeSettings();
+  }],
+  ['GET', '/admin/settings/delivery-fees/records', (r) => {
+    admin(r);
+    // The demo keeps no per-order price records.
+    return { items: [], total: 0, page: 1, limit: 20, summary: { orders: 0, fees_rwf: 0, avg_distance_m: null, avg_fee_rwf: null } };
   }],
   ['PUT', '/admin/settings/delivery-fees', (r) => {
     admin(r);
-    state.settings.delivery_fee_ranges = r.body.ranges || [];
+    if (r.body.ranges !== undefined) state.settings.delivery_fee_ranges = r.body.ranges || [];
+    if (r.body.per_meter !== undefined) state.settings.per_meter = { ...DEMO_PER_METER, ...r.body.per_meter };
     state.settings.updated_at = nowIso();
-    return { ranges: state.settings.delivery_fee_ranges, updated_at: state.settings.updated_at };
+    return deliveryFeeSettings();
   }],
   ['GET', '/admin/settings/banks', (r) => {
     admin(r);

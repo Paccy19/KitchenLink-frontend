@@ -88,6 +88,7 @@ export const ADMIN_SECTIONS = [
           { to: '/admin-dashboard/settings/rules', label: 'Delivery & pickup rules', permission: 'dashboard:read' },
           { to: '/admin-dashboard/settings/bank-accounts', label: 'Bank account numbers', permission: 'payouts:read' },
           { to: '/admin-dashboard/settings/delivery-fees', label: 'Delivery fee by distance', permission: 'deliveries:read' },
+          { to: '/admin-dashboard/settings/delivery-fee-records', label: 'Delivery fee records', permission: 'deliveries:read' },
           { to: '/admin-dashboard/settings/delivery-timing', label: 'Delivery timing', permission: 'deliveries:read' },
         ],
       },

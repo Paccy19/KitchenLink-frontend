@@ -1,0 +1,17 @@
+# Windows-installed modules and old builds must never reach the Linux image:
+# the build stage runs `npm ci` and `npm run build` itself.
+node_modules
+dist
+.git
+.gitignore
+.vscode
+
+# Local environment files (production values come from build arguments).
+# .env.demo stays out too: the production image never runs in demo mode.
+.env
+.env.*
+
+npm-debug.log*
+*.log
+Dockerfile
+.dockerignore
