@@ -8,6 +8,8 @@ import ActionCodeField from '../../components/admin-dashboard/ActionCodeField';
 import DeliveryTimingCard from '../../components/admin-dashboard/DeliveryTimingCard';
 import BankFormatsCard from '../../components/admin-dashboard/BankFormatsCard';
 import DeliveryFeesCard from '../../components/admin-dashboard/DeliveryFeesCard';
+import PerMeterFeeCard from '../../components/admin-dashboard/PerMeterFeeCard';
+import DeliveryFeeRecordsCard from '../../components/admin-dashboard/DeliveryFeeRecordsCard';
 import DeliveryRulesCard from '../../components/admin-dashboard/DeliveryRulesCard';
 import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 import {
@@ -27,7 +29,8 @@ const SECTIONS = {
   profile: { label: 'Profile & account security', Body: ProfileSection },
   rules: { label: 'Delivery & pickup rules', Body: DeliveryRulesCard },
   'bank-accounts': { label: 'Bank account numbers', Body: BankFormatsCard },
-  'delivery-fees': { label: 'Delivery fee by distance', Body: DeliveryFeesCard },
+  'delivery-fees': { label: 'Delivery fee by distance', Body: DeliveryFeesSection },
+  'delivery-fee-records': { label: 'Delivery fee records', Body: DeliveryFeeRecordsCard },
   'delivery-timing': { label: 'Delivery timing', Body: DeliveryTimingCard },
 };
 
@@ -41,6 +44,16 @@ export default function AdminSettingsPage() {
     <div className="space-y-5">
       <PageHeader title="Settings" description={label} />
       <Body />
+    </div>
+  );
+}
+
+/** Standard delivery fee: per meter (preferred when on), then distance ranges. */
+function DeliveryFeesSection() {
+  return (
+    <div className="space-y-5">
+      <PerMeterFeeCard />
+      <DeliveryFeesCard />
     </div>
   );
 }

@@ -39,7 +39,8 @@ export default function CheckoutPage() {
   } = useCart();
   const { user, isAuthenticated, openAuthModal, addAddress } = useAuth();
   const { placeOrder, apiEnabled, apiError, clearApiError } = useOrders();
-  const { coords } = useLocation();
+  // The delivery point (GPS or a picked place); the fee is re-quoted whenever it changes.
+  const { coords, label: locationLabel } = useLocation();
 
   const scheduledFor =
     orderType === 'scheduled'
@@ -73,6 +74,8 @@ export default function CheckoutPage() {
       prev.mobile_money.phone ? prev : { ...prev, mobile_money: { phone: accountPhone } },
     );
   }, [accountPhone]);
+  const selectedAddress =
+    user.addresses?.find((a) => a.id === selectedAddressId) || user.addresses?.[0] || null;
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -122,7 +125,10 @@ export default function CheckoutPage() {
       return;
     }
     if (!isPickup && deliveryFee == null) {
-      setErrorMsg("We couldn't calculate the delivery fee for your location. Please check your location and try again.");
+      setErrorMsg(
+        deliveryQuote.errorMessage ||
+          "We couldn't calculate the delivery fee for your location. Please check your location and try again.",
+      );
       return;
     }
 
@@ -271,6 +277,10 @@ export default function CheckoutPage() {
             subtotal={subtotal}
             deliveryFee={deliveryFee}
             deliveryQuote={deliveryQuote}
+            deliveryPlace={{
+              address: [selectedAddress?.street, selectedAddress?.district].filter(Boolean).join(', '),
+              label: locationLabel,
+            }}
             grandTotal={grandTotal}
             isPickup={isPickup}
             error={errorMsg || apiError || cartApiError}
