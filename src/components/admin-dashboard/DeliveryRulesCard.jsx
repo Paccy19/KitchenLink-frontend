@@ -181,14 +181,13 @@ export default function DeliveryRulesCard() {
                   Edit in Delivery fee by distance
                 </Link>
               </div>
-              {(rules.fees.ranges || []).length > 0 ? (
-                rules.fees.ranges.map((range) => (
-                  <RuleRow
-                    key={range.from_km}
-                    label={range.to_km == null ? `${range.from_km} km and more` : `${range.from_km}–${range.to_km} km`}
-                    value={`${Number(range.fee_rwf).toLocaleString()} RWF`}
-                  />
-                ))
+              {rules.fees.mode === 'per_meter' && rules.fees.per_meter ? (
+                <RuleRow
+                  label="Price"
+                  value={`${Number(rules.fees.per_meter.base_fee_rwf).toLocaleString()} RWF + ${rules.fees.per_meter.per_meter_rwf} RWF per meter (min ${Number(rules.fees.per_meter.min_fee_rwf).toLocaleString()} RWF${
+                    rules.fees.per_meter.max_fee_rwf != null ? `, max ${Number(rules.fees.per_meter.max_fee_rwf).toLocaleString()} RWF` : ''
+                  })`}
+                />
               ) : (
                 <RuleRow
                   label="Price"
