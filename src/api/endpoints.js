@@ -216,6 +216,37 @@ export const chatApi = {
   markRead: (id) => apiJson('POST', `/chats/${encodeURIComponent(id)}/read`),
 };
 
+/**
+ * Special delivery negotiation (big events): when the automatic big-event
+ * delivery fee can't be used, the customer asks the kitchen, they talk in a
+ * dedicated chat and the kitchen sends formal quotations to accept or not.
+ */
+const sd = (id, rest = '') => `/special-deliveries/${encodeURIComponent(id)}${rest}`;
+export const specialDeliveryApi = {
+  list: (params = {}) => apiRequest('/special-deliveries', params),
+  create: (payload) => apiJson('POST', '/special-deliveries', payload),
+  get: (id) => apiRequest(sd(id)),
+  cancel: (id, reason = '') => apiJson('POST', sd(id, '/cancel'), { reason }),
+  provideInformation: (id, message) => apiJson('POST', sd(id, '/information'), { message }),
+  acceptQuotation: (id, quotationId) => apiJson('POST', sd(id, `/quotations/${encodeURIComponent(quotationId)}/accept`), {}),
+  requestRevision: (id, quotationId, note = '') =>
+    apiJson('POST', sd(id, `/quotations/${encodeURIComponent(quotationId)}/request-revision`), { note }),
+  rejectQuotation: (id, quotationId, note = '') =>
+    apiJson('POST', sd(id, `/quotations/${encodeURIComponent(quotationId)}/reject`), { note }),
+  dispute: (id, reason) => apiJson('POST', sd(id, '/dispute'), { reason }),
+  messages: (id, params = {}) => apiRequest(sd(id, '/messages'), params),
+  send: (id, body) => apiJson('POST', sd(id, '/messages'), { body }),
+  shareLocation: (id, { latitude, longitude, label = '' }) =>
+    apiJson('POST', sd(id, '/messages'), { kind: 'location', latitude, longitude, label }),
+  sendImage: (id, file, caption = '') => {
+    const form = new FormData();
+    form.append('image', file);
+    if (caption) form.append('caption', caption);
+    return apiJson('POST', sd(id, '/attachments'), form);
+  },
+  markRead: (id) => apiJson('POST', sd(id, '/read'), {}),
+};
+
 export const fetchNotifications = (params = {}) =>
   apiRequest('/notifications', params);
 export const markNotificationRead = (notificationId) =>
