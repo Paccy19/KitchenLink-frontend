@@ -143,6 +143,15 @@ export const AuthProvider = ({ children }) => {
       isDefault: user.addresses.length === 0,
     };
     setUser((prev) => ({ ...prev, addresses: [...prev.addresses, addr] }));
+    return addr;
+  };
+
+  /** Changes a saved address (e.g. adds the map pin to an address saved without one). */
+  const updateAddress = (id, patch) => {
+    setUser((prev) => ({
+      ...prev,
+      addresses: prev.addresses.map((address) => (address.id === id ? { ...address, ...patch } : address)),
+    }));
   };
 
   const setDefaultAddress = (id) => {
@@ -207,6 +216,7 @@ export const AuthProvider = ({ children }) => {
     verifyOtp,
     logout,
     addAddress,
+    updateAddress,
     setDefaultAddress,
     deleteAddress,
     updateProfile,

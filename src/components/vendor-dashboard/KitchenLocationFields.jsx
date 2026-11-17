@@ -80,6 +80,10 @@ export default function KitchenLocationFields({
   inputClass,
   areaLabel = 'Area / neighbourhood',
   addressLabel = 'Street address',
+  // Wording, so customers can use the same fields for a delivery address.
+  place = 'your kitchen',
+  placeSpot = "your kitchen's exact spot",
+  currentLocationHint = 'At your kitchen right now? Detect it automatically. Otherwise, search your area and street below or tap the map.',
 }) {
   const [focus, setFocus] = useState(null);
   const [areaCenter, setAreaCenter] = useState(null);
@@ -98,8 +102,8 @@ export default function KitchenLocationFields({
       setFocus({ center: { lat: here.lat, lng: here.lng }, zoom: 17 });
       setNotice(
         here.accuracyM > ROUGH_FIX_M
-          ? `Location detected, accurate to about ${here.accuracyM} m. Check the pin and drag it to your kitchen's exact spot.`
-          : 'Location detected. Check the pin is on your kitchen and drag it if needed.',
+          ? `Location detected, accurate to about ${here.accuracyM} m. Check the pin and drag it to ${placeSpot}.`
+          : `Location detected. Check the pin is on ${place} and drag it if needed.`,
       );
       // Fill in the area and street the map knows here, without replacing what was typed.
       try {
@@ -137,7 +141,7 @@ export default function KitchenLocationFields({
     } else {
       setFocus({ center, zoom: 14, zone: approxCircle(center, APPROX_AREA_KM) });
     }
-    setNotice(`Showing ${suggestion.name}. Now type your street to place your kitchen.`);
+    setNotice(`Showing ${suggestion.name}. Now type your street to place ${place}.`);
   };
 
   const pickStreet = async (suggestion) => {
@@ -146,13 +150,13 @@ export default function KitchenLocationFields({
     setFailed('');
     const place = await resolvePlace(suggestion);
     if (!place) {
-      setFailed('We could not find that street on the map. Tap your kitchen on the map instead.');
+      setFailed(`We could not find that street on the map. Tap ${place} on the map instead.`);
       return;
     }
     onChange({ coords: { lat: Number(place.lat).toFixed(6), lng: Number(place.lng).toFixed(6) } });
     setFocus({ center: { lat: place.lat, lng: place.lng }, zoom: 17, line: place.line ?? null });
     setNotice(
-      `Pin placed on ${suggestion.name}. Drag it (or tap the map) to your kitchen's exact spot.`,
+      `Pin placed on ${suggestion.name}. Drag it (or tap the map) to ${placeSpot}.`,
     );
   };
 
@@ -169,8 +173,7 @@ export default function KitchenLocationFields({
           {locating ? 'Detecting your location…' : 'Use my current location'}
         </button>
         <p className="text-[11px] text-stone-500 leading-snug">
-          At your kitchen right now? Detect it automatically. Otherwise, search your area and street below
-          or tap the map.
+          {currentLocationHint}
         </p>
       </div>
 
@@ -222,6 +225,7 @@ export default function KitchenLocationFields({
         focus={focus}
         error={errors.coords}
         inputClass={inputClass(errors.coords)}
+        place={place}
       />
     </div>
   );
