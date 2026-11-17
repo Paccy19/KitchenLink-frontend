@@ -52,12 +52,14 @@ async function http(path, params = {}, { method = 'GET', body, headers = {} } = 
     };
     const token = localStorage.getItem('ofk_access_token');
     if (token) requestHeaders.Authorization = `Bearer ${token}`;
-    if (body !== undefined) requestHeaders['Content-Type'] = 'application/json';
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    // Multipart: the browser sets the Content-Type (with its boundary).
+    if (body !== undefined && !isForm) requestHeaders['Content-Type'] = 'application/json';
 
     response = await fetch(url, {
       method,
       headers: requestHeaders,
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined ? { body: isForm ? body : JSON.stringify(body) } : {}),
       signal: controller.signal,
     });
   } catch (error) {
@@ -77,18 +79,24 @@ async function http(path, params = {}, { method = 'GET', body, headers = {} } = 
       window.dispatchEvent(new Event('ofk:unauthorized'));
     }
     let detail = '';
+    let code = '';
+    let details = null;
     try {
       const body = await response.json();
       detail =
         body?.message ||
         body?.error?.message ||
         (typeof body?.error === 'string' ? body.error : '');
+      code = body?.error?.code || '';
+      details = body?.error?.details || null;
     } catch {
       /* ignore malformed error bodies */
     }
     throw new ApiError(detail || `Request failed (${response.status}).`, {
       status: response.status,
       path,
+      code,
+      details,
     });
   }
 

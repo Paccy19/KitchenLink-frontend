@@ -388,6 +388,54 @@ export const vendorApi = {
   nationwide: async () => (await vendorRequest('/vendor/nationwide'))?.nationwide,
   saveNationwide: async (payload) =>
     (await vendorRequest('/vendor/nationwide', { method: 'PUT', body: payload }))?.nationwide,
+  // Big-event delivery coverage: where the kitchen delivers (never the price).
+  coverage: {
+    get: () => vendorRequest('/vendor/delivery-coverage'),
+    save: (payload) => vendorRequest('/vendor/delivery-coverage', { method: 'PUT', body: payload }),
+    check: ({ lat, lng }) =>
+      vendorRequest(`/vendor/delivery-coverage/check?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`),
+  },
+  // Special delivery requests: review, chat and formal quotations.
+  specialDeliveries: {
+    list: (params = {}) => {
+      const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value)).toString();
+      return vendorRequest(`/vendor/special-deliveries${query ? `?${query}` : ''}`);
+    },
+    get: (id) => vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}`),
+    acceptNegotiation: (id, message = '') =>
+      vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/accept-negotiation`, { method: 'POST', body: { message } }),
+    requestInformation: (id, message) =>
+      vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/request-information`, { method: 'POST', body: { message } }),
+    decline: (id, reason) =>
+      vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/decline`, { method: 'POST', body: { reason } }),
+    submitQuotation: (id, payload) =>
+      vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/quotations`, { method: 'POST', body: payload }),
+    withdrawQuotation: (id, quotationId, reason = '') =>
+      vendorRequest(
+        `/vendor/special-deliveries/${encodeURIComponent(id)}/quotations/${encodeURIComponent(quotationId)}/withdraw`,
+        { method: 'POST', body: { reason } },
+      ),
+    dispute: (id, reason) =>
+      vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/dispute`, { method: 'POST', body: { reason } }),
+    messages: (id, params = {}) => {
+      const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value)).toString();
+      return vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/messages${query ? `?${query}` : ''}`);
+    },
+    send: (id, body) =>
+      vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/messages`, { method: 'POST', body: { body } }),
+    shareLocation: (id, { latitude, longitude, label = '' }) =>
+      vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/messages`, {
+        method: 'POST',
+        body: { kind: 'location', latitude, longitude, label },
+      }),
+    sendImage: (id, file, caption = '') => {
+      const form = new FormData();
+      form.append('image', file);
+      if (caption) form.append('caption', caption);
+      return vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/attachments`, { method: 'POST', form });
+    },
+    markRead: (id) => vendorRequest(`/vendor/special-deliveries/${encodeURIComponent(id)}/read`, { method: 'POST' }),
+  },
   // Big events: the kitchen's offer (guest ranges, plate, service, delivery) and form options.
   eventPackage: () => vendorRequest('/vendor/event-package'),
   saveEventPackage: (payload) => vendorRequest('/vendor/event-package', { method: 'PUT', body: payload }),

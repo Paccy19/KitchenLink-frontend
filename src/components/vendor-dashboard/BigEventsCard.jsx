@@ -1,18 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Copy, Plus, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, Copy, MapPinned, Plus, Trash2 } from 'lucide-react';
 import { vendorApi } from '../../api/vendorApi';
 import { useToast } from '../common/Toast';
-import {
-  addRangeRow,
-  feeInput,
-  kmInput,
-  rangeLabel,
-  rangeProblems,
-  rangesToPayload,
-  rangesToRows,
-  removeRangeRow,
-  rowsToRanges,
-} from '../../utils/distanceFeeRanges';
+import { kmInput } from '../../utils/distanceFeeRanges';
 
 const EMPTY_TIER = { min_guests: '', max_guests: '', price_per_plate_rwf: '' };
 const newPackage = (name = '') => ({
@@ -26,12 +17,6 @@ const newPackage = (name = '') => ({
   service_style: 'buffet',
   service_details: '',
 });
-// Suggested start for the delivery fee by distance.
-const DEFAULT_DELIVERY_ROWS = [
-  { to: '5', fee: '5000' },
-  { to: '15', fee: '15000' },
-  { to: '', fee: '30000' },
-];
 const rwf = (value) => `${Math.round(Number(value) || 0).toLocaleString()} RWF`;
 
 /** A package's filled-in guest ranges, as numbers. */
@@ -56,18 +41,19 @@ function packageSummary(pkg) {
 /**
  * Big events: the kitchen sets up its ways of hosting events — one or more
  * packages ("Wedding buffet", "Corporate lunch" …), each with its own guest
- * ranges and price per plate, what a plate holds and the service — plus one
- * delivery fee by distance for all of them (ranges like the admin's delivery
- * fees), and checks the total a customer would pay. Customers who tap "Big
- * Event" enter their guest count, choose delivery (they pay the fee) or
- * pick-up (no fee), and see every package that fits.
+ * ranges and price per plate, what a plate holds and the service — and checks
+ * the total a customer would pay. The delivery fee is not the kitchen's: the
+ * platform prices it by road distance, and where the kitchen delivers is set
+ * in Delivery Coverage. Customers who tap "Big Event" enter their guest
+ * count, choose delivery or pick-up (no fee), and see every package that fits.
  */
 export default function BigEventsCard() {
   const toast = useToast();
   const [options, setOptions] = useState(null);
   const [form, setForm] = useState(null);
   const [openIndex, setOpenIndex] = useState(0);
-  const [deliveryRows, setDeliveryRows] = useState(DEFAULT_DELIVERY_ROWS);
+  // The platform's big-event delivery pricing and whether this kitchen delivers.
+  const [delivery, setDelivery] = useState(null);
   const [previewPackage, setPreviewPackage] = useState(0);
   const [previewGuests, setPreviewGuests] = useState('');
   const [previewKm, setPreviewKm] = useState('3');
@@ -88,7 +74,6 @@ export default function BigEventsCard() {
           }))
         : [newPackage('Event package')],
     });
-    setDeliveryRows(rangesToRows(offer.delivery_fee_ranges, DEFAULT_DELIVERY_ROWS));
     setPreviewGuests((current) => current || String(offer.packages[0]?.tiers[0]?.min_guests ?? 50));
   }, []);
 
@@ -100,6 +85,10 @@ export default function BigEventsCard() {
       .catch(() => {
         /* the card stays hidden when the API is unavailable */
       });
+    vendorApi.coverage
+      .get()
+      .then((data) => alive && setDelivery({ pricing: data.platform_pricing, delivers: data.coverage.big_event_enabled }))
+      .catch(() => null);
     return () => {
       alive = false;
     };
@@ -129,13 +118,9 @@ export default function BigEventsCard() {
     setOpenIndex(-1);
     setPreviewPackage(0);
   };
-  const setDeliveryRow = (index, patch) =>
-    setDeliveryRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-
-  const deliveryRanges = useMemo(() => rowsToRanges(deliveryRows), [deliveryRows]);
-  const deliveryProblems = rangeProblems(deliveryRanges, options?.limits.delivery_fee_rwf[0] ?? 0);
-
-  // Same sum the customer sees: guests × the package's plate price for their range + delivery for the distance.
+  // Same sum the customer sees: guests × the package's plate price for their
+  // range + the platform's big-event delivery fee (an estimate here: the real
+  // one uses the road distance).
   const preview = useMemo(() => {
     const pkg = form?.packages[previewPackage];
     if (!pkg) return null;
@@ -145,11 +130,15 @@ export default function BigEventsCard() {
     if (!tier) return { guests, tier: null, name: pkg.name };
     const food = guests * tier.price_per_plate_rwf;
     const km = Math.max(0, Number(previewKm) || 0);
-    const range =
-      deliveryRanges.find((r) => km >= r.from && (r.to === null || km < r.to)) || deliveryRanges[deliveryRanges.length - 1];
-    const delivery = range && Number.isFinite(range.fee) ? range.fee : 0;
-    return { guests, tier, food, km, delivery, total: food + delivery, name: pkg.name };
-  }, [form, previewPackage, previewGuests, previewKm, deliveryRanges]);
+    const pricing = delivery?.pricing;
+    let fee = null;
+    let negotiated = false;
+    if (pricing) {
+      fee = Math.max(pricing.min_fee_rwf, Math.round(pricing.starting_fee_rwf + km * 1000 * pricing.per_meter_rwf));
+      negotiated = !pricing.automatic_pricing_enabled || fee > pricing.auto_ceiling_rwf;
+    }
+    return { guests, tier, food, km, delivery: fee, negotiated, total: food + (negotiated ? 0 : fee ?? 0), name: pkg.name };
+  }, [form, previewPackage, previewGuests, previewKm, delivery]);
 
   if (!form || !options) return null;
 
@@ -171,7 +160,6 @@ export default function BigEventsCard() {
             service_style: pkg.service_style,
             service_details: pkg.service_details,
           })),
-          delivery_fee_ranges: rangesToPayload(deliveryRanges),
           delivery_details: form.delivery_details,
         }),
       );
@@ -405,9 +393,9 @@ export default function BigEventsCard() {
 
       {/* Delivery (shared by all packages) */}
       <div className={sectionClass}>
-        <p className={labelClass}>Delivery fee (all packages)</p>
+        <p className={labelClass}>Delivery (all packages)</p>
         <p className="text-xs text-stone-500">
-          Each customer chooses: you bring the food and they pay your delivery fee for the distance, or they pick it up at your
+          Each customer chooses: you bring the food and they pay KitchenLink's big-event delivery fee, or they pick it up at your
           kitchen and pay no delivery fee.
         </p>
         <label className="block">
@@ -422,79 +410,29 @@ export default function BigEventsCard() {
           />
         </label>
 
-        <div className="space-y-2">
-          <p className="text-[11px] text-stone-500">
-            Delivery fee by distance from your kitchen to the event. Each range starts where the previous one ends; the last one
-            covers everything farther.
+        <div className="rounded-xl bg-stone-50 border border-stone-100 p-3 text-xs text-stone-700 space-y-1.5">
+          <p className="font-black uppercase tracking-wider text-stone-400 flex items-center gap-1.5">
+            <MapPinned className="w-3.5 h-3.5" /> Delivery fee: set by KitchenLink
           </p>
-          {deliveryRows.map((row, index) => {
-            const range = deliveryRanges[index];
-            const isLast = index === deliveryRows.length - 1;
-            return (
-              <div key={index} className="flex flex-wrap items-center gap-2 rounded-xl border border-stone-200 px-3 py-2.5">
-                <span className="text-sm font-bold text-gray-900 w-20">From {range.from} km</span>
-                {isLast ? (
-                  <span className="text-sm font-bold text-stone-600 w-32">and more</span>
-                ) : (
-                  <span className="flex items-center gap-1.5 w-32">
-                    <span className="text-sm text-stone-500">to</span>
-                    <input
-                      inputMode="decimal"
-                      value={row.to}
-                      onChange={(e) => setDeliveryRow(index, { to: kmInput(e.target.value) })}
-                      className={`${smallInputClass} w-16`}
-                      aria-label={`Delivery range ${index + 1} ends at (km)`}
-                    />
-                    <span className="text-sm text-stone-500">km</span>
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5">
-                  <input
-                    inputMode="numeric"
-                    value={row.fee}
-                    onChange={(e) => setDeliveryRow(index, { fee: feeInput(e.target.value, 7) })}
-                    className={`${smallInputClass} w-28`}
-                    aria-label={`Delivery range ${index + 1} fee (RWF)`}
-                  />
-                  <span className="text-sm text-stone-500">RWF</span>
-                </span>
-                {deliveryRows.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryRows((rows) => removeRangeRow(rows, index))}
-                    aria-label={`Remove delivery range ${index + 1}`}
-                    className="ml-auto p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setDeliveryRows((rows) => addRangeRow(rows, 5))}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#542813] hover:underline"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add a distance range
-          </button>
-          {deliveryProblems.length > 0 ? (
-            <ul className="text-xs font-semibold text-red-700 space-y-0.5">
-              {deliveryProblems.map((problem) => (
-                <li key={problem}>{problem}</li>
-              ))}
-            </ul>
+          {delivery?.pricing ? (
+            <p>
+              {rwf(delivery.pricing.starting_fee_rwf)} + {delivery.pricing.per_meter_rwf} RWF per meter of road, calculated
+              automatically up to {rwf(delivery.pricing.auto_ceiling_rwf)}. Above that, or outside your coverage, the customer
+              can ask you for a special delivery and you send them a quotation.
+            </p>
           ) : (
-            <div className="rounded-xl bg-stone-50 border border-stone-100 p-3 text-xs text-stone-700 space-y-0.5">
-              <p className="font-black uppercase tracking-wider text-stone-400 mb-1">Customers will pay for delivery</p>
-              {deliveryRanges.map((range, index) => (
-                <p key={index}>
-                  {rangeLabel(range.from, range.to)}: <strong>{rwf(range.fee)}</strong>
-                </p>
-              ))}
-            </div>
+            <p>KitchenLink calculates the delivery fee from the road distance.</p>
           )}
-          <p className="text-[11px] text-stone-400">A distance exactly on the edge (e.g. 5 km) uses the next range.</p>
+          <p>
+            {delivery && !delivery.delivers ? (
+              <span className="font-bold text-amber-700">You don't deliver big events yet, so customers can only pick up. </span>
+            ) : null}
+            Choose where you deliver in{' '}
+            <Link to="/vendor-dashboard/delivery-coverage" className="font-bold text-[#542813] underline">
+              Delivery Coverage
+            </Link>
+            .
+          </p>
         </div>
       </div>
 
@@ -555,8 +493,8 @@ export default function BigEventsCard() {
               <dd>{rwf(preview.food)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt>Delivery ({preview.km} km)</dt>
-              <dd>{rwf(preview.delivery)}</dd>
+              <dt>Delivery (about {preview.km} km of road)</dt>
+              <dd>{preview.delivery == null ? '—' : preview.negotiated ? 'Special delivery quote' : rwf(preview.delivery)}</dd>
             </div>
             <div className="flex justify-between pt-1.5 border-t border-[#ebd7c5] text-sm font-black text-gray-900">
               <dt>Total with delivery</dt>
@@ -572,7 +510,7 @@ export default function BigEventsCard() {
 
       <button
         type="submit"
-        disabled={busy || deliveryProblems.length > 0}
+        disabled={busy}
         className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white text-xs font-bold disabled:opacity-50"
       >
         {busy ? 'Saving…' : 'Save big events'}

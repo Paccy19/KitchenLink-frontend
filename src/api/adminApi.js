@@ -180,6 +180,14 @@ export const adminApi = {
   saveOperationsRules: (body) => adminRequest('/admin/operations/rules', { method: 'PUT', body }),
   // Delivery timing rules (warning / late charge / automatic reassign), in minutes.
   // Delivery fee by distance ranges.
+  // Delivery Management → big-event delivery pricing (separate from the standard fee).
+  bigEventDelivery: () => adminRequest('/admin/settings/big-event-delivery'),
+  saveBigEventDelivery: (body) => adminRequest('/admin/settings/big-event-delivery', { method: 'PUT', body }),
+  // Special delivery negotiations: requests, quotations, chats, disputes.
+  specialDeliveries: (params) => adminRequest(`/admin/special-deliveries${qs(params)}`),
+  specialDelivery: (id) => adminRequest(`/admin/special-deliveries/${encodeURIComponent(id)}`),
+  resolveSpecialDeliveryDispute: (id, body) =>
+    adminRequest(`/admin/special-deliveries/${encodeURIComponent(id)}/resolve-dispute`, { method: 'POST', body }),
   deliveryFees: () => adminRequest('/admin/settings/delivery-fees'),
   saveDeliveryFees: (body) => adminRequest('/admin/settings/delivery-fees', { method: 'PUT', body }),
   // Orders charged the standard delivery fee (distance, prices used, detour flags).

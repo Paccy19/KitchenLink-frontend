@@ -16,6 +16,7 @@ import {
   Landmark,
   BookOpen,
   UsersRound,
+  Truck,
 } from 'lucide-react';
 
 /**
@@ -36,6 +37,8 @@ export const ADMIN_SECTIONS = [
     items: [
       { to: '/admin-dashboard/orders', label: 'Orders', icon: ClipboardList, permission: 'orders:read' },
       { to: '/admin-dashboard/deliveries', label: 'Deliveries', icon: Bike, permission: 'deliveries:read' },
+      // Big-event delivery pricing and special delivery negotiations.
+      { to: '/admin-dashboard/delivery-management', label: 'Delivery Management', icon: Truck, permission: 'deliveries:read' },
       { to: '/admin-dashboard/vendors', label: 'Vendors', icon: Store, permission: 'vendors:read' },
       { to: '/admin-dashboard/drivers', label: 'Delivery Workers', icon: Bike, permission: 'drivers:read' },
       { to: '/admin-dashboard/users', label: 'Customers', icon: Users, permission: 'users:read' },

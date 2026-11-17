@@ -39,6 +39,7 @@ import {
   Bell,
   CheckCheck,
   MessageCircle,
+  Truck,
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -407,6 +408,10 @@ export default function Navbar() {
                               {chatUnread}
                             </span>
                           )}
+                        </Link>
+                        <Link to="/special-deliveries" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Truck className="w-4 h-4 text-stone-400" />
+                          <span>Special Deliveries</span>
                         </Link>
                         <Link to="/wishlist" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
                           <Heart className="w-4 h-4 text-rose-500" />

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Store } from 'lucide-react';
-import { fetchEventQuote, createEventOrder } from '../api/endpoints';
+import { ArrowLeft, Handshake, Loader2, Store } from 'lucide-react';
+import { fetchEventQuote, createEventOrder, specialDeliveryApi } from '../api/endpoints';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
 import { useLocation } from '../context/LocationContext';
@@ -33,7 +33,18 @@ function earliestEventInput(hours) {
  * day before the event (from their order page). Prices always come from the
  * server (POST /orders/event-quote) and the order is placed with
  * POST /orders/event-checkout.
+ *
+ * Delivery is priced by KitchenLink (big-event delivery fee). When that isn't
+ * possible — the venue is outside the kitchen's coverage, or the fee is above
+ * the automatic limit — the customer can request a special delivery and agree
+ * a price with the kitchen. With `?agreement=<request id>` the page books the
+ * event with that agreed (locked) delivery fee.
  */
+const toLocalInput = (iso) => {
+  const date = new Date(iso);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
 export default function EventOrderPage() {
   const { vendorId } = useParams();
   const [searchParams] = useSearchParams();
@@ -42,6 +53,13 @@ export default function EventOrderPage() {
   const { refreshOrder } = useOrders();
   const { coords, source } = useLocation();
 
+  const agreementId = searchParams.get('agreement') || '';
+  // An agreed special delivery (accepted quotation): its venue and locked fee.
+  const [agreement, setAgreement] = useState(null);
+  const [agreementError, setAgreementError] = useState('');
+  const [specialNote, setSpecialNote] = useState('');
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState(null);
   const [guests, setGuests] = useState(searchParams.get('guests') || '');
   // The kitchen's package being ordered (from the list); none = the server's pick.
   const [packageId, setPackageId] = useState(searchParams.get('package') || '');
@@ -70,6 +88,24 @@ export default function EventOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  useEffect(() => {
+    if (!agreementId || !isAuthenticated) return;
+    specialDeliveryApi
+      .get(agreementId)
+      .then((request) => {
+        if (!request.can_checkout) {
+          setAgreementError('This delivery agreement can no longer be used for booking.');
+          return;
+        }
+        setAgreement(request);
+        setPickup(false);
+        setVenueAddress(request.delivery_location.address);
+        setVenue({ lat: String(request.delivery_location.latitude), lng: String(request.delivery_location.longitude) });
+        if (request.event?.event_at) setEventAt(toLocalInput(request.event.event_at));
+      })
+      .catch((error) => setAgreementError(error.message || 'Could not load your delivery agreement.'));
+  }, [agreementId, isAuthenticated]);
+
   const guestCount = Number(guests);
   const validGuests = Number.isInteger(guestCount) && guestCount >= 1;
   const pin = parseCoords(venue);
@@ -87,7 +123,8 @@ export default function EventOrderPage() {
       ...(packageId ? { package_id: packageId } : {}),
       guests: debouncedGuests,
       fulfillment: pickup ? 'pickup' : 'delivery',
-      ...(!pickup && lat != null ? { delivery_location: { latitude: lat, longitude: lng } } : {}),
+      // With an agreed special delivery the fee is already known: quote the food only.
+      ...(!pickup && lat != null && !agreementId ? { delivery_location: { latitude: lat, longitude: lng } } : {}),
     })
       .then((result) => {
         if (!alive) return;
@@ -125,6 +162,14 @@ export default function EventOrderPage() {
   }
 
   const { vendor, offer, quote } = data;
+  const delivery = data.delivery; // big-event delivery pricing for the pinned venue
+  const agreed = Boolean(agreement) && !pickup;
+  const deliveryFee = pickup ? 0 : agreed ? agreement.agreed_fee_rwf : delivery?.status === 'automatic' ? delivery.fee_rwf : null;
+  const needsSpecial = !pickup && !agreed && delivery?.status === 'negotiation_required';
+  const noDelivery = !pickup && delivery?.status === 'unavailable';
+  const totalRwf = quote.food_total_rwf + (deliveryFee ?? 0);
+  const depositRwf = agreed ? Math.round((totalRwf * (quote.deposit_percent ?? 50)) / 100) : quote.deposit_rwf;
+  const balanceRwf = agreed ? totalRwf - depositRwf : quote.balance_rwf;
   const pkg = offer.package;
   const leadDays = Math.round((quote.min_lead_hours ?? 48) / 24);
   const minEvent = earliestEventInput(quote.min_lead_hours ?? 48);
@@ -167,6 +212,7 @@ export default function EventOrderPage() {
           ? { note: '' }
           : { address: venueAddress.trim(), latitude: pin.latitude, longitude: pin.longitude },
         note,
+        ...(agreed ? { special_delivery_request_id: agreement.id } : {}),
         payment_method: paymentMethod,
         payment_details: paymentDetails,
       });
@@ -176,6 +222,33 @@ export default function EventOrderPage() {
       setErrorMsg(error.message || 'Could not place your order.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Ask the kitchen for a special delivery arrangement (no fee is charged).
+  const requestSpecialDelivery = async () => {
+    setRequestError(null);
+    if (!isAuthenticated) {
+      openAuthModal();
+      return;
+    }
+    if (!eventAt) return setRequestError({ message: 'Choose the date and time of your event first.' });
+    if (!venueAddress.trim() || !pin) return setRequestError({ message: 'Enter the venue address and pin it on the map.' });
+    setRequesting(true);
+    try {
+      const request = await specialDeliveryApi.create({
+        vendor_id: vendorId,
+        package_id: packageId || quote.package_id,
+        guests: guestCount,
+        event_at: new Date(eventAt).toISOString(),
+        delivery_location: { address: venueAddress.trim(), latitude: pin.latitude, longitude: pin.longitude },
+        instructions: specialNote.trim(),
+      });
+      navigate(`/special-deliveries/${request.id}`);
+    } catch (error) {
+      setRequestError({ message: error.message || 'Could not send your request.', existingId: error.details?.request_id || null });
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -315,18 +388,81 @@ export default function EventOrderPage() {
                     type="text"
                     maxLength={200}
                     value={venueAddress}
+                    readOnly={agreed}
                     onChange={(e) => setVenueAddress(e.target.value)}
                     placeholder="e.g. Kigali Serena Hotel, KN 3 Ave"
                     className={`${inputClass} mt-1`}
                   />
                 </label>
-                <KitchenCoordinatesPicker
-                  value={venue}
-                  onChange={setVenue}
-                  inputClass={inputClass}
-                  place="your event venue"
-                />
+                {agreed ? (
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2">
+                    <Handshake className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>
+                      Special delivery {agreement.reference}: {rwf(agreement.agreed_fee_rwf)} agreed with the kitchen for this venue.
+                      The venue and the delivery fee are locked.
+                    </span>
+                  </div>
+                ) : (
+                  <KitchenCoordinatesPicker
+                    value={venue}
+                    onChange={setVenue}
+                    inputClass={inputClass}
+                    place="your event venue"
+                  />
+                )}
                 {offer.delivery_details && <p className="text-[11px] text-stone-500">{offer.delivery_details}</p>}
+                {delivery?.status === 'automatic' && !agreed && (
+                  <p className="text-[11px] text-stone-500">
+                    KitchenLink big-event delivery: {rwf(delivery.starting_fee_rwf)} + {delivery.per_meter_rwf} RWF per meter of road
+                    {delivery.distance_km != null ? ` (${delivery.distance_km} km)` : ''}.
+                  </p>
+                )}
+                {noDelivery && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+                    <p>{delivery.message}</p>
+                    <button type="button" onClick={() => setPickup(true)} className="font-bold underline">
+                      Pick up instead
+                    </button>
+                  </div>
+                )}
+                {needsSpecial && (
+                  <div className="p-4 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] text-xs space-y-2.5">
+                    <p className="font-black text-[#3d1b0c] flex items-center gap-1.5">
+                      <Handshake className="w-4 h-4" /> Special delivery needed
+                    </p>
+                    <p className="text-stone-700">{delivery.message}</p>
+                    {delivery.reason_messages?.map((reason) => (
+                      <p key={reason} className="text-stone-500">• {reason}</p>
+                    ))}
+                    <textarea
+                      rows={2}
+                      value={specialNote}
+                      onChange={(e) => setSpecialNote(e.target.value.slice(0, 1000))}
+                      placeholder="Delivery instructions for the kitchen (access, unloading, contact on site…)"
+                      className="w-full text-xs p-2.5 rounded-xl border border-stone-200 outline-none focus:border-[#542813] bg-white resize-none"
+                    />
+                    {requestError && (
+                      <p className="font-semibold text-red-600">
+                        {requestError.message}{' '}
+                        {requestError.existingId && (
+                          <Link to={`/special-deliveries/${requestError.existingId}`} className="underline">
+                            Open it
+                          </Link>
+                        )}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={requestSpecialDelivery}
+                      disabled={requesting}
+                      className="px-4 py-2.5 rounded-xl bg-[#542813] text-white font-black disabled:opacity-50 inline-flex items-center gap-2"
+                    >
+                      {requesting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      Request special delivery
+                    </button>
+                    <p className="text-[11px] text-stone-500">No delivery fee is charged until you accept the kitchen's quotation.</p>
+                  </div>
+                )}
               </div>
             )}
           </StepCard>
@@ -387,24 +523,34 @@ export default function EventOrderPage() {
                       </>
                     ) : (
                       <>
-                        <dt className="min-w-0">{quote.distance_km != null ? `Delivery (${quote.distance_km} km)` : 'Delivery'}</dt>
-                        <dd className="whitespace-nowrap text-right">{quote.delivery_fee_rwf != null ? rwf(quote.delivery_fee_rwf) : 'Pin the venue'}</dd>
+                        <dt className="min-w-0">
+                          {agreed ? 'Delivery (agreed)' : delivery?.distance_km != null ? `Delivery (${delivery.distance_km} km)` : 'Delivery'}
+                        </dt>
+                        <dd className="whitespace-nowrap text-right">
+                          {deliveryFee != null
+                            ? rwf(deliveryFee)
+                            : needsSpecial
+                              ? 'Special arrangement'
+                              : noDelivery
+                                ? 'Not available'
+                                : 'Pin the venue'}
+                        </dd>
                       </>
                     )}
                   </div>
                   <div className="flex items-baseline justify-between gap-3 pt-2 border-t border-stone-100 text-base sm:text-lg font-black text-gray-900">
                     <dt className="min-w-0">Total</dt>
-                    <dd className="whitespace-nowrap text-right">{rwf(quote.total_rwf)}</dd>
+                    <dd className="whitespace-nowrap text-right">{rwf(totalRwf)}</dd>
                   </div>
-                  {(pickup || quote.delivery_fee_rwf != null) && (
+                  {(pickup || deliveryFee != null) && (
                     <div className="mt-2 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-3 space-y-1 text-xs">
                       <div className="flex items-baseline justify-between gap-3 font-black text-[#3d1b0c]">
                         <dt className="min-w-0">Pay now ({quote.deposit_percent}%)</dt>
-                        <dd className="whitespace-nowrap text-right">{rwf(quote.deposit_rwf)}</dd>
+                        <dd className="whitespace-nowrap text-right">{rwf(depositRwf)}</dd>
                       </div>
                       <div className="flex items-baseline justify-between gap-3 text-stone-600">
                         <dt className="min-w-0">Balance, {balanceDueAt ? `by ${formatDue(balanceDueAt)}` : 'a day before the event'}</dt>
-                        <dd className="whitespace-nowrap text-right">{rwf(quote.balance_rwf)}</dd>
+                        <dd className="whitespace-nowrap text-right">{rwf(balanceRwf)}</dd>
                       </div>
                     </div>
                   )}
@@ -414,16 +560,17 @@ export default function EventOrderPage() {
               )}
             </dl>
 
+            {agreementError && <p className="text-xs font-semibold text-red-600">{agreementError}</p>}
             {errorMsg && <p className="text-xs font-semibold text-red-600">{errorMsg}</p>}
 
             <button
               type="button"
               onClick={placeOrder}
-              disabled={submitting || quoting || !quoteMatches || (!pickup && quote.delivery_fee_rwf == null)}
+              disabled={submitting || quoting || !quoteMatches || (!pickup && deliveryFee == null)}
               className="w-full px-4 py-3.5 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white text-sm font-black shadow-md disabled:opacity-50 active:scale-[0.98] transition flex items-center justify-center gap-2"
             >
               {(submitting || quoting) && <Loader2 className="w-4 h-4 animate-spin" />}
-              {submitting ? 'Placing your order…' : quoteMatches ? `Place order · pay ${rwf(quote.deposit_rwf)} now` : 'Place order'}
+              {submitting ? 'Placing your order…' : quoteMatches ? `Place order · pay ${rwf(depositRwf)} now` : 'Place order'}
             </button>
             <p className="text-[11px] text-stone-400 text-center">
               You pay half now and the rest a day before your event, from your order page. Your money is held safely until

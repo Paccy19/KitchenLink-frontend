@@ -25,6 +25,12 @@ const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const SupportPage = lazy(() => import('./pages/SupportPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const VendorMessagesPage = lazy(() => import('./pages/vendor/VendorMessagesPage'));
+// Big-event delivery: coverage, special delivery negotiations, admin pricing.
+const SpecialDeliveriesPage = lazy(() => import('./pages/SpecialDeliveriesPage'));
+const SpecialDeliveryPage = lazy(() => import('./pages/SpecialDeliveryPage'));
+const VendorDeliveryCoveragePage = lazy(() => import('./pages/vendor/VendorDeliveryCoveragePage'));
+const VendorSpecialDeliveriesPage = lazy(() => import('./pages/vendor/VendorSpecialDeliveriesPage'));
+const AdminDeliveryManagementPage = lazy(() => import('./pages/admin/AdminDeliveryManagementPage'));
 const AdminChatsPage = lazy(() => import('./pages/admin/AdminChatsPage'));
 
 // Vendor dashboard (separate shell without the customer chrome).
@@ -119,6 +125,8 @@ export default function App() {
               <Route path="/wishlist" element={<WishlistPage />} />
               <Route path="/support" element={<SupportPage />} />
               <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/special-deliveries" element={<SpecialDeliveriesPage />} />
+              <Route path="/special-deliveries/:requestId" element={<SpecialDeliveryPage />} />
               <Route path="/vendor-register" element={<VendorRegisterPage />} />
               <Route path="/vendor-login" element={<VendorLoginPage />} />
               <Route path="/driver-register" element={<DriverRegisterPage />} />
@@ -130,6 +138,7 @@ export default function App() {
                 <Route index element={<AdminOverviewPage />} />
                 <Route path="orders" element={<AdminOrdersPage />} />
                 <Route path="deliveries" element={<AdminDeliveriesPage />} />
+                <Route path="delivery-management" element={<AdminDeliveryManagementPage />} />
                 <Route path="vendors" element={<AdminVendorsPage />} />
                 <Route path="drivers" element={<AdminDriversPage />} />
                 <Route path="users" element={<AdminUsersPage />} />
@@ -167,6 +176,8 @@ export default function App() {
                 <Route path="profile/:section" element={<VendorProfilePage />} />
                 <Route path="support" element={<VendorSupportPage />} />
                 <Route path="messages" element={<VendorMessagesPage />} />
+                <Route path="special-deliveries" element={<VendorSpecialDeliveriesPage />} />
+                <Route path="delivery-coverage" element={<VendorDeliveryCoveragePage />} />
               </Route>
 
               <Route path="*" element={<HomePage />} />

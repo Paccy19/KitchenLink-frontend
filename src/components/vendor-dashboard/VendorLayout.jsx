@@ -19,6 +19,8 @@ import {
   MessageCircle,
   Settings,
   ChevronDown,
+  Truck,
+  MapPinned,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { vendorApi } from '../../api/vendorApi';
@@ -35,6 +37,9 @@ const NAV = [
   { to: '/vendor-dashboard/menu', label: 'Menu', icon: UtensilsCrossed, badgeKey: 'menuCount' },
   { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet },
   { to: '/vendor-dashboard/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'chats' },
+  // Big-event delivery: negotiations with customers, and where the kitchen delivers.
+  { to: '/vendor-dashboard/special-deliveries', label: 'Special deliveries', icon: Truck },
+  { to: '/vendor-dashboard/delivery-coverage', label: 'Delivery Coverage', icon: MapPinned },
   { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications' },
   // A group: opens to list the settings pages.
   { to: VENDOR_SETTINGS_BASE, label: 'Settings', icon: Settings, children: VENDOR_SETTINGS_SECTIONS },
