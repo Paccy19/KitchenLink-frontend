@@ -111,7 +111,7 @@ export default function PerMeterFeeCard() {
       ) : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            {inUse ? <Badge tone="green">In use for new orders</Badge> : <Badge>Off — {query.data?.mode === 'ranges' ? 'distance ranges' : 'standard formula'} in use</Badge>}
+            {inUse ? <Badge tone="green">In use for new orders</Badge> : <Badge>Off — standard formula in use</Badge>}
             {live && !query.data?.per_meter_saved && <span className="text-[11px] text-stone-400">Starting values from the server settings (500 RWF + 0.3 RWF per meter unless changed)</span>}
           </div>
 
@@ -184,7 +184,7 @@ export default function PerMeterFeeCard() {
             {query.data?.updated_at && <span className="text-[11px] text-stone-400">Last changed {formatDate(query.data.updated_at)}</span>}
           </div>
           <p className="text-[11px] text-stone-400">
-            While this is on, the distance ranges below are not used. If the routing service can't measure a road distance, customers are asked to try again or choose pickup — they are never charged a guess. Orders already placed keep the fee they were charged.
+            While this is off, the standard formula is used. If the routing service can't measure a road distance, customers are asked to try again or choose pickup — they are never charged a guess. Orders already placed keep the fee they were charged.
           </p>
           {mutation.isError && <ErrorNote error={mutation.error} />}
         </div>
