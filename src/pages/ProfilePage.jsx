@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FadeImage from '../components/common/FadeImage';
-import { KIGALI_AREAS } from '../utils/kigaliAreas';
+import KitchenLocationFields from '../components/vendor-dashboard/KitchenLocationFields';
 import {
   NAME_MAX_LENGTH,
   formatNameInput,
@@ -59,6 +59,9 @@ export default function ProfilePage() {
   const [title, setTitle] = useState('Home');
   const [street, setStreet] = useState('');
   const [district, setDistrict] = useState('');
+  // The address's map pin ({ lat, lng } strings): delivery is priced to it.
+  const [pin, setPin] = useState({ lat: '', lng: '' });
+  const [addrError, setAddrError] = useState('');
   const [instructions, setInstructions] = useState('');
 
   const [profileError, setProfileError] = useState('');
@@ -96,11 +99,22 @@ export default function ProfilePage() {
 
   const handleAddAddress = (e) => {
     e.preventDefault();
-    if (!street || !district.trim()) return;
-    addAddress({ title, street, district: district.trim(), city: 'Kigali', instructions });
+    if (!street.trim() || !district.trim()) {
+      setAddrError('Enter the area and the street or a landmark.');
+      return;
+    }
+    const lat = Number(pin.lat);
+    const lng = Number(pin.lng);
+    if (pin.lat === '' || pin.lng === '' || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setAddrError('Put the pin on the delivery spot: search the street, tap the map, or use your current location.');
+      return;
+    }
+    addAddress({ title, street: street.trim(), district: district.trim(), city: 'Kigali', instructions, lat, lng });
     setShowAddAddr(false);
     setStreet('');
     setDistrict('');
+    setPin({ lat: '', lng: '' });
+    setAddrError('');
     setInstructions('');
   };
 
@@ -258,34 +272,34 @@ export default function ProfilePage() {
           {showAddAddr && (
             <form onSubmit={handleAddAddress} className="p-5 bg-white rounded-3xl border border-stone-200 space-y-3 animate-scale-in">
               <h4 className="font-bold text-xs text-stone-800">Add New Address in Kigali</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Label (e.g. Home, Work, Aunt's House)"
-                  className="p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
-                  required
-                />
-                <input
-                  list="profile-kigali-areas"
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value.slice(0, 80))}
-                  placeholder="Area (any part of Kigali)"
-                  className="p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
-                  required
-                />
-                <datalist id="profile-kigali-areas">
-                  {KIGALI_AREAS.map((area) => <option key={area} value={area} />)}
-                </datalist>
-              </div>
               <input
                 type="text"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-                placeholder="Street name / Landmark"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Label (e.g. Home, Work, Aunt's House)"
                 className="w-full p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
                 required
+              />
+              {/* The map pin is where the delivery fee is calculated to. */}
+              <KitchenLocationFields
+                area={district}
+                address={street}
+                coords={pin}
+                onChange={(patch) => {
+                  setAddrError('');
+                  if (patch.area !== undefined) setDistrict(patch.area.slice(0, 80));
+                  if (patch.address !== undefined) setStreet(patch.address);
+                  if (patch.coords !== undefined) setPin(patch.coords);
+                }}
+                errors={addrError ? { coords: addrError } : {}}
+                inputClass={(error) =>
+                  `w-full p-2.5 text-xs rounded-xl border outline-none focus:border-[#542813] ${error ? 'border-red-300' : 'border-stone-200'}`
+                }
+                areaLabel="Area"
+                addressLabel="Street name / Landmark"
+                place="the delivery spot"
+                placeSpot="the exact spot where the food should arrive"
+                currentLocationHint="At this address right now? Detect it. Otherwise search the area and street, or tap the map."
               />
               <input
                 type="text"
@@ -329,6 +343,11 @@ export default function ProfilePage() {
                   </div>
                   <p className="text-xs text-stone-700 font-medium">{addr.street}</p>
                   <p className="text-xs text-stone-400">{addr.district}, Kigali</p>
+                  {(addr.lat == null || addr.lng == null) && (
+                    <p className="text-[11px] text-amber-700 font-semibold mt-1">
+                      No map pin yet: add it at checkout so the delivery fee can be calculated.
+                    </p>
+                  )}
                   {addr.instructions && (
                     <p className="text-[11px] text-stone-500 italic mt-2">Note: {addr.instructions}</p>
                   )}

@@ -4,11 +4,10 @@ import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
-import { useLocation } from '../context/LocationContext';
 import { buildScheduledFor } from '../utils/schedule';
 import { basketRuleProblem } from '../data/vendorTypes';
 import { sanitizePhoneInput } from '../utils/validation';
-import FulfillmentSection from '../components/checkout/FulfillmentSection';
+import FulfillmentSection, { addressPoint } from '../components/checkout/FulfillmentSection';
 import ScheduleSection from '../components/checkout/ScheduleSection';
 import PaymentSection from '../components/checkout/PaymentSection';
 import OrderSummary from '../components/checkout/OrderSummary';
@@ -36,11 +35,10 @@ export default function CheckoutPage() {
     preorderSpecial,
     orderingRules,
     totalItemCount,
+    setCheckoutPoint,
   } = useCart();
-  const { user, isAuthenticated, openAuthModal, addAddress } = useAuth();
+  const { user, isAuthenticated, openAuthModal, addAddress, updateAddress } = useAuth();
   const { placeOrder, apiEnabled, apiError, clearApiError } = useOrders();
-  // The delivery point (GPS or a picked place); the fee is re-quoted whenever it changes.
-  const { coords, label: locationLabel } = useLocation();
 
   const scheduledFor =
     orderType === 'scheduled'
@@ -76,6 +74,14 @@ export default function CheckoutPage() {
   }, [accountPhone]);
   const selectedAddress =
     user.addresses?.find((a) => a.id === selectedAddressId) || user.addresses?.[0] || null;
+  // The delivery fee is priced to the chosen address's map pin (never to where
+  // the customer's phone is now). No pin yet: no price until they add one.
+  const deliveryPoint = addressPoint(selectedAddress);
+  useEffect(() => {
+    setCheckoutPoint(deliveryPoint || false);
+  }, [deliveryPoint?.lat, deliveryPoint?.lng, setCheckoutPoint]);
+  // Leaving checkout: the basket goes back to estimating from the current location.
+  useEffect(() => () => setCheckoutPoint(null), [setCheckoutPoint]);
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -120,6 +126,11 @@ export default function CheckoutPage() {
       setErrorMsg('Add or select a delivery address before placing your order.');
       return;
     }
+    const currentPoint = addressPoint(currentAddr);
+    if (!isPickup && !currentPoint) {
+      setErrorMsg('Put your delivery address on the map ("Add the pin") so we can calculate the delivery fee.');
+      return;
+    }
     if (!isPickup && deliveryQuote.unavailableReason) {
       setErrorMsg(deliveryQuote.unavailableReason);
       return;
@@ -127,7 +138,7 @@ export default function CheckoutPage() {
     if (!isPickup && deliveryFee == null) {
       setErrorMsg(
         deliveryQuote.errorMessage ||
-          "We couldn't calculate the delivery fee for your location. Please check your location and try again.",
+          "We couldn't calculate the delivery fee to this address. Check its map pin and try again.",
       );
       return;
     }
@@ -164,8 +175,9 @@ export default function CheckoutPage() {
           : {
               address: currentAddr.street,
               neighborhood: currentAddr.district,
-              latitude: coords.lat,
-              longitude: coords.lng,
+              // The chosen address's pin: the same point the fee was quoted for.
+              latitude: currentPoint.lat,
+              longitude: currentPoint.lng,
               note: [currentAddr.instructions, orderNotes].filter(Boolean).join(' | '),
             },
         paymentMethod: {
@@ -232,6 +244,7 @@ export default function CheckoutPage() {
             selectedAddressId={selectedAddressId}
             onSelectAddress={setSelectedAddressId}
             onAddAddress={addAddress}
+            onUpdateAddress={updateAddress}
             onError={setErrorMsg}
           />
 
@@ -279,7 +292,7 @@ export default function CheckoutPage() {
             deliveryQuote={deliveryQuote}
             deliveryPlace={{
               address: [selectedAddress?.street, selectedAddress?.district].filter(Boolean).join(', '),
-              label: locationLabel,
+              label: deliveryPoint ? 'pinned on the map' : 'no map pin yet',
             }}
             grandTotal={grandTotal}
             isPickup={isPickup}

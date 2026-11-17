@@ -319,13 +319,19 @@ export const CartProvider = ({ children }) => {
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  // Delivery is priced by road distance from the kitchen to the customer, so
-  // it is re-quoted whenever the kitchen or the delivery location changes.
+  // Delivery is priced by road distance from the kitchen to the DELIVERY
+  // ADDRESS, re-quoted whenever the kitchen or that address changes. At
+  // checkout the page sets `checkoutPoint` to the chosen address's map pin
+  // (`false` while the chosen address has no pin: no price yet). Elsewhere
+  // (`null`, e.g. the basket drawer) the customer's current location gives an
+  // estimate until they choose where to deliver.
   const isPickup = fulfillment === 'pickup';
-  const quoteEnabled = Boolean(cartItems.length && activeVendor?.id && coords && !isPickup);
+  const [checkoutPoint, setCheckoutPoint] = useState(null);
+  const quotePoint = checkoutPoint === null ? coords : checkoutPoint || null;
+  const quoteEnabled = Boolean(cartItems.length && activeVendor?.id && quotePoint && !isPickup);
   const quoteQuery = useQuery({
-    queryKey: ['delivery-quote', activeVendor?.id, coords?.lat, coords?.lng],
-    queryFn: () => fetchDeliveryQuote(activeVendor.id, coords),
+    queryKey: ['delivery-quote', activeVendor?.id, quotePoint?.lat, quotePoint?.lng],
+    queryFn: () => fetchDeliveryQuote(activeVendor.id, quotePoint),
     enabled: quoteEnabled,
     staleTime: 5 * 60 * 1000,
     retry: 1,
@@ -340,6 +346,10 @@ export const CartProvider = ({ children }) => {
     // Why there's no price (e.g. the routing service didn't answer: try again or pick up).
     errorMessage: isPickup || !quoteQuery.isError ? null : quoteQuery.error?.message || null,
     retry: () => quoteQuery.refetch(),
+    // Priced to the current location, not a chosen delivery address (basket preview).
+    isEstimate: !isPickup && checkoutPoint === null,
+    // At checkout, the chosen address still needs its map pin.
+    needsPin: !isPickup && checkoutPoint === false,
     isPickup,
     isLoading: quoteEnabled && quoteQuery.isPending,
     isError: quoteQuery.isError,
@@ -393,6 +403,7 @@ export const CartProvider = ({ children }) => {
       subtotal,
       deliveryFee,
       deliveryQuote,
+      setCheckoutPoint,
       grandTotal,
       totalItemCount,
       orderType,
@@ -420,13 +431,16 @@ export const deliveryFeeLabel = (quote) => {
   if (quote?.isPickup) return 'Delivery fee (you pick up)';
   const name = quote?.kitchenDelivers ? "Kitchen's travel fee" : 'Delivery fee';
   const distance = formatDistance(quote?.distanceM, quote?.distanceKm);
-  return distance ? `${name} (${distance})` : name;
+  // Before an address is chosen the fee is only an estimate to where you are now.
+  const label = quote?.isEstimate ? `${name}, estimated` : name;
+  return distance ? `${label} (${distance})` : label;
 };
 
 export const deliveryFeeValue = (fee, quote) => {
   if (quote?.isPickup) return 'Free';
+  if (quote?.needsPin) return 'Pin your address';
   if (quote?.isLoading) return 'Calculating…';
   if (quote?.unavailableReason) return 'Too far';
   if (fee == null) return 'Unavailable';
-  return `${fee.toLocaleString()} RWF`;
+  return `${quote?.isEstimate ? '~' : ''}${fee.toLocaleString()} RWF`;
 };
