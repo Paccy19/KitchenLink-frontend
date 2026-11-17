@@ -1,0 +1,4 @@
+# Files used inside the Linux container keep LF line endings even when
+# edited from Windows.
+Dockerfile        text eol=lf
+docker/**         text eol=lf

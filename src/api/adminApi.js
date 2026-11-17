@@ -182,6 +182,8 @@ export const adminApi = {
   // Delivery fee by distance ranges.
   deliveryFees: () => adminRequest('/admin/settings/delivery-fees'),
   saveDeliveryFees: (body) => adminRequest('/admin/settings/delivery-fees', { method: 'PUT', body }),
+  // Orders charged the standard delivery fee (distance, prices used, detour flags).
+  deliveryFeeRecords: (params) => adminRequest(`/admin/settings/delivery-fees/records${qs(params)}`),
   // Banks for withdrawals and each bank's account-number length.
   bankFormats: () => adminRequest('/admin/settings/banks'),
   saveBankFormats: (body) => adminRequest('/admin/settings/banks', { method: 'PUT', body }),

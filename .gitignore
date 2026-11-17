@@ -1,12 +1,20 @@
-# Dependencies and build output
+# Dependencies (install with `npm ci`)
 node_modules/
+
+# Build output (`npm run build`)
 dist/
 
-# Local environment (may hold secrets)
+# Local environment files: keep secrets and machine-specific settings out of Git.
+# .env.example (template) and .env.demo (demo mode, no secrets) stay tracked.
 .env
 .env.local
 .env.*.local
+.env.production
 
-# OS / editor
-.DS_Store
+# Logs and editor/OS clutter
 *.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

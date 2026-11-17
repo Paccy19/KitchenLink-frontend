@@ -6,6 +6,7 @@ import { useLocation } from './LocationContext';
 import { useToast } from '../components/common/Toast';
 import { orderingRulesFor } from '../data/vendorTypes';
 import { scheduleDayOptions, scheduleTimeSlots } from '../utils/schedule';
+import { formatDistance } from '../utils/distance';
 
 const CartContext = createContext(null);
 const MAX_CART_QUANTITY = 99;
@@ -332,6 +333,13 @@ export const CartProvider = ({ children }) => {
   const deliveryFee = !cartItems.length || isPickup ? 0 : quoteQuery.data?.delivery_fee_rwf ?? null;
   const deliveryQuote = {
     distanceKm: isPickup ? null : quoteQuery.data?.distance_km ?? null,
+    // Road meters from the routing service (per-meter pricing charges every meter).
+    distanceM: isPickup ? null : quoteQuery.data?.distance_m ?? null,
+    pickupAddress: isPickup ? null : [quoteQuery.data?.pickup?.address, quoteQuery.data?.pickup?.neighborhood].filter(Boolean).join(', ') || null,
+    pricingMode: isPickup ? null : quoteQuery.data?.pricing?.mode ?? null,
+    // Why there's no price (e.g. the routing service didn't answer: try again or pick up).
+    errorMessage: isPickup || !quoteQuery.isError ? null : quoteQuery.error?.message || null,
+    retry: () => quoteQuery.refetch(),
     isPickup,
     isLoading: quoteEnabled && quoteQuery.isPending,
     isError: quoteQuery.isError,
@@ -411,7 +419,8 @@ export const useCart = () => useContext(CartContext);
 export const deliveryFeeLabel = (quote) => {
   if (quote?.isPickup) return 'Delivery fee (you pick up)';
   const name = quote?.kitchenDelivers ? "Kitchen's travel fee" : 'Delivery fee';
-  return quote?.distanceKm != null ? `${name} (${quote.distanceKm} km)` : name;
+  const distance = formatDistance(quote?.distanceM, quote?.distanceKm);
+  return distance ? `${name} (${distance})` : name;
 };
 
 export const deliveryFeeValue = (fee, quote) => {

@@ -1,6 +1,7 @@
 import React from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, MapPin, Navigation } from 'lucide-react';
 import { deliveryFeeLabel, deliveryFeeValue } from '../../context/CartContext';
+import { formatDistance } from '../../utils/distance';
 
 /** Checkout right column: the kitchen, dishes, price breakdown and Place Order button. */
 export default function OrderSummary({
@@ -9,6 +10,7 @@ export default function OrderSummary({
   subtotal,
   deliveryFee,
   deliveryQuote,
+  deliveryPlace,
   grandTotal,
   isPickup,
   error,
@@ -52,6 +54,47 @@ export default function OrderSummary({
         ))}
       </div>
 
+      {/* Delivery route the fee is based on (recalculated when the location changes) */}
+      {!isPickup && !deliveryQuote.kitchenDelivers && (
+        <div className="rounded-2xl border border-stone-100 bg-stone-50/70 p-3 space-y-2 text-xs">
+          <div className="flex items-start gap-2">
+            <MapPin className="w-3.5 h-3.5 mt-0.5 text-[#542813] flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Pickup</p>
+              <p className="font-semibold text-stone-700 truncate">
+                {activeVendor?.name}
+                {deliveryQuote.pickupAddress ? ` · ${deliveryQuote.pickupAddress}` : ''}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Navigation className="w-3.5 h-3.5 mt-0.5 text-[#542813] flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Delivery</p>
+              <p className="font-semibold text-stone-700 truncate">
+                {[deliveryPlace?.address, deliveryPlace?.label].filter(Boolean).join(' · ') || 'Your location'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between border-t border-stone-200/70 pt-2">
+            <span className="text-stone-500">Estimated road distance</span>
+            <span className="font-bold text-stone-800">
+              {deliveryQuote.isLoading
+                ? 'Calculating…'
+                : formatDistance(deliveryQuote.distanceM, deliveryQuote.distanceKm) || '—'}
+            </span>
+          </div>
+          {deliveryQuote.errorMessage && (
+            <div role="alert" className="flex items-start justify-between gap-2 rounded-xl bg-amber-50 border border-amber-200 p-2 text-amber-800 font-semibold">
+              <span>{deliveryQuote.errorMessage}</span>
+              <button type="button" onClick={deliveryQuote.retry} className="flex-shrink-0 underline font-bold">
+                Try again
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Price Breakdown */}
       <div className="space-y-2 pt-4 border-t border-stone-100 text-xs">
         <div className="flex justify-between text-stone-600">
@@ -69,7 +112,9 @@ export default function OrderSummary({
               ? deliveryQuote.unavailableReason
               : deliveryQuote.kitchenDelivers
                 ? "You're beyond the delivery workers' range, so the kitchen brings your order itself and charges its own travel fee. Far orders are scheduled ahead. At handover, give the kitchen the code we send you."
-                : 'The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.'}
+                : deliveryQuote.pricingMode === 'per_meter'
+                  ? 'The delivery fee is a base fee plus a price for each meter of road from the kitchen to you. It is fixed when you place the order, is charged separately from your food, and goes in full to your delivery worker.'
+                  : 'The delivery fee depends on the distance from the kitchen to you, is charged separately from your food, and goes in full to your delivery worker.'}
         </p>
         <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-200">
           <span>Total Due</span>
