@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Phone, ShieldCheck, ArrowRight, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
 
 export default function AuthModal() {
+  const navigate = useNavigate();
   const {
     isAuthModalOpen,
     closeAuthModal,
@@ -43,6 +45,12 @@ export default function AuthModal() {
     }
     verifyOtp(otpCode, pendingName || name)
       .then((success) => {
+        // The server identified an admin: their email + password come next.
+        // The one-time challenge travels in router state only (not stored).
+        if (success?.adminVerificationRequired) {
+          navigate('/admin-verify', { state: { challengeToken: success.challengeToken, expiresInSeconds: success.expiresInSeconds } });
+          return;
+        }
         if (!success) setError('Invalid verification code.');
       })
       .catch((requestError) => setError(requestError.message));
