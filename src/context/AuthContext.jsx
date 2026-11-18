@@ -3,6 +3,7 @@ import {
   fetchCurrentCustomer,
   sendOtp as sendOtpRequest,
   verifyOtp as verifyOtpRequest,
+  continueAsCustomer as continueAsCustomerRequest,
   updateCurrentCustomerProfile,
 } from '../api/endpoints';
 import { clearAllSessions } from '../api/session';
@@ -116,8 +117,8 @@ export const AuthProvider = ({ children }) => {
     setAuthStep('otp');
   };
 
-  const verifyOtp = async (code, name = pendingName) => {
-    const result = await verifyOtpRequest(pendingPhone, code, name);
+  /** Signs the customer in with a session the server issued. */
+  const startCustomerSession = (result) => {
     // Roles are exclusive: wipe any vendor/driver/admin session first.
     clearAllSessions();
     localStorage.setItem(ACCESS_TOKEN_KEY, result.token);
@@ -128,6 +129,26 @@ export const AuthProvider = ({ children }) => {
     setOtpPreview('');
     return true;
   };
+
+  /**
+   * Returns true when signed in as a customer, or
+   * { adminVerificationRequired, challengeToken } when the server says this
+   * verified phone belongs to an admin (it decides — never this app). No
+   * session exists yet in that case; nothing is stored.
+   */
+  const verifyOtp = async (code, name = pendingName) => {
+    const result = await verifyOtpRequest(pendingPhone, code, name);
+    if (result.admin_verification_required) {
+      setIsAuthModalOpen(false);
+      setAuthStep('phone');
+      setOtpPreview('');
+      return { adminVerificationRequired: true, challengeToken: result.challenge_token, expiresInSeconds: result.expires_in_seconds };
+    }
+    return startCustomerSession(result);
+  };
+
+  /** From the admin verification screen: sign in as the customer instead. */
+  const continueAsCustomer = async (challengeToken) => startCustomerSession(await continueAsCustomerRequest(challengeToken));
 
   const logout = () => {
     clearAllSessions();
@@ -214,6 +235,7 @@ export const AuthProvider = ({ children }) => {
     setAuthStep,
     sendOtp,
     verifyOtp,
+    continueAsCustomer,
     logout,
     addAddress,
     updateAddress,

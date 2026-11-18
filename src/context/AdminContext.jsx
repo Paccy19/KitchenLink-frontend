@@ -132,6 +132,24 @@ export function AdminProvider({ children }) {
     }
   }, []);
 
+  // Finishes the sign-in that started at the customer phone login: the
+  // server checks the challenge and that these are the same admin's
+  // credentials, then issues the admin session.
+  const completePhoneLogin = useCallback(async (challengeToken, email, password) => {
+    setAuthBusy(true);
+    setError('');
+    try {
+      const result = await adminApi.phoneLogin(challengeToken, email, password);
+      clearAllSessions();
+      setAdminToken(result.token);
+      setAuthToken(result.token);
+      setAdmin(result.admin);
+      return result;
+    } finally {
+      if (mounted.current) setAuthBusy(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     clearAllSessions();
     setAuthToken('');
@@ -183,13 +201,14 @@ export function AdminProvider({ children }) {
       permissions: admin?.permissions || [],
       login,
       verifyTwoFactor,
+      completePhoneLogin,
       logout,
       refreshProfile,
       isOwner: admin?.role === 'super_admin',
       can,
       limits,
     }),
-    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, verifyTwoFactor, logout, refreshProfile, can, limits],
+    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, verifyTwoFactor, completePhoneLogin, logout, refreshProfile, can, limits],
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

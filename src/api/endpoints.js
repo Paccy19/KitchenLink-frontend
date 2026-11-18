@@ -138,6 +138,10 @@ export const verifyOtp = (phoneNumber, code, name) =>
     ...(name ? { name } : {}),
   });
 
+/** A verified phone that also belongs to an admin: sign in as the customer instead. */
+export const continueAsCustomer = (challengeToken) =>
+  apiJson('POST', '/auth/continue-as-customer', { challenge_token: challengeToken });
+
 export const fetchCurrentCustomer = () => apiJson('GET', '/auth/me');
 
 export const updateCurrentCustomerProfile = (payload) =>

@@ -103,6 +103,9 @@ export const adminApi = {
   changePassword: (payload) =>
     adminRequest('/admin/auth/change-password', { method: 'POST', body: payload }),
   // SMS codes: second sign-in step, setup, and codes confirming money actions.
+  // Stage 2 of the sign-in through the customer phone login (email + password).
+  phoneLogin: (challengeToken, email, password) =>
+    adminRequest('/admin/auth/phone-login', { method: 'POST', body: { challenge_token: challengeToken, email, password } }),
   verifyTwoFactor: (challengeToken, code) =>
     adminRequest('/admin/auth/verify-2fa', { method: 'POST', body: { challenge_token: challengeToken, code } }),
   startTwoFactor: (phone) => adminRequest('/admin/auth/2fa/start', { method: 'POST', body: { phone } }),

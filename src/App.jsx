@@ -59,6 +59,8 @@ const DriverSupportPage = lazy(() => import('./pages/driver/DriverSupportPage'))
 // Admin panel (separate shell without the customer chrome).
 const AdminLayout = lazy(() => import('./components/admin-dashboard/AdminLayout'));
 const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
+// Stage 2 of the admin sign-in that starts at the customer phone login.
+const AdminVerifyPage = lazy(() => import('./pages/admin/AdminVerifyPage'));
 const AdminOverviewPage = lazy(() => import('./pages/admin/AdminOverviewPage'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminVendorsPage = lazy(() => import('./pages/admin/AdminVendorsPage'));
@@ -132,6 +134,7 @@ export default function App() {
               <Route path="/driver-register" element={<DriverRegisterPage />} />
               <Route path="/driver-login" element={<DriverLoginPage />} />
               <Route path="/admin-login" element={<AdminLoginPage />} />
+              <Route path="/admin-verify" element={<AdminVerifyPage />} />
               <Route path="/admin-invite" element={<AdminInvitePage />} />
 
               <Route path="/admin-dashboard" element={<AdminLayout />}>
@@ -190,6 +193,7 @@ export default function App() {
         location.pathname.startsWith('/driver-login') ||
         location.pathname.startsWith('/driver-register') ||
         location.pathname.startsWith('/admin-login') ||
+        location.pathname.startsWith('/admin-verify') ||
         location.pathname.startsWith('/admin-invite')) && (
         <ThemeToggle className="fixed top-4 right-4 z-50 shadow-md" />
       )}
