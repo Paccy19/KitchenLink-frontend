@@ -200,6 +200,9 @@ export const adminApi = {
 
   listOrders: (params) => adminRequest(`/admin/orders${qs(params)}`),
   getOrder: (id) => adminRequest(`/admin/orders/${encodeURIComponent(id)}`),
+  // This order's commission % (null = back to the commission rules), until the kitchen is paid.
+  setOrderCommission: (id, body) =>
+    adminRequest(`/admin/orders/${encodeURIComponent(id)}/commission`, { method: 'PUT', body }),
   // Delivery workers near the kitchen, for support to call before reassigning.
   nearbyDrivers: (id, params) => adminRequest(`/admin/orders/${encodeURIComponent(id)}/nearby-drivers${qs(params)}`),
   updateOrderStatus: (id, body) =>

@@ -262,6 +262,7 @@ export default function AdminOrdersPage() {
 
             {isPickup && order.pickup && <PickupSection pickup={order.pickup} status={order.status} />}
             {!isPickup && delivery && <DeliverySection delivery={delivery} dispatch={dispatch} />}
+            <CommissionSection order={order} onSaved={invalidate} />
             {!isPickup && !delivery && !CLOSED.includes(order.status) && (
               <p className="text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2">
                 {order.order_type && order.order_type !== 'immediate'
@@ -398,6 +399,121 @@ export default function AdminOrdersPage() {
 }
 
 /** Pickup orders: where collection stands (the code itself is never shown). */
+/**
+ * The platform commission on this order: what the rules gave, or the admin's
+ * own percentage for this order. Editable until the kitchen is paid.
+ */
+function CommissionSection({ order, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [percent, setPercent] = useState('');
+  const [reason, setReason] = useState('');
+  const kitchenDelivers = order.fulfillment === 'vendor_delivery';
+  const food = Number(order.subtotal_rwf) || 0;
+  const value = Number(percent);
+  const valid = percent !== '' && Number.isFinite(value) && value >= 0 && value <= 100;
+  // Same calculation as the server: commission on food only.
+  const previewCommission = valid ? Math.round((food * value) / 100) : null;
+  const previewPayout = valid ? food - previewCommission + (kitchenDelivers ? Number(order.delivery_fee_rwf) || 0 : 0) : null;
+
+  const mutation = useMutation({
+    mutationFn: (body) => adminApi.setOrderCommission(order.id, body),
+    onSuccess: () => {
+      onSaved();
+      setOpen(false);
+      setReason('');
+    },
+  });
+
+  const lockedNote =
+    order.settlement_status === 'settled'
+      ? 'Locked: the kitchen has been paid for this order.'
+      : order.settlement_status === 'refunded'
+        ? 'Locked: this order was refunded.'
+        : null;
+
+  return (
+    <div className="rounded-xl border border-stone-200 p-3 space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-black uppercase tracking-wider text-stone-500">Commission</p>
+        {order.commission_override ? <Badge tone="amber">Set for this order</Badge> : <Badge tone="slate">Commission rules</Badge>}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Info label="Commission" value={`${order.commission_override?.percent ?? order.commission_percent}%`} />
+        <Info label="Platform keeps" value={order.settlement_status === 'unpaid' ? 'Set at payment' : formatRwf(order.commission_rwf)} />
+        <Info label="Kitchen receives" value={order.settlement_status === 'unpaid' ? 'Set at payment' : formatRwf(order.vendor_payout_rwf)} />
+      </div>
+      {order.commission_override?.reason && <p className="text-[11px] text-stone-500">Reason: {order.commission_override.reason}</p>}
+      {lockedNote && <p className="text-[11px] text-stone-400">{lockedNote}</p>}
+
+      {order.commission_editable && (
+        <Can permission="commissions:write">
+          {!open ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setPercent(String(order.commission_override?.percent ?? order.commission_percent ?? ''));
+                setOpen(true);
+              }}
+            >
+              Set commission for this order
+            </Button>
+          ) : (
+            <div className="space-y-2 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Field label="Commission (%)" hint="0–100, up to 2 decimals. On the food only.">
+                  <Input inputMode="decimal" value={percent} onChange={(e) => setPercent(e.target.value.replace(/[^0-9.]/g, '').slice(0, 6))} />
+                </Field>
+                <Field label="Reason" hint="Kept on the order and in the audit log; the kitchen sees it.">
+                  <Input value={reason} onChange={(e) => setReason(e.target.value.slice(0, 300))} placeholder="e.g. Launch promotion" />
+                </Field>
+              </div>
+              {valid && (
+                <p className="text-xs text-stone-600">
+                  Platform keeps <strong>{formatRwf(previewCommission)}</strong> · kitchen receives <strong>{formatRwf(previewPayout)}</strong>
+                  {kitchenDelivers ? ' (including its delivery fee)' : ''}.
+                </p>
+              )}
+              {mutation.error && <ErrorNote error={mutation.error} />}
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" disabled={!valid || !reason.trim() || mutation.isPending} onClick={() => mutation.mutate({ percent: value, reason: reason.trim() })}>
+                  {mutation.isPending ? 'Saving…' : 'Save'}
+                </Button>
+                {order.commission_override && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={!reason.trim() || mutation.isPending}
+                    onClick={() => mutation.mutate({ percent: null, reason: reason.trim() })}
+                  >
+                    Back to the commission rules
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </Can>
+      )}
+
+      {order.commission_history?.length > 0 && (
+        <details>
+          <summary className="text-[11px] font-bold text-stone-500 cursor-pointer">Changes ({order.commission_history.length})</summary>
+          <ul className="mt-1.5 space-y-1 text-[11px] text-stone-600">
+            {order.commission_history.map((entry, index) => (
+              <li key={index}>
+                {formatDate(entry.at)}: {entry.from_percent ?? '—'}% → {entry.to_percent == null ? 'commission rules' : `${entry.to_percent}%`} · {entry.reason}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function PickupSection({ pickup, status }) {
   return (
     <div className="rounded-2xl border border-violet-100 bg-violet-50/40 p-4 space-y-2">
