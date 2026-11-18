@@ -335,7 +335,7 @@ export function VendorProvider({ children }) {
         longitude: data.longitude,
       }),
     );
-    form.append('food_categories', JSON.stringify(data.foodCategories || []));
+    // No food_categories: the server assigns the vendor type's defaults.
     const day = 'monday';
     form.append(
       'operating_hours',
