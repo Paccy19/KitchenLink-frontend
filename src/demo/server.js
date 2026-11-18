@@ -2804,10 +2804,34 @@ const extraAdminRoutes = [
     const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited');
     if (!member) fail(404, 'This invitation link is not valid any more. Ask the owner for a new one.');
     const role = roleOf(member.role);
-    return { invitation: { email: member.email, role: role.id, role_label: role.label, role_description: role.description } };
+    return {
+      invitation: {
+        email: member.email, role: role.id, role_label: role.label, role_description: role.description,
+        phone_verified: Boolean(member.invitePhoneVerified), verified_phone: member.invitePhoneVerified ? '•••••••••' + member.invitePhoneVerified.slice(-3) : '',
+      },
+    };
+  }],
+  // Joining: phone + SMS code before the password (the demo code is DEMO_OTP).
+  ['POST', '/admin/auth/invitations/:token/phone/send-code', (r, p) => {
+    const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited') || fail(404, 'This invitation link is not valid any more.');
+    const phone = String(r.body.phone || '').replace(/\s/g, '');
+    if (!/^(07[2389]\d{7}|\+?2507[2389]\d{7})$/.test(phone)) fail(400, 'phone_number is not a valid Rwandan phone number.');
+    member.invitePhonePending = phone;
+    member.invitePhoneVerified = '';
+    return { sent_to: '•••••••••' + phone.slice(-3), expires_in_seconds: 300, resend_after_seconds: 30, dev_otp: DEMO_OTP };
+  }],
+  ['POST', '/admin/auth/invitations/:token/phone/verify', (r, p) => {
+    const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited') || fail(404, 'This invitation link is not valid any more.');
+    if (!member.invitePhonePending) fail(400, 'Enter your phone number and request a code first.');
+    checkOtp(r.body.code);
+    member.invitePhoneVerified = member.invitePhonePending;
+    return { phone_verified: true, verified_phone: '•••••••••' + member.invitePhoneVerified.slice(-3), valid_for_minutes: 30 };
   }],
   ['POST', '/admin/auth/invitations/:token/accept', (r, p) => {
     const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited') || fail(404, 'This invitation link is not valid any more.');
+    if (!member.invitePhoneVerified) fail(403, 'Verify your phone number before creating your password.', 'PHONE_VERIFICATION_REQUIRED');
+    member.phone = member.invitePhoneVerified;
+    member.two_factor_enabled = true;
     member.status = 'active';
     member.name = r.body.name || member.name || member.email.split('@')[0];
     member.invite_expires_at = null;
