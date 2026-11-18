@@ -79,7 +79,7 @@ async function adminRequest(path, { method = 'GET', body } = {}) {
   if (!response.ok) {
     throw new ApiError(
       data?.error?.message || data?.message || `Request failed (${response.status}).`,
-      { status: response.status, path, code: data?.error?.code || '' },
+      { status: response.status, path, code: data?.error?.code || '', details: data?.error?.details || null },
     );
   }
   notifyDataChanged(method, path);
@@ -276,6 +276,11 @@ export const adminApi = {
 
   // Invitation link (no sign-in)
   getInvitation: (token) => adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}`),
+  // Joining: a phone verified with an SMS code before the password.
+  sendInvitePhoneCode: (token, phone) =>
+    adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/phone/send-code`, { method: 'POST', body: { phone } }),
+  verifyInvitePhone: (token, code) =>
+    adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/phone/verify`, { method: 'POST', body: { code } }),
   acceptInvitation: (token, body) =>
     adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/accept`, { method: 'POST', body }),
 };
