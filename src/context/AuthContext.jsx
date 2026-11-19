@@ -40,8 +40,12 @@ const customerUser = (customer, existing = guestUser) => ({
   ...existing,
   id: customer.id,
   name: customer.name,
-  phone: customer.phone_number,
+  phone: customer.phone_number || '',
   email: customer.email || '',
+  // Only a verified email receives delivery codes; a phone/email waiting for its code.
+  emailVerified: Boolean(customer.email_verified),
+  pendingPhone: customer.pending_phone_number || '',
+  pendingEmail: customer.pending_email || '',
   avatar: customer.profile_image_url || existing.avatar || '',
 });
 
@@ -107,15 +111,23 @@ export const AuthProvider = ({ children }) => {
 
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
-  const sendOtp = async (phone, name = '') => {
+  /**
+   * `identifier`: the phone number or email typed in the one sign-in field.
+   * The code goes to that phone or inbox. Only an SMS code on a development
+   * server ever comes back (`dev_otp`); email codes never do.
+   */
+  const sendOtp = async (identifier, name = '', registrationPhone = '') => {
     setAuthError('');
-    setPendingPhone(phone);
+    setPendingPhone(identifier);
     setPendingName(name);
-    const result = await sendOtpRequest(phone, name);
-    setPendingPhone(result.phone_number);
-    setOtpPreview(result.dev_otp ?? '');
+    const result = await sendOtpRequest(identifier, name, registrationPhone);
+    setPendingPhone(result.identifier || result.phone_number);
+    setOtpPreview(result.identifier_type === 'email' ? '' : result.dev_otp ?? '');
     setAuthStep('otp');
   };
+
+  /** Re-reads the account (after verifying a new phone or email). */
+  const applyCustomer = (customer) => setUser((current) => customerUser(customer, current));
 
   /** Signs the customer in with a session the server issued. */
   const startCustomerSession = (result) => {
@@ -242,6 +254,7 @@ export const AuthProvider = ({ children }) => {
     setDefaultAddress,
     deleteAddress,
     updateProfile,
+    applyCustomer,
   }), [user, accessToken, isAuthModalOpen, authStep, pendingPhone, pendingName, otpPreview, authError]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

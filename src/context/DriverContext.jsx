@@ -360,7 +360,7 @@ export function DriverProvider({ children }) {
     setError('');
     try {
       const result = await driverApi.sendLoginOtp(phone);
-      setPendingLoginPhone(result.phone_number);
+      setPendingLoginPhone(result.identifier || result.phone_number);
       setLoginOtpPreview(result.dev_otp || '');
       return result;
     } catch (err) {

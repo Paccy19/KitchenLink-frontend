@@ -298,10 +298,15 @@ export function normalizeOrder(raw = {}) {
     cancelReason: toText(raw.cancel_reason),
     // Money going back for a cancelled paid order (raw API shape).
     refund: raw.refund || null,
-    deliveryCode: toText(delivery.proof_of_delivery_code) || '',
+    // The delivery code itself is never sent to the app: only where it went
+    // (the customer's verified email) and whether it can be sent again.
+    deliveryCodeIssued: Boolean(delivery.code_issued),
+    deliveryCodeSentVia: toText(delivery.code_sent_via) || '',
+    deliveryCodeSentTo: toText(delivery.code_sent_to) || '',
+    deliveryCodeNeedsChannel: Boolean(delivery.code_needs_channel),
+    canResendDeliveryCode: Boolean(delivery.can_resend_code),
     otpCodeRequired: Boolean(delivery.otp_required),
     deliveryConfirmed: Boolean(delivery.otp_verified),
-    canConfirmDelivery: Boolean(delivery.can_confirm),
     deliveryStatus: toText(delivery.status),
   };
 }

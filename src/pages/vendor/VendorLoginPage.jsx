@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Phone, User, ArrowRight, ShieldCheck, ChefHat, Check, Ban, Mail } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { BLOCKED_VENDOR_CODES } from '../../api/vendorApi';
-import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
+import { IDENTIFIER_ERROR, IDENTIFIER_MAX_LENGTH, IDENTIFIER_PLACEHOLDER, isValidIdentifier, looksLikeEmail, sanitizeIdentifierInput } from '../../utils/validation';
 
 const formatDate = (value) => {
   const date = value ? new Date(value) : null;
@@ -105,8 +105,8 @@ export default function VendorLoginPage() {
 
   const submitPhone = async (event) => {
     event.preventDefault();
-    if (!isValidRwandaPhone(phone)) {
-      setError(PHONE_ERROR);
+    if (!isValidIdentifier(phone)) {
+      setError(IDENTIFIER_ERROR);
       return;
     }
     setError('');
@@ -163,7 +163,7 @@ export default function VendorLoginPage() {
           </div>
           <h1 className="mt-4 text-2xl font-black text-gray-900 tracking-tight">Vendor Login</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Sign in securely using a one-time code sent to your vendor phone.
+            Sign in securely using a one-time code sent to your vendor phone or email.
           </p>
         </div>
 
@@ -173,17 +173,19 @@ export default function VendorLoginPage() {
         >
           {step === 'phone' ? (
             <div>
-              <label className="text-xs font-bold text-stone-500 block mb-1.5">Vendor phone number</label>
+              <label className="text-xs font-bold text-stone-500 block mb-1.5">Phone number or email</label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
                 <input
-                  type="tel"
-                  inputMode="tel"
-                  maxLength={PHONE_MAX_LENGTH}
+                  type="text"
+                  inputMode={looksLikeEmail(phone) ? 'email' : 'tel'}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  maxLength={IDENTIFIER_MAX_LENGTH}
                   value={phone}
-                  onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
-                  placeholder={PHONE_PLACEHOLDER}
-                  autoComplete="tel"
+                  onChange={(event) => setPhone(sanitizeIdentifierInput(event.target.value))}
+                  placeholder={IDENTIFIER_PLACEHOLDER}
+                  autoComplete="username"
                   required
                   className="w-full pl-9 pr-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/10 outline-none"
                 />
@@ -237,7 +239,7 @@ export default function VendorLoginPage() {
               }}
               className="w-full text-xs font-bold text-[#542813] hover:text-[#2b1206]"
             >
-              Change phone number
+              Change phone or email
             </button>
           )}
         </form>

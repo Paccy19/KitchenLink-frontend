@@ -266,7 +266,7 @@ export function VendorProvider({ children }) {
       setAccountBlock(null);
       try {
         const result = await vendorApi.sendLoginOtp(phone);
-        setPendingLoginPhone(result.phone_number);
+        setPendingLoginPhone(result.identifier || result.phone_number);
         setLoginOtpPreview(result.dev_otp || '');
         return result;
       } catch (err) {
