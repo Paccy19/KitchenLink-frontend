@@ -20,7 +20,11 @@ export default function SearchBar({
   className,
   compact = false,
   label = 'Search food or kitchens',
+  // 'hero': the large rounded homepage search with an orange Search button.
+  variant = 'default',
+  inputId = 'global-search',
 }) {
+  const isHero = variant === 'hero';
   const [focused, setFocused] = useState(false);
   const containerRef = useRef(null);
   const { recent, addSearch, removeSearch, clearSearches } = useRecentSearches();
@@ -57,15 +61,15 @@ export default function SearchBar({
         }}
         className="relative"
       >
-        <label htmlFor="global-search" className="sr-only">
+        <label htmlFor={inputId} className="sr-only">
           {label}
         </label>
         <Search
-          className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+          className={`text-gray-400 absolute top-1/2 -translate-y-1/2 pointer-events-none ${isHero ? 'w-5 h-5 left-5' : 'w-5 h-5 left-4'}`}
           aria-hidden="true"
         />
         <input
-          id="global-search"
+          id={inputId}
           type="search"
           value={value}
           autoComplete="off"
@@ -75,10 +79,14 @@ export default function SearchBar({
           placeholder={placeholder}
           aria-label={label}
           aria-expanded={showPanel}
-          aria-controls="search-suggestions"
-          className={`w-full pl-12 pr-12 rounded-2xl bg-white border border-stone-200 text-gray-900 placeholder:text-stone-400 shadow-sm hover:border-stone-300 focus:border-[#542813] focus:ring-4 focus:ring-[#542813]/10 outline-none transition ${
-            compact ? 'py-2.5 text-sm' : 'py-3.5 text-base'
-          }`}
+          aria-controls={`${inputId}-suggestions`}
+          className={
+            isHero
+              ? 'w-full pl-13 pr-36 sm:pr-40 py-4 sm:py-[18px] text-sm sm:text-base rounded-full bg-white border-0 text-gray-900 placeholder:text-stone-400 shadow-xl shadow-black/20 focus:ring-4 focus:ring-[#f28c18]/40 outline-none transition [&::-webkit-search-cancel-button]:hidden'
+              : `w-full pl-12 pr-12 rounded-2xl bg-white border border-stone-200 text-gray-900 placeholder:text-stone-400 shadow-sm hover:border-stone-300 focus:border-[#542813] focus:ring-4 focus:ring-[#542813]/10 outline-none transition ${
+                  compact ? 'py-2.5 text-sm' : 'py-3.5 text-base'
+                }`
+          }
         />
         {value && (
           <button
@@ -88,16 +96,26 @@ export default function SearchBar({
               containerRef.current?.querySelector('input')?.focus();
             }}
             aria-label="Clear search"
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition"
+            className={`absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition ${
+              isHero ? 'right-[118px] sm:right-[134px]' : 'right-3'
+            }`}
           >
             <X className="w-4 h-4" />
+          </button>
+        )}
+        {isHero && (
+          <button
+            type="submit"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-[calc(100%-12px)] px-6 sm:px-8 rounded-full bg-[#f28c18] hover:bg-[#e07b0c] text-white text-sm sm:text-base font-extrabold shadow-md shadow-[#f28c18]/30 transition active:scale-95"
+          >
+            Search
           </button>
         )}
       </form>
 
       {showPanel && (
         <div
-          id="search-suggestions"
+          id={`${inputId}-suggestions`}
           className="absolute z-50 mt-2 w-full bg-white rounded-3xl border border-stone-100 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           {recent.length > 0 && (
