@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChefHat, MapPinOff, RefreshCw } from 'lucide-react';
+import { ChefHat, MapPin, MapPinOff, Navigation, RefreshCw } from 'lucide-react';
 
 import HomeHero from './HomeHero';
 import BenefitsStrip from './BenefitsStrip';
@@ -62,7 +62,7 @@ function SectionHeader({ title, subtitle, to, linkLabel = 'See all' }) {
 export default function HomeFeed() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { isUsingFallback, isPrimerOpen } = useLocation();
+  const { isUsingFallback, currentLocation, source: locationSource } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlQuery = searchParams.get('q') ?? '';
@@ -112,43 +112,59 @@ export default function HomeFeed() {
   const isSearching = urlQuery.trim().length > 0;
   const data = feed.data;
 
+  // What the location section says under the selector (follows the selection at once).
+  const locationNote =
+    locationSource === 'gps'
+      ? 'Showing kitchens near your current location, with exact distances.'
+      : locationSource === 'manual'
+        ? `Showing kitchens around ${currentLocation} — allow location for exact distances.`
+        : `Showing kitchens around ${currentLocation} — allow location or pick a neighbourhood for exact distances.`;
+
   /**
-   * The one discovery toolbar: location (with its picker), refresh, and the
-   * kitchen-type filter, plus the note when the location is only a fallback.
-   * Rendered once, above the kitchen lists (or the search results).
+   * "Kitchens near": the one location selector (the existing picker), the
+   * refresh button and what the results are based on. Its own section, right
+   * under the benefits strip.
    */
-  const toolbar = ({ withTypes }) => (
-    <div className="rounded-3xl bg-white border border-stone-200/80 shadow-[0_2px_12px_rgba(43,18,6,0.05)] px-3 sm:px-4 py-3">
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="hidden sm:inline text-[11px] font-black uppercase tracking-wider text-stone-400 mr-1">Kitchens near</span>
-          <LocationIndicator />
-          <button
-            type="button"
-            onClick={pull.refresh}
-            aria-label="Refresh homepage feed"
-            title="Refresh"
-            disabled={pull.refreshing}
-            className="w-9 h-9 rounded-full bg-white border border-stone-200 text-stone-500 hover:text-[#542813] hover:border-[#d9bda6] hover:bg-[#faf6f2] flex items-center justify-center transition disabled:opacity-60 shadow-sm active:scale-95"
-          >
-            <RefreshCw className={`w-4 h-4 ${pull.refreshing ? 'animate-spin' : ''}`} />
-          </button>
+  const locationSection = (
+    <section
+      aria-label="Your location"
+      className="mt-8 sm:mt-10 rounded-3xl bg-[#faf6f2] border border-[#f1e2d2] shadow-[0_2px_12px_rgba(43,18,6,0.05)] px-4 sm:px-6 py-4 sm:py-5"
+    >
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 sm:gap-x-5 gap-y-3">
+        <div className="col-span-2 sm:col-span-1 flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-full bg-[#3d1b0c] flex items-center justify-center shadow-sm">
+            <MapPin className="w-[18px] h-[18px] text-[#f7a23b]" aria-hidden="true" />
+          </span>
+          <span className="text-xs sm:text-[13px] font-black uppercase tracking-[0.14em] text-[#6d391d]">Kitchens near</span>
         </div>
-        {withTypes && (
-          <>
-            <span aria-hidden="true" className="hidden lg:block w-px h-7 bg-stone-200" />
-            <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="min-w-0 lg:flex-1" />
-          </>
-        )}
+        <LocationIndicator variant="prominent" className="min-w-0" />
+        <button
+          type="button"
+          onClick={pull.refresh}
+          aria-label="Refresh nearby kitchens"
+          title="Refresh nearby kitchens"
+          disabled={pull.refreshing}
+          className="w-12 h-12 rounded-full bg-white border border-[#ebd7c5] text-[#6d391d] hover:text-[#f28c18] hover:border-[#f28c18]/60 shadow-[0_2px_10px_rgba(43,18,6,0.06)] flex items-center justify-center transition disabled:opacity-60 active:scale-95 justify-self-end"
+        >
+          <RefreshCw className={`w-5 h-5 ${pull.refreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
-      {/* Subtle fallback notice when GPS is unavailable / denied */}
-      {isUsingFallback && !isPrimerOpen && (
-        <p className="mt-2 px-1 text-[11px] text-gray-400 flex items-center gap-1.5">
-          <MapPinOff className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-          Showing kitchens around {feed.data?.location?.label ?? 'Kigali'} — allow location or pick a
-          neighbourhood for exact distances.
-        </p>
-      )}
+      <p className="mt-3 text-xs sm:text-[13px] text-stone-500 font-medium flex items-start gap-1.5">
+        {isUsingFallback ? (
+          <MapPinOff className="w-4 h-4 flex-shrink-0 mt-px text-[#8a5332]" aria-hidden="true" />
+        ) : (
+          <Navigation className="w-4 h-4 flex-shrink-0 mt-px text-[#8a5332]" aria-hidden="true" />
+        )}
+        <span>{locationNote}</span>
+      </p>
+    </section>
+  );
+
+  /** The kitchen-type filter, right above the kitchen lists it changes. */
+  const typeToolbar = (
+    <div className="rounded-3xl bg-white border border-stone-200/80 shadow-[0_2px_12px_rgba(43,18,6,0.05)] px-3 sm:px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+      <span className="flex-shrink-0 px-1 text-[11px] font-black uppercase tracking-wider text-stone-400">Kitchen type</span>
+      <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="min-w-0 sm:flex-1" />
     </div>
   );
 
@@ -164,6 +180,9 @@ export default function HomeFeed() {
       <HomeHero query={query} onQueryChange={setQuery} onSubmit={(value) => setQuery(value)} />
       <BenefitsStrip />
 
+      {/* ── Kitchens near: location, refresh, what the results use ── */}
+      {locationSection}
+
       {/* ── Big Events (the existing event kitchens listing) ──── */}
       <BigEventsBanner />
 
@@ -171,13 +190,10 @@ export default function HomeFeed() {
 
       {/* ── Search results view ───────────────────────────────── */}
       {isSearching ? (
-        <div className="space-y-6">
-          {/* Search results have their own kitchen-type filter. */}
-          {toolbar({ withTypes: false })}
-          <Suspense fallback={<HomeFeedSkeleton />}>
-            <SearchResults query={urlQuery} onSuggest={setQuery} vendorTypes={vendorTypes} onVendorTypesChange={setVendorTypes} />
-          </Suspense>
-        </div>
+        // Search results have their own kitchen-type filter.
+        <Suspense fallback={<HomeFeedSkeleton />}>
+          <SearchResults query={urlQuery} onSuggest={setQuery} vendorTypes={vendorTypes} onVendorTypesChange={setVendorTypes} />
+        </Suspense>
       ) : feed.isPending ? (
         <HomeFeedSkeleton />
       ) : feed.isError && !data ? (
@@ -199,9 +215,9 @@ export default function HomeFeed() {
             subtitle="Explore a wide variety of cuisines"
           />
 
-          {/* Where and what kind: location, refresh and kitchen type, right
-              above the kitchen lists they change. */}
-          {toolbar({ withTypes: true })}
+          {/* Kitchen type, right above the kitchen lists it changes
+              (location has its own section under the benefits). */}
+          {typeToolbar}
 
           {/* Best-rated live kitchens + the promotion banner (real offers only) */}
           <TopRatedKitchens

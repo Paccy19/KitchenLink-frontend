@@ -6,7 +6,7 @@ import { KIGALI_NEIGHBORHOODS, useLocation } from '../../context/LocationContext
  * Subtle location indicator with a manual change sheet.
  * Shows the active coordinates source (GPS / manual / default fallback).
  */
-export default function LocationIndicator({ className = '' }) {
+export default function LocationIndicator({ className = '', variant = 'pill' }) {
   const {
     currentLocation,
     source,
@@ -30,19 +30,40 @@ export default function LocationIndicator({ className = '' }) {
 
   return (
     <div className={className}>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={`Delivering to ${currentLocation}. Change location`}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-stone-200 shadow-sm text-xs font-bold text-stone-700 hover:border-[#d9bda6] hover:text-[#3d1b0c] transition max-w-full active:scale-95"
-      >
-        <MapPin className="w-3.5 h-3.5 text-[#8a5332] flex-shrink-0" aria-hidden="true" />
-        <span className="truncate max-w-[180px]">{currentLocation}</span>
-        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ${badge.className}`}>
-          {badge.text}
-        </span>
-        <ChevronDown className="w-3.5 h-3.5 text-stone-400" aria-hidden="true" />
-      </button>
+      {variant === 'prominent' ? (
+        // The homepage's "Kitchens near" selector: large and easy to spot.
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`Browsing kitchens near ${currentLocation}. Change location`}
+          className="group w-full inline-flex items-center gap-3 pl-4 sm:pl-2 pr-4 py-2.5 sm:py-2 rounded-2xl bg-white border border-[#ebd7c5] shadow-[0_2px_10px_rgba(43,18,6,0.06)] hover:border-[#f28c18]/60 hover:shadow-[0_6px_18px_rgba(43,18,6,0.10)] transition active:scale-[0.99] text-left"
+        >
+          <span className="hidden sm:flex flex-shrink-0 w-10 h-10 rounded-xl bg-[#fff1e0] items-center justify-center">
+            <MapPin className="w-5 h-5 text-[#f28c18]" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1 flex items-center gap-2.5">
+            <span className="min-w-0 line-clamp-2 sm:line-clamp-1 break-words text-[15px] sm:text-lg leading-snug font-black text-[#3d1b0c]">{currentLocation}</span>
+            <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${badge.className}`}>
+              {badge.text}
+            </span>
+          </span>
+          <ChevronDown className="flex-shrink-0 w-5 h-5 text-[#8a5332] transition-transform group-hover:translate-y-0.5" aria-hidden="true" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`Delivering to ${currentLocation}. Change location`}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-stone-200 shadow-sm text-xs font-bold text-stone-700 hover:border-[#d9bda6] hover:text-[#3d1b0c] transition max-w-full active:scale-95"
+        >
+          <MapPin className="w-3.5 h-3.5 text-[#8a5332] flex-shrink-0" aria-hidden="true" />
+          <span className="truncate max-w-[180px]">{currentLocation}</span>
+          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ${badge.className}`}>
+            {badge.text}
+          </span>
+          <ChevronDown className="w-3.5 h-3.5 text-stone-400" aria-hidden="true" />
+        </button>
+      )}
 
       {open && (
         <div
