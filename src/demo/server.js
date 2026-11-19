@@ -349,10 +349,12 @@ function customerOrder(order) {
     delivery: order.fulfillment === 'delivery'
       ? {
           status: deliveryStatusOf(order),
-          proof_of_delivery_code: order.delivery_code,
           otp_required: true,
           otp_verified: order.status === 'delivered',
-          can_confirm: false,
+          code_issued: order.status !== 'delivered' && Boolean(order.delivery_code),
+          code_sent_via: 'email',
+          code_sent_to: 'de•••@example.com',
+          can_resend_code: order.status !== 'delivered',
         }
       : {},
     rider: driver ? { name: driver.name, phone: driver.phone } : null,
@@ -959,12 +961,16 @@ const KIGALI_PLACES = [
 
 const customerRoutes = [
   ['POST', '/auth/send-otp', (r) => {
-    linkedName(String(r.body.phone_number || ''), r.body.name);
-    return { phone_number: r.body.phone_number, dev_otp: DEMO_OTP, expires_in_seconds: 300 };
+    const identifier = String(r.body.identifier ?? r.body.phone_number ?? '').trim();
+    const isEmail = identifier.includes('@');
+    if (!isEmail) linkedName(identifier, r.body.name);
+    return isEmail
+      ? { identifier, identifier_type: 'email', channel: 'email', sent_to: identifier, expires_in_seconds: 300 }
+      : { identifier, phone_number: identifier, identifier_type: 'phone', channel: 'sms', dev_otp: DEMO_OTP, expires_in_seconds: 300 };
   }],
   ['POST', '/auth/verify-otp', (r) => {
     checkOtp(r.body.code);
-    const phone = String(r.body.phone_number || '');
+    const phone = String(r.body.identifier ?? r.body.phone_number ?? '');
     const registeredName = linkedName(phone, r.body.name);
     let customer = state.customers.find((c) => c.phone_number === phone);
     if (!customer && registeredName) {
@@ -1193,6 +1199,7 @@ const customerRoutes = [
     order.payment_status = 'paid';
     return customerOrder(order);
   }],
+  ['POST', '/orders/:id/delivery-code/resend', () => ({ sent: true, channel: 'email', sent_to: 'de•••@example.com' })],
   ['POST', '/orders/:id/cancel', (r, p) => {
     const order = customerOwned(r, p.id);
     if (!['placed', 'confirmed', 'preparing', 'ready'].includes(order.status)) fail(400, 'This order can no longer be cancelled.');
@@ -1305,7 +1312,7 @@ function vendorOwned(request, id) {
 }
 
 const vendorRoutes = [
-  ['POST', '/vendor/auth/send-otp', (r) => ({ phone_number: r.body.phone, dev_otp: DEMO_OTP })],
+  ['POST', '/vendor/auth/send-otp', (r) => (String(r.body.phone || '').includes('@') ? { identifier: r.body.phone, identifier_type: 'email' } : { identifier: r.body.phone, phone_number: r.body.phone, dev_otp: DEMO_OTP })],
   ['POST', '/vendor/auth/verify-otp', (r) => {
     checkOtp(r.body.code);
     const vendor = state.vendors.find((v) => v.phone === r.body.phone) || findVendor(DEMO_IDS.vendor);
@@ -1542,7 +1549,7 @@ function driverEarnings(driver) {
 }
 
 const driverRoutes = [
-  ['POST', '/driver/auth/send-otp', (r) => ({ phone_number: r.body.phone, dev_otp: DEMO_OTP })],
+  ['POST', '/driver/auth/send-otp', (r) => (String(r.body.phone || '').includes('@') ? { identifier: r.body.phone, identifier_type: 'email' } : { identifier: r.body.phone, phone_number: r.body.phone, dev_otp: DEMO_OTP })],
   ['POST', '/driver/auth/verify-otp', (r) => {
     checkOtp(r.body.code);
     const driver = state.drivers.find((d) => d.phone === r.body.phone) || findDriver(DEMO_IDS.driver);

@@ -29,7 +29,67 @@ import {
   isValidRwandaPhone,
   sanitizeEmailInput,
   sanitizePhoneInput,
+  toLocalRwandaPhone,
 } from '../utils/validation';
+import { confirmEmailVerification, confirmPhoneChange, startEmailVerification, startPhoneChange } from '../api/endpoints';
+
+/**
+ * A new phone or email only replaces the old one once the code sent to it is
+ * entered (the server keeps the number/address it sent the code to). Email
+ * codes are never shown; an SMS code is shown only by a development server.
+ */
+function VerifyContactForm({ pending, onVerified, onCancel }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const isPhone = pending.kind === 'phone';
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(code)) return setError('Enter the 6-digit code.');
+    setBusy(true);
+    setError('');
+    try {
+      const { customer } = await (isPhone ? confirmPhoneChange(code) : confirmEmailVerification(code));
+      onVerified(customer);
+    } catch (err) {
+      setCode('');
+      setError(err?.message || 'Could not verify the code.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="bg-white rounded-3xl p-6 border border-[#ebd7c5] shadow-sm mb-8 space-y-3 animate-scale-in">
+      <h3 className="font-extrabold text-gray-900 text-sm">{isPhone ? 'Verify your new phone number' : 'Verify your email address'}</h3>
+      <p className="text-xs text-stone-500">
+        Enter the code we sent to <strong className="text-gray-900">{pending.sentTo || pending.target}</strong>.
+        {isPhone ? ' Your current number stays on your account until then.' : ' Delivery codes are sent only to a verified email.'}
+      </p>
+      {pending.devOtp && (
+        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">Development code: {pending.devOtp}</p>
+      )}
+      <input
+        type="text"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={6}
+        value={code}
+        onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        placeholder="6-digit code"
+        className="w-full sm:w-48 text-sm p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] tracking-widest font-bold"
+      />
+      {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={busy} className="px-5 py-2.5 bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 disabled:opacity-60">
+          {busy ? 'Verifying…' : 'Verify'}
+        </button>
+        <button type="button" onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-bold text-xs">Later</button>
+      </div>
+    </form>
+  );
+}
 
 const initialsOf = (name) => {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -38,8 +98,9 @@ const initialsOf = (name) => {
 
 export default function ProfilePage() {
   const { 
-    user, 
-    updateProfile, 
+    user,
+    updateProfile,
+    applyCustomer,
     addAddress, 
     deleteAddress, 
     setDefaultAddress 
@@ -65,10 +126,19 @@ export default function ProfilePage() {
   const [instructions, setInstructions] = useState('');
 
   const [profileError, setProfileError] = useState('');
+  // A phone/email waiting for its code: { kind: 'phone'|'email', target, sentTo, devOtp }.
+  const [pendingContact, setPendingContact] = useState(null);
 
-  const handleSaveProfile = (e) => {
+  /** Sends the code that proves a new phone or email (the server refuses another customer's). */
+  const requestCode = async (kind, target) => {
+    const result = kind === 'phone' ? await startPhoneChange(target) : await startEmailVerification(target);
+    // Only an SMS code on a development server ever comes back; never an email code.
+    setPendingContact({ kind, target, sentTo: result.sent_to, devOtp: kind === 'phone' ? result.dev_otp || '' : '' });
+  };
+
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!isValidRwandaPhone(phone)) {
+    if (phone && !isValidRwandaPhone(phone)) {
       setProfileError(PHONE_ERROR);
       return;
     }
@@ -77,10 +147,26 @@ export default function ProfilePage() {
       return;
     }
     setProfileError('');
-    // Keep the form open if the server refuses (e.g. phone/email already used by another customer).
-    updateProfile({ name, phone, email })
-      .then(() => setIsEditing(false))
-      .catch((error) => setProfileError(error?.message || 'Could not save your profile.'));
+    const phoneChanged = Boolean(phone) && toLocalRwandaPhone(phone) !== toLocalRwandaPhone(user.phone || '');
+    const emailChanged = Boolean(email.trim()) && email.trim().toLowerCase() !== (user.email || '').toLowerCase();
+    try {
+      // The name (and removing the email) save straight away; a new phone or
+      // email is saved only after its code (the server refuses another
+      // customer's number, keeping the form open with its message).
+      await updateProfile({ name, ...(!email.trim() && user.email ? { email: '' } : {}) });
+      if (phoneChanged) await requestCode('phone', phone.trim());
+      else if (emailChanged) await requestCode('email', email.trim());
+      setIsEditing(false);
+    } catch (error) {
+      setProfileError(error?.message || 'Could not save your profile.');
+    }
+  };
+
+  const onContactVerified = (customer) => {
+    applyCustomer(customer);
+    setPhone(customer.phone_number || '');
+    setEmail(customer.email || '');
+    setPendingContact(null);
   };
 
   const handleAvatarChange = (e) => {
@@ -155,6 +241,18 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-2xl font-black text-gray-900">{user.name}</h1>
             <p className="text-xs text-stone-500 font-medium mt-0.5 break-all">{[user.phone, user.email].filter(Boolean).join(' · ')}</p>
+            {/* Unverified contact details never sign in or receive delivery codes. */}
+            {user.email && !user.emailVerified && !pendingContact && (
+              <button type="button" onClick={() => requestCode('email', user.email).catch((err) => setProfileError(err?.message || 'Could not send the code.'))} className="mt-1 block text-[11px] font-bold text-amber-700 underline">
+                Email not verified: send a code to verify it
+              </button>
+            )}
+            {user.pendingPhone && !pendingContact && (
+              <button type="button" onClick={() => requestCode('phone', user.pendingPhone).catch((err) => setProfileError(err?.message || 'Could not send the code.'))} className="mt-1 block text-[11px] font-bold text-amber-700 underline">
+                Verify your phone number {user.pendingPhone}
+              </button>
+            )}
+            {!isEditing && profileError && <p className="mt-1 text-[11px] font-semibold text-red-600">{profileError}</p>}
             <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
               Verified Customer Account
             </span>
@@ -178,6 +276,10 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {pendingContact && (
+        <VerifyContactForm pending={pendingContact} onVerified={onContactVerified} onCancel={() => setPendingContact(null)} />
+      )}
 
       {/* Profile Edit Form if active */}
       {isEditing && (

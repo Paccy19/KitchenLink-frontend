@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Phone, ShieldCheck, ArrowRight, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
+import {
+  NAME_MAX_LENGTH, formatNameInput, PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput,
+  IDENTIFIER_ERROR, IDENTIFIER_MAX_LENGTH, IDENTIFIER_PLACEHOLDER, isValidIdentifier, looksLikeEmail, sanitizeIdentifierInput,
+} from '../../utils/validation';
 
 export default function AuthModal() {
   const navigate = useNavigate();
@@ -18,6 +21,9 @@ export default function AuthModal() {
     authError
   } = useAuth();
 
+  // One field: a phone number or an email address (the server decides which).
+  const [identifier, setIdentifier] = useState('');
+  // Email sign-up only: an optional phone (checked by the server, saved unverified).
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -27,12 +33,17 @@ export default function AuthModal() {
 
   const handlePhoneSubmit = (e) => {
     e.preventDefault();
-    if (!isValidRwandaPhone(phone)) {
+    if (!isValidIdentifier(identifier)) {
+      setError(IDENTIFIER_ERROR);
+      return;
+    }
+    const emailMode = looksLikeEmail(identifier);
+    if (emailMode && phone && !isValidRwandaPhone(phone)) {
       setError(PHONE_ERROR);
       return;
     }
     setError('');
-    sendOtp(phone, name).catch((requestError) => {
+    sendOtp(identifier.trim(), name, emailMode ? phone : '').catch((requestError) => {
       setError(requestError.message);
     });
   };
@@ -78,7 +89,7 @@ export default function AuthModal() {
               Welcome to KitchenLink
             </h3>
             <p className="text-xs text-stone-500 mb-6 font-medium">
-              Enter your phone number to sign in or create your customer account
+              Enter your phone number or email to sign in or create your customer account
             </p>
 
             {(error || authError) && (
@@ -108,20 +119,43 @@ export default function AuthModal() {
 
               <div>
                 <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
-                  Phone Number (MTN / Airtel)
+                  Phone Number or Email
                 </label>
                 <input
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  maxLength={PHONE_MAX_LENGTH}
-                  value={phone}
-                  onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
-                  placeholder={PHONE_PLACEHOLDER}
+                  type="text"
+                  inputMode={looksLikeEmail(identifier) ? 'email' : 'tel'}
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  maxLength={IDENTIFIER_MAX_LENGTH}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(sanitizeIdentifierInput(e.target.value))}
+                  placeholder={IDENTIFIER_PLACEHOLDER}
                   required
                   className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 text-sm font-semibold outline-none transition"
                 />
               </div>
+
+              {looksLikeEmail(identifier) && (
+                <div>
+                  <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
+                    Phone Number (optional, MTN / Airtel)
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    maxLength={PHONE_MAX_LENGTH}
+                    value={phone}
+                    onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+                    placeholder={PHONE_PLACEHOLDER}
+                    className="w-full px-4 py-3 rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/20 text-sm font-semibold outline-none transition"
+                  />
+                  <p className="mt-1 text-[11px] text-stone-400">
+                    New accounts only. You verify it with a code later in your profile.
+                  </p>
+                </div>
+              )}
 
               <button
                 type="submit"

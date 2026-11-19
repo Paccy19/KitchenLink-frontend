@@ -125,18 +125,32 @@ export function fetchDeliveryQuote(vendorId, { lat, lng }) {
   return apiRequest(`/vendors/${encodeURIComponent(vendorId)}/delivery-quote`, { lat, lng });
 }
 
-export const sendOtp = (phoneNumber, name) =>
+/**
+ * `identifier`: a phone number or an email address (the server decides which).
+ * `registrationPhone`: optional phone of a new customer signing up with an email.
+ */
+export const sendOtp = (identifier, name, registrationPhone = '') =>
   apiJson('POST', '/auth/send-otp', {
-    phone_number: phoneNumber,
+    identifier,
     ...(name ? { name } : {}),
+    ...(registrationPhone ? { phone_number: registrationPhone } : {}),
   });
 
-export const verifyOtp = (phoneNumber, code, name) =>
+export const verifyOtp = (identifier, code, name) =>
   apiJson('POST', '/auth/verify-otp', {
-    phone_number: phoneNumber,
+    identifier,
     code,
     ...(name ? { name } : {}),
   });
+
+// A new phone / email only counts once its code is verified.
+export const startPhoneChange = (phoneNumber) => apiJson('POST', '/auth/me/phone/send-code', { phone_number: phoneNumber });
+export const confirmPhoneChange = (code) => apiJson('POST', '/auth/me/phone/verify', { code });
+export const startEmailVerification = (email) => apiJson('POST', '/auth/me/email/send-code', email ? { email } : {});
+export const confirmEmailVerification = (code) => apiJson('POST', '/auth/me/email/verify', { code });
+
+/** The customer's delivery code, sent again to their verified email (never returned). */
+export const resendDeliveryCode = (orderId) => apiJson('POST', `/orders/${encodeURIComponent(orderId)}/delivery-code/resend`, {});
 
 /** A verified phone that also belongs to an admin: sign in as the customer instead. */
 export const continueAsCustomer = (challengeToken) =>

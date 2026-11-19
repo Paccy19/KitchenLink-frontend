@@ -164,7 +164,8 @@ export function mapDelivery(raw = {}) {
     promisedEarnings: Number(raw.promised_earnings_rwf ?? 0),
     paymentMethod: raw.payment_method || '',
     otpRequired: Boolean(raw.otp_required),
-    otpCode: raw.dev_otp || '',
+    // The customer's code is never sent to the worker; only whether they could get one.
+    customerHasNoCodeChannel: Boolean(raw.otp_customer_has_no_channel),
     proofPhotoUrl: raw.proof_photo_url || '',
     // Offered at placement: the kitchen may still be cooking.
     kitchenReady: raw.kitchen_ready !== false,
