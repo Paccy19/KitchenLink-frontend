@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarDays, Sparkles } from 'lucide-react';
 
 /**
- * "KitchenLink Big Events": the wide banner between the benefits strip and
- * the categories. It opens the existing Big Events listing (every kitchen that
+ * "KitchenLink Big Events": the compact banner near the top of the homepage.
+ * It opens the existing Big Events listing (every kitchen that
  * takes event orders, /vendors?events=1), as the old "Big Event" button did.
  */
 export default function BigEventsBanner() {
   return (
-    <section aria-label="KitchenLink Big Events" className="mt-8 sm:mt-10">
+    <section aria-label="KitchenLink Big Events" className="mt-5 sm:mt-6">
       <Link
         to="/vendors?events=1"
         className="group relative block overflow-hidden rounded-[26px] bg-[#2b1206] text-white shadow-xl shadow-[#2b1206]/20 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#f28c18]/40"

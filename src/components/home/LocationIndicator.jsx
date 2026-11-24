@@ -27,27 +27,40 @@ export default function LocationIndicator({ className = '', variant = 'pill' }) 
       : source === 'manual'
         ? { text: 'Manual', className: 'bg-[#f5ebe1] text-[#3d1b0c]' }
         : { text: 'Default', className: 'bg-stone-100 text-stone-500' };
+  const isCompact = variant === 'compact';
 
   return (
     <div className={className}>
-      {variant === 'prominent' ? (
-        // The homepage's "Kitchens near" selector: large and easy to spot.
+      {variant === 'prominent' || isCompact ? (
+        // Prominent and compact "Kitchens near" controls share the same picker.
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label={`Browsing kitchens near ${currentLocation}. Change location`}
-          className="group w-full inline-flex items-center gap-3 pl-4 sm:pl-2 pr-4 py-2.5 sm:py-2 rounded-2xl bg-white border border-[#ebd7c5] shadow-[0_2px_10px_rgba(43,18,6,0.06)] hover:border-[#f28c18]/60 hover:shadow-[0_6px_18px_rgba(43,18,6,0.10)] transition active:scale-[0.99] text-left"
+          className={`group w-full min-w-0 inline-flex items-center bg-white border border-[#ebd7c5] hover:border-[#f28c18]/60 transition text-left ${
+            isCompact
+              ? 'gap-2 px-2.5 py-1.5 rounded-xl shadow-sm active:scale-[0.99]'
+              : 'gap-3 pl-4 sm:pl-2 pr-4 py-2.5 sm:py-2 rounded-2xl shadow-[0_2px_10px_rgba(43,18,6,0.06)] hover:shadow-[0_6px_18px_rgba(43,18,6,0.10)] active:scale-[0.99]'
+          }`}
         >
-          <span className="hidden sm:flex flex-shrink-0 w-10 h-10 rounded-xl bg-[#fff1e0] items-center justify-center">
-            <MapPin className="w-5 h-5 text-[#f28c18]" aria-hidden="true" />
-          </span>
+          {!isCompact && (
+            <span className="hidden sm:flex flex-shrink-0 w-10 h-10 rounded-xl bg-[#fff1e0] items-center justify-center">
+              <MapPin className="w-5 h-5 text-[#f28c18]" aria-hidden="true" />
+            </span>
+          )}
           <span className="min-w-0 flex-1 flex items-center gap-2.5">
-            <span className="min-w-0 line-clamp-2 sm:line-clamp-1 break-words text-[15px] sm:text-lg leading-snug font-black text-[#3d1b0c]">{currentLocation}</span>
-            <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${badge.className}`}>
+            <span className={`min-w-0 truncate font-black text-[#3d1b0c] ${
+              isCompact ? 'text-xs sm:text-sm' : 'line-clamp-2 sm:line-clamp-1 break-words text-[15px] sm:text-lg leading-snug'
+            }`}>{currentLocation}</span>
+            <span className={`flex-shrink-0 rounded-full font-black uppercase tracking-wide ${
+              isCompact ? 'px-1.5 py-0 text-[9px]' : 'px-2 py-0.5 text-[10px]'
+            } ${badge.className}`}>
               {badge.text}
             </span>
           </span>
-          <ChevronDown className="flex-shrink-0 w-5 h-5 text-[#8a5332] transition-transform group-hover:translate-y-0.5" aria-hidden="true" />
+          <ChevronDown className={`flex-shrink-0 text-[#8a5332] transition-transform group-hover:translate-y-0.5 ${
+            isCompact ? 'w-4 h-4' : 'w-5 h-5'
+          }`} aria-hidden="true" />
         </button>
       ) : (
         <button
