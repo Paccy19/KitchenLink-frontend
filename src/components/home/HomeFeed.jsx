@@ -1,19 +1,16 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
-import TopRatedKitchens from './TopRatedKitchens';
 import BrandStrip from './BrandStrip';
 import HeroSlider from './HeroSlider';
 import KitchensRow from './KitchensRow';
 import AllDishes from './AllDishes';
 import SearchBar from './SearchBar';
-import VendorCard from './VendorCard';
 import DishCard from './DishCard';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
 import { ErrorState } from '../common/EmptyState';
-import VendorTypeFilter from '../common/VendorTypeFilter';
 import useVendorTypeParam from '../../hooks/useVendorTypeParam';
-import { HomeFeedSkeleton, VendorTileSkeleton, Skeleton } from '../common/Skeleton';
+import { HomeFeedSkeleton, Skeleton } from '../common/Skeleton';
 import { useToast } from '../common/Toast';
 
 import useHomeFeed from '../../hooks/useHomeFeed';
@@ -64,9 +61,8 @@ function CompactDishSkeleton() {
 }
 
 /**
- * Homepage feed: search + hero slider (Big Events, Tomorrow's Specials) next
- * to the popular dishes → kitchens near you → kitchen lists,
- * with pull-to-refresh and graceful loading/error/empty states.
+ * Homepage feed: search, hero slider, popular dishes, Kitchens Near You, and All Dishes.
+ * Pull-to-refresh and graceful loading/error/empty states are included.
  */
 export default function HomeFeed() {
   const toast = useToast();
@@ -76,17 +72,14 @@ export default function HomeFeed() {
   const [query, setQuery] = useState(urlQuery);
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
 
-  // Kitchen type filter (?type=home_cook,cafe) — applies to the kitchen lists and search.
+  // Search results retain their existing kitchen-type filter.
   const [vendorTypes, setVendorTypes] = useVendorTypeParam();
-  const typeQuery = vendorTypes.length ? `?type=${vendorTypes.join(',')}` : '';
 
-  const feed = useHomeFeed({ vendorTypes });
-  // "Kitchens Near You": nearest first from the server, every kitchen type
-  // (the Kitchen type filter lower down only changes the lists under it).
+  const feed = useHomeFeed();
+  // "Kitchens Near You": nearest first from the server, regardless of type.
   const nearKitchens = useAllVendors({ perPage: 20, enabled: !urlQuery.trim() });
   const specials = useVendorSpecials();
   const offers = useVendorOffers();
-  const allVendors = useAllVendors({ perPage: 6, vendorTypes, enabled: !urlQuery.trim() });
 
   // Keep the URL shareable: debounce input → `?q=` (replace, no history spam).
   useEffect(() => {
@@ -117,14 +110,6 @@ export default function HomeFeed() {
   const isSearching = urlQuery.trim().length > 0;
   const data = feed.data;
   const popularDishes = (data?.popularDishes ?? []).slice(0, 4);
-
-  /** The kitchen-type filter, right above the kitchen lists it changes. */
-  const typeToolbar = (
-    <div className="rounded-3xl bg-white border border-stone-200/80 shadow-[0_2px_12px_rgba(43,18,6,0.05)] px-3 sm:px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-      <span className="flex-shrink-0 px-1 text-[11px] font-black uppercase tracking-wider text-stone-400">Kitchen type</span>
-      <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="min-w-0 sm:flex-1" />
-    </div>
-  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-16" {...pull.handlers}>
@@ -218,49 +203,6 @@ export default function HomeFeed() {
 
           {/* Every dish from every kitchen, 8 at a time, with category chips and sorting. */}
           <AllDishes />
-
-          {/* Kitchen type, right above the kitchen lists it changes. */}
-          {typeToolbar}
-
-          {/* Best-rated live kitchens + the promotion banner (real offers only) */}
-          <TopRatedKitchens
-            vendorLists={[data?.featuredVendors ?? [], allVendors.data?.vendors ?? []]}
-            loading={feed.isFetching || allVendors.isPending}
-            offers={offers.data ?? []}
-            specials={specials.data ?? []}
-            seeAllTo={`/vendors${typeQuery}`}
-          />
-
-          {/* All kitchens — near or far, nearest to the customer first */}
-          <section aria-label="All kitchens">
-            <SectionHeader
-              title="All Kitchens"
-              subtitle={
-                allVendors.data?.locationUsed
-                  ? 'Every kitchen on the platform — nearest to you first'
-                  : 'Every kitchen on the platform — use your location to see nearby ones first'
-              }
-              to={`/vendors${typeQuery}`}
-              linkLabel={
-                allVendors.data?.total ? `See all ${allVendors.data.total}` : 'See all'
-              }
-            />
-            {allVendors.isPending ? (
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0">
-                <VendorTileSkeleton />
-                <VendorTileSkeleton />
-                <VendorTileSkeleton />
-              </div>
-            ) : allVendors.isError ? (
-              <ErrorState onRetry={allVendors.refetch} isRetrying={allVendors.isFetching} />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(allVendors.data?.vendors ?? []).map((vendor) => (
-                  <VendorCard key={vendor.id} vendor={vendor} />
-                ))}
-              </div>
-            )}
-          </section>
 
         </div>
       )}
