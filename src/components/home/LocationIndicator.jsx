@@ -5,8 +5,12 @@ import { KIGALI_NEIGHBORHOODS, useLocation } from '../../context/LocationContext
 /**
  * Subtle location indicator with a manual change sheet.
  * Shows the active coordinates source (GPS / manual / default fallback).
+ *
+ * `dense` (compact variant only): a smaller trigger for page headers.
+ * `hideBadge`: no source badge (Default / Manual / GPS) on the trigger; the
+ * picker shows it next to the current location instead.
  */
-export default function LocationIndicator({ className = '', variant = 'pill' }) {
+export default function LocationIndicator({ className = '', variant = 'pill', dense = false, hideBadge = false }) {
   const {
     currentLocation,
     source,
@@ -38,7 +42,9 @@ export default function LocationIndicator({ className = '', variant = 'pill' }) 
           onClick={() => setOpen(true)}
           aria-label={`Browsing kitchens near ${currentLocation}. Change location`}
           className={`group w-full min-w-0 inline-flex items-center bg-white border border-[#ebd7c5] hover:border-[#f28c18]/60 transition text-left ${
-            isCompact
+            isCompact && dense
+              ? 'gap-1.5 h-8 px-2.5 rounded-lg shadow-sm active:scale-[0.99]'
+              : isCompact
               ? 'gap-2 px-2.5 py-1.5 rounded-xl shadow-sm active:scale-[0.99]'
               : 'gap-3 pl-4 sm:pl-2 pr-4 py-2.5 sm:py-2 rounded-2xl shadow-[0_2px_10px_rgba(43,18,6,0.06)] hover:shadow-[0_6px_18px_rgba(43,18,6,0.10)] active:scale-[0.99]'
           }`}
@@ -50,16 +56,18 @@ export default function LocationIndicator({ className = '', variant = 'pill' }) 
           )}
           <span className="min-w-0 flex-1 flex items-center gap-2.5">
             <span className={`min-w-0 truncate font-black text-[#3d1b0c] ${
-              isCompact ? 'text-xs sm:text-sm' : 'line-clamp-2 sm:line-clamp-1 break-words text-[15px] sm:text-lg leading-snug'
+              isCompact && dense ? 'text-xs' : isCompact ? 'text-xs sm:text-sm' : 'line-clamp-2 sm:line-clamp-1 break-words text-[15px] sm:text-lg leading-snug'
             }`}>{currentLocation}</span>
-            <span className={`flex-shrink-0 rounded-full font-black uppercase tracking-wide ${
-              isCompact ? 'px-1.5 py-0 text-[9px]' : 'px-2 py-0.5 text-[10px]'
-            } ${badge.className}`}>
-              {badge.text}
-            </span>
+            {!hideBadge && (
+              <span className={`flex-shrink-0 rounded-full font-black uppercase tracking-wide ${
+                isCompact ? 'px-1.5 py-0 text-[9px]' : 'px-2 py-0.5 text-[10px]'
+              } ${badge.className}`}>
+                {badge.text}
+              </span>
+            )}
           </span>
           <ChevronDown className={`flex-shrink-0 text-[#8a5332] transition-transform group-hover:translate-y-0.5 ${
-            isCompact ? 'w-4 h-4' : 'w-5 h-5'
+            isCompact && dense ? 'w-3.5 h-3.5' : isCompact ? 'w-4 h-4' : 'w-5 h-5'
           }`} aria-hidden="true" />
         </button>
       ) : (
@@ -101,6 +109,19 @@ export default function LocationIndicator({ className = '', variant = 'pill' }) 
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* The badge hidden on a compact trigger is shown here. */}
+            {hideBadge && (
+              <p className="-mt-2 mb-4 flex items-center gap-2 text-xs text-stone-500">
+                <MapPin className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />
+                <span className="min-w-0 truncate">
+                  Now: <strong className="text-[#3d1b0c]">{currentLocation}</strong>
+                </span>
+                <span className={`flex-shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${badge.className}`}>
+                  {badge.text}
+                </span>
+              </p>
+            )}
 
             <button
               type="button"

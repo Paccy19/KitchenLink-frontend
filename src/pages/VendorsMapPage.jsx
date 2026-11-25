@@ -8,7 +8,6 @@ import {
   Loader2,
   MapPin,
   Navigation,
-  RefreshCw,
   Star,
   Store,
 } from 'lucide-react';
@@ -27,7 +26,7 @@ import { useLocation } from '../context/LocationContext';
 import useCategories from '../hooks/useCategories';
 import useVendorTypeParam from '../hooks/useVendorTypeParam';
 import VendorTypeFilter from '../components/common/VendorTypeFilter';
-import LocationIndicator from '../components/home/LocationIndicator';
+import KitchensNearBar from '../components/home/KitchensNearBar';
 import { ErrorState } from '../components/common/EmptyState';
 
 // Stores open and close during the day; keep the map current.
@@ -161,34 +160,6 @@ export default function VendorsMapPage() {
       : source === 'manual'
         ? `Showing kitchens around ${currentLocation}.`
         : 'Choose a neighbourhood or use your current location.';
-
-  const locationSection = (
-    <section
-      aria-label="Your location"
-      className="mb-3 rounded-2xl bg-[#faf6f2] border border-[#f1e2d2] px-2.5 sm:px-3 py-2"
-    >
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-        <div className="flex flex-shrink-0 items-center gap-1.5">
-          <MapPin className="w-4 h-4 text-[#f28c18]" aria-hidden="true" />
-          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wide text-[#6d391d]">Kitchens near</span>
-        </div>
-        <LocationIndicator variant="compact" className="min-w-0 flex-1" />
-        <span className="hidden xl:block min-w-0 max-w-[250px] truncate text-[11px] font-medium text-stone-500">
-          {locationNote}
-        </span>
-        <button
-          type="button"
-          onClick={() => query.refetch()}
-          aria-label="Refresh kitchens near this location"
-          title="Refresh kitchens near this location"
-          disabled={query.isFetching}
-          className="w-8 h-8 flex-shrink-0 rounded-lg bg-white border border-[#ebd7c5] text-[#6d391d] hover:text-[#f28c18] hover:border-[#f28c18]/60 flex items-center justify-center transition disabled:opacity-60 active:scale-95"
-        >
-          <RefreshCw className={`w-4 h-4 ${query.isFetching ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-    </section>
-  );
 
   // The list follows the part of the map the customer is looking at.
   const inView = useMemo(
@@ -356,7 +327,10 @@ export default function VendorsMapPage() {
         <span>Back to list</span>
       </Link>
 
-      <div className="mb-5">
+      {/* Title on the left, the location selector on the right (under the
+          title, full width, on phones). */}
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
           {eventsOnly ? 'Big Event Kitchens · Map' : 'Open Kitchens · Map'}
         </h1>
@@ -381,8 +355,8 @@ export default function VendorsMapPage() {
           )}
         </p>
       </div>
-
-      {locationSection}
+      <KitchensNearBar compact note={locationNote} onRefresh={() => query.refetch()} refreshing={query.isFetching} />
+      </div>
 
       <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="mb-3" />
 

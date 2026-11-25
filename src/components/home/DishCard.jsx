@@ -13,9 +13,14 @@ const hasPrep = (dish) => Boolean(dish.prepTime) && dish.prepTime !== '—';
  * the customer stays on the page and can add it to the basket; the details
  * offer an optional link to the kitchen's full menu.
  *
- * @param {{dish:Object, highlightedQuery?:string, variant?:'tile'|'row'}} props
+ * `compact` (tile variant only): the smaller card of the homepage's
+ * Popular Dishes grid: a ~96px photo, a one-line name, tighter spacing. It
+ * fills its column; the parent sets its width. Without it the tile is the
+ * fixed 190px card it always was.
+ *
+ * @param {{dish:Object, highlightedQuery?:string, variant?:'tile'|'row', compact?:boolean, className?:string}} props
  */
-export default function DishCard({ dish, highlightedQuery = '', variant = 'tile' }) {
+export default function DishCard({ dish, highlightedQuery = '', variant = 'tile', compact = false, className = '' }) {
   const [open, setOpen] = useState(false);
   const vendor = dish.vendor
     ? { ...dish.vendor, location: dish.vendor.neighborhood || dish.vendor.location }
@@ -78,19 +83,20 @@ export default function DishCard({ dish, highlightedQuery = '', variant = 'tile'
 
   return (
     <>
-      <DishHoverPreview dish={dish} className="snap-start flex-shrink-0">
+      <DishHoverPreview dish={dish} className={`snap-start flex-shrink-0 ${className}`}>
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label={label}
-          className="group block text-left min-w-[190px] max-w-[190px] snap-start bg-white rounded-3xl border border-stone-200/80 overflow-hidden shadow-sm hover:shadow-2xl hover:border-[#ebd7c5] hover:-translate-y-1.5 transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#542813]/20"
+          className={`group block text-left ${compact ? 'w-full h-full rounded-2xl hover:-translate-y-1' : 'min-w-[190px] max-w-[190px] rounded-3xl hover:-translate-y-1.5'} snap-start bg-white border border-stone-200/80 overflow-hidden shadow-sm hover:shadow-2xl hover:border-[#ebd7c5] transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#542813]/20`}
         >
           <div className="relative overflow-hidden">
             <LazyImage
               src={dish.image}
               alt={dish.name}
-              aspect="aspect-[4/3]"
+              aspect={compact ? '' : 'aspect-[4/3]'}
               rounded="rounded-none"
+              className={compact ? 'h-24 lg:h-16' : undefined}
               imgClassName="group-hover:scale-110 transition-transform duration-500 ease-out"
             />
             {dish.isAvailable ? (
@@ -104,17 +110,17 @@ export default function DishCard({ dish, highlightedQuery = '', variant = 'tile'
             )}
           </div>
 
-          <div className="p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">{dish.category}</span>
-            <h3 className="font-extrabold text-sm text-gray-900 group-hover:text-[#542813] transition-colors line-clamp-2 mt-0.5 leading-snug">
+          <div className={compact ? 'p-2.5 lg:px-2.5 lg:py-2' : 'p-3.5'}>
+            <span className={`text-[10px] font-bold uppercase tracking-wider text-stone-400 ${compact ? 'block truncate' : ''}`}>{dish.category}</span>
+            <h3 className={`font-extrabold text-sm text-gray-900 group-hover:text-[#542813] transition-colors mt-0.5 leading-snug ${compact ? 'truncate' : 'line-clamp-2'}`}>
               {name}
             </h3>
 
-            <p className="text-[11px] text-stone-500 font-medium line-clamp-1 mt-1">{dish.vendor?.name}</p>
+            <p className={`text-[11px] text-stone-500 font-medium line-clamp-1 ${compact ? 'mt-0.5' : 'mt-1'}`}>{dish.vendor?.name}</p>
 
-            <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-stone-100">
+            <div className={`flex items-center justify-between gap-1.5 border-t border-stone-100 ${compact ? 'mt-2 pt-1.5 lg:mt-1.5 lg:pt-1' : 'mt-2.5 pt-2'}`}>
               <span className="text-sm font-black text-[#4e2410] whitespace-nowrap">{formatRwf(dish.price)}</span>
-              <span className="text-[11px] text-stone-400 font-semibold flex items-center gap-1">
+              <span className={`text-[11px] text-stone-400 font-semibold flex items-center gap-1 ${compact ? 'min-w-0 whitespace-nowrap overflow-hidden' : ''}`}>
                 {dish.rating > 0 && (
                   <>
                     <Star className="w-3 h-3 fill-amber-400 text-amber-400" aria-hidden="true" />

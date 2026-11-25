@@ -3,17 +3,16 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import TopRatedKitchens from './TopRatedKitchens';
 import BrandStrip from './BrandStrip';
-import BigEventsBanner from './BigEventsBanner';
+import HeroSlider from './HeroSlider';
 import CategoryBar from './CategoryBar';
 import SearchBar from './SearchBar';
 import VendorCard from './VendorCard';
 import DishCard from './DishCard';
-import SpecialCard from './SpecialCard';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
 import { ErrorState } from '../common/EmptyState';
 import VendorTypeFilter from '../common/VendorTypeFilter';
 import useVendorTypeParam from '../../hooks/useVendorTypeParam';
-import { HomeFeedSkeleton, VendorTileSkeleton, DishCardSkeleton } from '../common/Skeleton';
+import { HomeFeedSkeleton, VendorTileSkeleton, Skeleton } from '../common/Skeleton';
 import { useToast } from '../common/Toast';
 
 import useHomeFeed from '../../hooks/useHomeFeed';
@@ -21,7 +20,6 @@ import useCategories from '../../hooks/useCategories';
 import useVendorSpecials from '../../hooks/useVendorSpecials';
 import useAllVendors from '../../hooks/useAllVendors';
 import useVendorOffers from '../../hooks/useVendorOffers';
-import OfferDayCard from './OfferDayCard';
 import useDebounce from '../../hooks/useDebounce';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
 
@@ -50,8 +48,24 @@ function SectionHeader({ title, subtitle, to, linkLabel = 'See all' }) {
   );
 }
 
+/** Placeholder for a compact DishCard while the feed loads. */
+function CompactDishSkeleton() {
+  return (
+    <div className="w-[168px] lg:w-auto flex-shrink-0 bg-white rounded-2xl border border-gray-100 overflow-hidden" aria-hidden="true">
+      <Skeleton className="h-24 lg:h-16 w-full rounded-none" />
+      <div className="p-2.5 space-y-2">
+        <Skeleton className="h-2.5 w-1/3" />
+        <Skeleton className="h-3.5 w-5/6" />
+        <Skeleton className="h-3 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 /**
- * Homepage feed: search → Big Events → categories → products → kitchens,
+ * Homepage feed: search + hero slider (Big Events, Tomorrow's Specials) next
+ * to the popular dishes → categories → kitchens,
  * with pull-to-refresh and graceful loading/error/empty states.
  */
 export default function HomeFeed() {
@@ -105,6 +119,7 @@ export default function HomeFeed() {
 
   const isSearching = urlQuery.trim().length > 0;
   const data = feed.data;
+  const popularDishes = (data?.popularDishes ?? []).slice(0, 4);
 
   /** The kitchen-type filter, right above the kitchen lists it changes. */
   const typeToolbar = (
@@ -122,22 +137,49 @@ export default function HomeFeed() {
         refreshing={pull.refreshing}
       />
 
-      <section aria-label="Find food and kitchens" className="mb-5 sm:mb-6 max-w-3xl">
-        <h1 className="mb-2 text-xl sm:text-2xl font-black tracking-tight text-[#3d1b0c]">
-          Find food near you
-        </h1>
-        <SearchBar
-          compact
-          inputId="home-search"
-          value={query}
-          onChange={setQuery}
-          onSubmit={setQuery}
-          placeholder="Search meals or kitchens..."
-        />
-      </section>
+      {/* ── Top: search + hero slider | popular dishes ─────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-7">
+        <div className="min-w-0 flex flex-col">
+          <section aria-label="Find food and kitchens" className="mb-4">
+            <h1 className="mb-2 text-xl sm:text-2xl font-black tracking-tight text-[#3d1b0c]">
+              Find food near you
+            </h1>
+            <SearchBar
+              compact
+              inputId="home-search"
+              value={query}
+              onChange={setQuery}
+              onSubmit={setQuery}
+              placeholder="Search meals or kitchens..."
+            />
+          </section>
 
-      {/* ── Compact Big Events promotion ──────────────────────── */}
-      <BigEventsBanner />
+          {/* Big Events, then one slide per Tomorrow's Special / Offer Day. */}
+          <HeroSlider fill specials={specials.data ?? []} offers={offers.data ?? []} className="lg:flex-1" />
+        </div>
+
+        <section aria-label="Popular dishes near you" className="min-w-0">
+          <SectionHeader
+            title="Popular Dishes Near You"
+            subtitle="What people around you are ordering today"
+            to="/vendors"
+            linkLabel="See all"
+          />
+          {/* A swipeable row on phones and tablets, a 2×2 grid next to the slider. */}
+          <div className="flex gap-3 overflow-x-auto snap-x pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:pb-0">
+            {popularDishes.map((dish) => (
+              <DishCard key={dish.id} dish={dish} compact className="w-[168px] lg:w-auto" />
+            ))}
+            {popularDishes.length === 0 && (feed.isPending || feed.isFetching) &&
+              Array.from({ length: 4 }, (_, i) => <CompactDishSkeleton key={i} />)}
+          </div>
+          {popularDishes.length === 0 && !feed.isPending && !feed.isFetching && (
+            <p className="rounded-2xl bg-[#faf6f2] border border-[#f1e2d2] px-4 py-6 text-center text-xs font-semibold text-stone-500">
+              No popular dishes near you yet.
+            </p>
+          )}
+        </section>
+      </div>
 
       <div className="mt-10 sm:mt-12" />
 
@@ -168,50 +210,18 @@ export default function HomeFeed() {
             subtitle="Explore a wide variety of cuisines"
           />
 
-          {/* Vendor products and specials appear before kitchen listings. */}
+          {/* The specials now live in the slider at the top; this links to all of them. */}
           {((specials.data?.length ?? 0) > 0 || (offers.data?.length ?? 0) > 0) && (
-            <section aria-label="Tomorrow's specials">
-              <SectionHeader
-                title="Tomorrow's Specials"
-                subtitle="Pre-order specials and upcoming kitchen offers"
+            <div className="-mt-4 sm:-mt-6 flex justify-end">
+              <Link
                 to="/vendors?filter=preorder"
-                linkLabel="See all"
-              />
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
-                {(specials.data ?? []).map((entry) => (
-                  <SpecialCard
-                    key={entry.vendor.id}
-                    vendor={entry.vendor}
-                    special={entry.special}
-                  />
-                ))}
-                {(offers.data ?? []).map((offer) => (
-                  <OfferDayCard key={offer.id} offer={offer} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          <section aria-label="Popular dishes near you">
-            <SectionHeader
-              title="Popular Dishes Near You"
-              subtitle="What people around you are ordering today"
-              to="/vendors"
-              linkLabel="Browse menus"
-            />
-            <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
-              {(data?.popularDishes ?? []).map((dish) => (
-                <DishCard key={dish.id} dish={dish} />
-              ))}
-              {feed.isFetching && (data?.popularDishes?.length ?? 0) === 0 && (
-                <>
-                  <DishCardSkeleton />
-                  <DishCardSkeleton />
-                  <DishCardSkeleton />
-                </>
-              )}
+                className="text-xs font-black text-[#542813] hover:text-[#2b1206] whitespace-nowrap flex items-center gap-1 group transition-colors"
+              >
+                <span>View all specials</span>
+                <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Link>
             </div>
-          </section>
+          )}
 
           {/* Kitchen type, right above the kitchen lists it changes. */}
           {typeToolbar}
