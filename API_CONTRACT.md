@@ -161,7 +161,7 @@ Called from `src/api/endpoints.js` (60 endpoints). The function names are in tha
 
 | Method | Path | Sign-in | Website function | Notes |
 | --- | --- | --- | --- | --- |
-| GET | `/home/categories` | Public | `fetchCategories` |  |
+| GET | `/home/categories` | Public | `fetchCategories` | Active categories with an available menu item from a live kitchen. |
 | GET | `/home/feed` | Public | `fetchHomeFeed` | Query: `lat={lat}&lng={lng}`. Combined home screen payload: categories + featured/nearby kitchens + popular dishes for the given coordinates. |
 | GET | `/home/search` | Public | `searchHome` | Query: `q={query}&lat={lat}&lng={lng}`. |
 | GET | `/home/vendors` | Public | `fetchAllVendors` | Query: `lat&lng&category_id&sort&page&limit`. every kitchen in the system, near or far; with lat/lng the nearby ones (`is_nearby`) come first. |

@@ -26,6 +26,7 @@ import { useLocation } from '../context/LocationContext';
 import useCategories from '../hooks/useCategories';
 import useVendorTypeParam from '../hooks/useVendorTypeParam';
 import VendorTypeFilter from '../components/common/VendorTypeFilter';
+import KitchensNearBar from '../components/home/KitchensNearBar';
 import { ErrorState } from '../components/common/EmptyState';
 
 // Stores open and close during the day; keep the map current.
@@ -101,7 +102,7 @@ function buildCustomerInfo(label) {
  */
 export default function VendorsMapPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { coords, label, isGps, source } = useLocation();
+  const { coords, label, isGps, source, currentLocation } = useLocation();
   // The Kigali-centre fallback is not the customer's position.
   const located = source !== 'default';
   const [mapsStatus, setMapsStatus] = useState('loading');
@@ -153,6 +154,12 @@ export default function VendorsMapPage() {
 
   const vendors = useMemo(() => query.data?.vendors ?? [], [query.data]);
   const total = query.data?.total ?? 0;
+  const locationNote =
+    source === 'gps'
+      ? 'Showing kitchens near your current location.'
+      : source === 'manual'
+        ? `Showing kitchens around ${currentLocation}.`
+        : 'Choose a neighbourhood or use your current location.';
 
   // The list follows the part of the map the customer is looking at.
   const inView = useMemo(
@@ -320,7 +327,10 @@ export default function VendorsMapPage() {
         <span>Back to list</span>
       </Link>
 
-      <div className="mb-5">
+      {/* Title on the left, the location selector on the right (under the
+          title, full width, on phones). */}
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <div className="min-w-0">
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
           {eventsOnly ? 'Big Event Kitchens · Map' : 'Open Kitchens · Map'}
         </h1>
@@ -344,6 +354,8 @@ export default function VendorsMapPage() {
             </span>
           )}
         </p>
+      </div>
+      <KitchensNearBar compact note={locationNote} onRefresh={() => query.refetch()} refreshing={query.isFetching} />
       </div>
 
       <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="mb-3" />

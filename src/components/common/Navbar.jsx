@@ -45,6 +45,8 @@ import {
 
 export default function Navbar() {
   const { pathname } = useRouterLocation();
+  // The homepage shows its own search bar, so the header one is hidden there.
+  const hideSearch = pathname === '/';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // Header search: shows the current homepage search, submits to it.
@@ -227,7 +229,10 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Search: opens the homepage results (/?q=…), the same search as the hero. */}
+          {/* Search: opens the homepage results (/?q=…), the same search as the hero.
+              Hidden on the homepage, which has its own search under the header;
+              the row's justify-between then keeps the logo left and the actions right. */}
+          {!hideSearch && (
           <form
             role="search"
             onSubmit={(event) => {
@@ -251,6 +256,7 @@ export default function Navbar() {
               />
             </div>
           </form>
+          )}
 
           {/* Right Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-3 flex-shrink-0">

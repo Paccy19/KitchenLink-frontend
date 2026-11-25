@@ -3,16 +3,17 @@ import { fetchCategories } from '../api/endpoints';
 import { normalizeCategory, pickList } from '../api/normalize';
 
 /**
- * GET /home/categories — the persistent category bar source.
- * Independent of location, so it is cached for 30 minutes.
+ * GET /home/categories — categories with live, available vendor offerings.
+ * Refresh periodically so changes to menu availability reach customers.
  */
 export default function useCategories({ enabled = true } = {}) {
   return useQuery({
     queryKey: ['home', 'categories'],
     queryFn: fetchCategories,
     enabled,
-    staleTime: 30 * 60_000,
-    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
     select: (data) => pickList(data, 'categories').map(normalizeCategory),
   });
 }

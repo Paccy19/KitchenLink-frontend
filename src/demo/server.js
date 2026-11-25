@@ -296,6 +296,21 @@ function groupOptions(options = []) {
 const visibleVendors = () => state.vendors.filter((v) => v.status === 'approved');
 const liveItems = () =>
   state.menuItems.filter((item) => findVendor(item.vendor_id)?.status === 'approved');
+const liveCategories = () => {
+  const vendorsByCategory = new Map();
+  liveItems().forEach((item) => {
+    const vendor = findVendor(item.vendor_id);
+    if (!item.is_available || item.deleted_at || !item.category_id || vendor?.is_open === false) return;
+    if (!vendorsByCategory.has(item.category_id)) vendorsByCategory.set(item.category_id, new Set());
+    vendorsByCategory.get(item.category_id).add(item.vendor_id);
+  });
+  return state.categories
+    .filter((category) => category.is_active && vendorsByCategory.has(category.id))
+    .map((category) => ({
+      ...category,
+      vendor_count: vendorsByCategory.get(category.id).size,
+    }));
+};
 
 function filterVendors(list, query) {
   const category = query.get('category_id');
@@ -997,16 +1012,14 @@ const customerRoutes = [
   }],
   ['PUT', '/auth/me/location', () => ({ ok: true })],
 
-  ['GET', '/home/categories', () => ({
-    categories: state.categories.filter((c) => c.is_active).map((c) => ({ ...c, vendor_count: visibleVendors().filter((v) => v.categories.includes(c.id)).length })),
-  })],
+  ['GET', '/home/categories', () => ({ categories: liveCategories() })],
   ['GET', '/home/feed', (r) => {
     const from = coordsOf(r.query);
     const vendors = filterVendors(visibleVendors(), r.query);
     const open = vendors.filter((v) => v.is_open);
     return {
       location: from ? { ...from, label: r.query.get('label') || 'Your location' } : { ...KIGALI, label: 'Kigali' },
-      categories: state.categories.filter((c) => c.is_active),
+      categories: liveCategories(),
       featured_vendors: [...open].sort((a, b) => b.rating - a.rating).slice(0, 6).map((v) => publicVendor(v, from)),
       nearby_vendors: sortVendors(open, r.query, from || KIGALI).map((v) => publicVendor(v, from)),
       popular_dishes: liveItems().filter((item) => item.is_popular && open.some((v) => v.id === item.vendor_id)).slice(0, 12).map(publicDish),
