@@ -97,8 +97,8 @@ const qs = (params = {}) => {
 };
 
 export const adminApi = {
-  login: (email, password) =>
-    adminRequest('/admin/auth/login', { method: 'POST', body: { email, password } }),
+  login: (identifier, password) =>
+    adminRequest('/admin/auth/login', { method: 'POST', body: { identifier, password } }),
   me: () => adminRequest('/admin/auth/me'),
   changePassword: (payload) =>
     adminRequest('/admin/auth/change-password', { method: 'POST', body: payload }),

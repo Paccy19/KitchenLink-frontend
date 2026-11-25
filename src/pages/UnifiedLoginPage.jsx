@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Bike, Check, Store, UtensilsCrossed, User } from 'lucide-react';
+import { ArrowRight, Bike, Check, Eye, EyeOff, Store, UtensilsCrossed, User } from 'lucide-react';
 import { sendUnifiedLoginOtp, verifyUnifiedLoginOtp } from '../api/endpoints';
 import { useAuth } from '../context/AuthContext';
 import { useVendor } from '../context/VendorContext';
 import { useDriver } from '../context/DriverContext';
+import { useAdmin } from '../context/AdminContext';
 import { IDENTIFIER_ERROR, IDENTIFIER_MAX_LENGTH, IDENTIFIER_PLACEHOLDER, isValidIdentifier, looksLikeEmail, sanitizeIdentifierInput } from '../utils/validation';
 
 const ROLE_OPTIONS = [
@@ -19,16 +20,25 @@ export default function UnifiedLoginPage() {
   const { acceptUnifiedCustomerSession } = useAuth();
   const { acceptUnifiedLogin: acceptVendorSession } = useVendor();
   const { acceptUnifiedLogin: acceptDriverSession } = useDriver();
+  const { login: adminLogin } = useAdmin();
 
   const [identifier, setIdentifier] = useState('');
   const [pendingIdentifier, setPendingIdentifier] = useState('');
   const [code, setCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('');
   const [availableRoles, setAvailableRoles] = useState([]);
   const [step, setStep] = useState('identifier');
   const [devOtp, setDevOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const timer = setTimeout(() => setResendCooldown((remaining) => Math.max(0, remaining - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const submitIdentifier = async (event) => {
     event.preventDefault();
@@ -52,10 +62,55 @@ export default function UnifiedLoginPage() {
       }
       setPendingIdentifier(result.identifier || identifier.trim());
       setRole(result.role);
+      if (result.requires_password && result.role === 'admin') {
+        setStep('password');
+        return;
+      }
       setDevOtp(result.dev_otp || '');
+      setResendCooldown(result.resend_after_seconds || 30);
       setStep('otp');
     } catch (requestError) {
       setError(requestError.message || 'Could not send a sign-in code.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitPassword = async (event) => {
+    event.preventDefault();
+    const password = String(new FormData(event.currentTarget).get('password') || '');
+    if (!password) {
+      setError('Enter your administrator password.');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    try {
+      await adminLogin(pendingIdentifier, password);
+      navigate('/admin-dashboard', { replace: true });
+    } catch (requestError) {
+      setError(requestError.message || 'Could not sign in.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (busy || resendCooldown > 0) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await sendUnifiedLoginOtp(pendingIdentifier, role);
+      if (result.requires_password && result.role === 'admin') {
+        setStep('password');
+        return;
+      }
+      setDevOtp(result.dev_otp || '');
+      setResendCooldown(result.resend_after_seconds || 30);
+    } catch (requestError) {
+      setError(requestError.message || 'Could not resend the sign-in code.');
+      setResendCooldown(requestError.details?.retry_after_seconds || 0);
     } finally {
       setBusy(false);
     }
@@ -107,6 +162,7 @@ export default function UnifiedLoginPage() {
     setPendingIdentifier('');
     setCode('');
     setDevOtp('');
+    setResendCooldown(0);
     setRole('');
     setAvailableRoles([]);
     setError('');
@@ -122,13 +178,15 @@ export default function UnifiedLoginPage() {
           <h1 className="mt-4 text-2xl font-black text-[#172033] tracking-tight">Sign in to KitchenLink</h1>
           <p className="mt-1 text-sm text-stone-500">
             {step === 'identifier'
-              ? 'Enter your phone number or email. We’ll identify your account and send a sign-in code.'
-              : `Enter the 6-digit code sent to ${pendingIdentifier}.`}
+              ? 'Enter your phone number or email to continue.'
+              : step === 'password'
+                ? `Enter the administrator password for ${pendingIdentifier}.`
+                : `Enter the 6-digit code sent to ${pendingIdentifier}.`}
           </p>
         </div>
 
         <form
-          onSubmit={step === 'identifier' ? submitIdentifier : submitCode}
+          onSubmit={step === 'identifier' ? submitIdentifier : step === 'password' ? submitPassword : submitCode}
           className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 sm:p-8 space-y-4"
         >
           {step === 'identifier' ? (
@@ -186,6 +244,40 @@ export default function UnifiedLoginPage() {
                 </fieldset>
               )}
             </>
+          ) : step === 'password' ? (
+            <>
+              <div>
+                <label htmlFor="login-password" className="text-xs font-bold text-stone-500 block mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    autoFocus
+                    required
+                    className="w-full px-3 py-3 pr-12 text-sm rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/10 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((shown) => !shown)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={changeIdentifier}
+                className="w-full text-xs font-bold text-[#542813] hover:text-[#2b1206]"
+              >
+                Back
+              </button>
+            </>
           ) : (
             <>
               <div>
@@ -217,6 +309,14 @@ export default function UnifiedLoginPage() {
               >
                 Change phone or email
               </button>
+              <button
+                type="button"
+                onClick={resendCode}
+                disabled={busy || resendCooldown > 0}
+                className="w-full text-xs font-bold text-[#542813] hover:text-[#2b1206] disabled:text-stone-400 disabled:cursor-not-allowed"
+              >
+                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+              </button>
             </>
           )}
 
@@ -231,7 +331,7 @@ export default function UnifiedLoginPage() {
             disabled={busy}
             className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95 disabled:opacity-60"
           >
-            {busy ? 'Please wait…' : step === 'identifier' ? 'Send sign-in code' : 'Verify & sign in'}
+            {busy ? 'Please wait…' : step === 'identifier' ? 'Continue' : step === 'password' ? 'Sign in' : 'Verify & sign in'}
             {step === 'otp' ? <Check className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
@@ -241,9 +341,6 @@ export default function UnifiedLoginPage() {
           <Link to="/signup" className="font-bold text-[#542813] hover:text-[#2b1206] underline underline-offset-2">
             Create Account
           </Link>
-        </p>
-        <p className="mt-3 text-center text-[11px] text-stone-400">
-          Administrator? <Link to="/admin-login" className="font-semibold text-stone-500 hover:text-[#542813]">Admin sign in</Link>
         </p>
       </div>
     </div>

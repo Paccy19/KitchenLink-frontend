@@ -83,7 +83,7 @@ function installBadge() {
     <div data-panel hidden style="padding:0 12px 10px;font-weight:500;width:250px;max-width:100%">
       <p style="margin:0 0 6px">Nothing here is real and no backend is used.</p>
       <p style="margin:0 0 6px">Sign in with any phone number and the code <b>${DEMO_OTP}</b>
-        (kitchen, delivery worker and customer). Admin: any email and password.
+        (kitchen, delivery worker and customer). Admin: admin@kitchenlink.demo or 0788000001, with any password.
         Any SMS code asked for is also <b>${DEMO_OTP}</b>.</p>
       <button type="button" data-reset style="all:unset;cursor:pointer;text-decoration:underline">
         Reset demo data

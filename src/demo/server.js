@@ -663,6 +663,20 @@ function demoLoginAccounts(identifier) {
 
 function sendDemoUnifiedOtp(request) {
   const identifier = String(request.body.identifier || '').trim();
+  const identifierKey = demoIdentifierKey(identifier);
+  const adminAccount = state.team.find((admin) => (
+    admin.status !== 'deleted'
+    && (demoIdentifierKey(admin.phone) === identifierKey || demoIdentifierKey(admin.email) === identifierKey)
+  ));
+  if (adminAccount) {
+    return {
+      role: 'admin',
+      requires_password: true,
+      identifier,
+      identifier_type: identifier.includes('@') ? 'email' : 'phone',
+    };
+  }
+
   const accounts = demoLoginAccounts(identifier);
   if (!accounts.length) fail(404, 'No customer, vendor or delivery worker account was found for this phone number or email address.', 'ACCOUNT_NOT_FOUND');
   const roles = [...new Set(accounts.map((account) => account.role))];
@@ -678,12 +692,20 @@ function sendDemoUnifiedOtp(request) {
     identifier_type: identifier.includes('@') ? 'email' : 'phone',
     ...(identifier.includes('@') ? {} : { dev_otp: DEMO_OTP }),
     expires_in_seconds: 300,
+    resend_after_seconds: 30,
   };
 }
 
 function verifyDemoUnifiedOtp(request) {
-  checkOtp(request.body.code);
   const identifier = String(request.body.identifier || '').trim();
+  const identifierKey = demoIdentifierKey(identifier);
+  if (state.team.some((admin) => (
+    admin.status !== 'deleted'
+    && (demoIdentifierKey(admin.phone) === identifierKey || demoIdentifierKey(admin.email) === identifierKey)
+  ))) {
+    fail(400, 'Administrator accounts sign in with their password.', 'PASSWORD_REQUIRED');
+  }
+  checkOtp(request.body.code);
   const accounts = demoLoginAccounts(identifier);
   const match = accounts.find((account) => account.role === request.body.role);
   if (!match) fail(404, 'That account type is not associated with this phone number or email address.', 'ACCOUNT_ROLE_NOT_FOUND');
@@ -1924,11 +1946,14 @@ const paymentRows = () =>
 
 const adminRoutes = [
   ['POST', '/admin/auth/login', (r) => {
-    if (!r.body.email || !r.body.password) fail(400, 'Enter your email and password.');
-    // With SMS codes turned on (Settings), sign-in asks for the code too.
-    if (state.admin2fa) {
-      return { two_factor_required: true, challenge_token: 'demo-challenge', sent_to: '+250 78• ••• 001', dev_otp: DEMO_OTP };
-    }
+    const identifier = String(r.body.identifier || r.body.email || '').trim();
+    const identifierKey = demoIdentifierKey(identifier);
+    if (!identifier || !r.body.password) fail(400, 'Enter your account identifier and password.');
+    const adminAccount = state.team.find((admin) => (
+      admin.status !== 'deleted'
+      && (demoIdentifierKey(admin.phone) === identifierKey || demoIdentifierKey(admin.email) === identifierKey)
+    ));
+    if (!adminAccount) fail(401, 'Invalid email or password.', 'INVALID_CREDENTIALS');
     return { token: TOKENS.admin, admin: adminProfile() };
   }],
   ['POST', '/admin/auth/logout', () => ({ ok: true })],

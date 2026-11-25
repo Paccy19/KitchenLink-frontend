@@ -56,9 +56,6 @@ const DriverSupportPage = lazy(() => import('./pages/driver/DriverSupportPage'))
 
 // Admin panel (separate shell without the customer chrome).
 const AdminLayout = lazy(() => import('./components/admin-dashboard/AdminLayout'));
-const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'));
-// Stage 2 of the admin sign-in that starts at the customer phone login.
-const AdminVerifyPage = lazy(() => import('./pages/admin/AdminVerifyPage'));
 const AdminOverviewPage = lazy(() => import('./pages/admin/AdminOverviewPage'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminVendorsPage = lazy(() => import('./pages/admin/AdminVendorsPage'));
@@ -136,8 +133,8 @@ export default function App() {
               <Route path="/vendor-login" element={<Navigate to="/login" replace />} />
               <Route path="/driver-register" element={<DriverRegisterPage />} />
               <Route path="/driver-login" element={<Navigate to="/login" replace />} />
-              <Route path="/admin-login" element={<AdminLoginPage />} />
-              <Route path="/admin-verify" element={<AdminVerifyPage />} />
+              <Route path="/admin-login" element={<Navigate to="/login" replace />} />
+              <Route path="/admin-verify" element={<Navigate to="/login" replace />} />
               <Route path="/admin-invite" element={<AdminInvitePage />} />
 
               <Route path="/admin-dashboard" element={<AdminLayout />}>
