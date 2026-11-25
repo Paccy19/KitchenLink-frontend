@@ -1,10 +1,11 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import TopRatedKitchens from './TopRatedKitchens';
 import BrandStrip from './BrandStrip';
 import HeroSlider from './HeroSlider';
-import CategoryBar from './CategoryBar';
+import KitchensRow from './KitchensRow';
+import AllDishes from './AllDishes';
 import SearchBar from './SearchBar';
 import VendorCard from './VendorCard';
 import DishCard from './DishCard';
@@ -16,7 +17,6 @@ import { HomeFeedSkeleton, VendorTileSkeleton, Skeleton } from '../common/Skelet
 import { useToast } from '../common/Toast';
 
 import useHomeFeed from '../../hooks/useHomeFeed';
-import useCategories from '../../hooks/useCategories';
 import useVendorSpecials from '../../hooks/useVendorSpecials';
 import useAllVendors from '../../hooks/useAllVendors';
 import useVendorOffers from '../../hooks/useVendorOffers';
@@ -65,11 +65,10 @@ function CompactDishSkeleton() {
 
 /**
  * Homepage feed: search + hero slider (Big Events, Tomorrow's Specials) next
- * to the popular dishes → categories → kitchens,
+ * to the popular dishes → kitchens near you → kitchen lists,
  * with pull-to-refresh and graceful loading/error/empty states.
  */
 export default function HomeFeed() {
-  const navigate = useNavigate();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -82,7 +81,9 @@ export default function HomeFeed() {
   const typeQuery = vendorTypes.length ? `?type=${vendorTypes.join(',')}` : '';
 
   const feed = useHomeFeed({ vendorTypes });
-  const categories = useCategories({ enabled: !urlQuery.trim() });
+  // "Kitchens Near You": nearest first from the server, every kitchen type
+  // (the Kitchen type filter lower down only changes the lists under it).
+  const nearKitchens = useAllVendors({ perPage: 20, enabled: !urlQuery.trim() });
   const specials = useVendorSpecials();
   const offers = useVendorOffers();
   const allVendors = useAllVendors({ perPage: 6, vendorTypes, enabled: !urlQuery.trim() });
@@ -112,10 +113,6 @@ export default function HomeFeed() {
   }, [feed, toast]);
 
   const pull = usePullToRefresh(refreshFeed);
-
-  const handleCategorySelect = (categoryId) => {
-    navigate(categoryId ? `/vendors?category=${encodeURIComponent(categoryId)}` : '/vendors');
-  };
 
   const isSearching = urlQuery.trim().length > 0;
   const data = feed.data;
@@ -156,6 +153,18 @@ export default function HomeFeed() {
 
           {/* Big Events, then one slide per Tomorrow's Special / Offer Day. */}
           <HeroSlider fill specials={specials.data ?? []} offers={offers.data ?? []} className="lg:flex-1" />
+          {/* The specials live in the slider; this links to all of them. */}
+          {((specials.data?.length ?? 0) > 0 || (offers.data?.length ?? 0) > 0) && (
+            <div className="mt-2 flex justify-end">
+              <Link
+                to="/vendors?filter=preorder"
+                className="text-xs font-black text-[#542813] hover:text-[#2b1206] whitespace-nowrap flex items-center gap-1 group transition-colors"
+              >
+                <span>View all specials</span>
+                <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Link>
+            </div>
+          )}
         </div>
 
         <section aria-label="Popular dishes near you" className="min-w-0">
@@ -200,28 +209,15 @@ export default function HomeFeed() {
         />
       ) : (
         <div className="space-y-10 sm:space-y-12">
-          {/* Categories (live; tapping one opens the filtered kitchens) */}
-          <CategoryBar
-            categories={categories.data ?? data?.categories ?? []}
-            activeId={null}
-            onSelect={handleCategorySelect}
-            loading={categories.isPending}
-            title="Popular Food Categories"
-            subtitle="Explore a wide variety of cuisines"
+          {/* Kitchens near the customer (open first, then by rating); tapping one opens it. */}
+          <KitchensRow
+            vendors={nearKitchens.data?.vendors ?? []}
+            loading={nearKitchens.isPending}
+            allTo="/vendors"
           />
 
-          {/* The specials now live in the slider at the top; this links to all of them. */}
-          {((specials.data?.length ?? 0) > 0 || (offers.data?.length ?? 0) > 0) && (
-            <div className="-mt-4 sm:-mt-6 flex justify-end">
-              <Link
-                to="/vendors?filter=preorder"
-                className="text-xs font-black text-[#542813] hover:text-[#2b1206] whitespace-nowrap flex items-center gap-1 group transition-colors"
-              >
-                <span>View all specials</span>
-                <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-              </Link>
-            </div>
-          )}
+          {/* Every dish from every kitchen, 8 at a time, with category chips and sorting. */}
+          <AllDishes />
 
           {/* Kitchen type, right above the kitchen lists it changes. */}
           {typeToolbar}

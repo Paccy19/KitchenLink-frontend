@@ -138,6 +138,33 @@ export function normalizeVendor(raw = {}) {
   };
 }
 
+function normalizeDishOptions(rawOptions) {
+  const groups = new Map();
+  for (const option of Array.isArray(rawOptions) ? rawOptions : []) {
+    if (!option || typeof option !== 'object') continue;
+    const groupName = toText(option.group_name, option.name, option.label, 'Options');
+    const choices = Array.isArray(option.choices)
+      ? option.choices
+      : Array.isArray(option.items)
+        ? option.items
+        : [option.name];
+    const normalizedChoices = choices
+      .map((choice) =>
+        typeof choice === 'object'
+          ? toText(choice?.name, choice?.label, choice?.value)
+          : toText(choice),
+      )
+      .filter(Boolean);
+    if (!normalizedChoices.length) continue;
+    if (!groups.has(groupName)) groups.set(groupName, []);
+    groups.get(groupName).push(...normalizedChoices);
+  }
+  return [...groups.entries()].map(([name, choices]) => ({
+    name,
+    choices: [...new Set(choices)],
+  }));
+}
+
 /**
  * @param {import('./types').RawDish} raw
  * @param {Object} [vendorRef] Optional fallback vendor reference
@@ -152,6 +179,12 @@ export function normalizeDish(raw = {}, vendorRef = null) {
           name: toText(rawVendor.name, rawVendor.vendor_name),
           type: toText(rawVendor.vendor_type_label, vendorTypeLabel(rawVendor.vendor_type ?? rawVendor.type)),
           typeCode: toVendorTypeCode(rawVendor.vendor_type ?? rawVendor.type),
+          // The All Dishes list says whether the kitchen is open, and when it reopens.
+          isOpen: toBool(rawVendor.is_open, true),
+          opensAt:
+            rawVendor.opens_at && typeof rawVendor.opens_at === 'object' && rawVendor.opens_at.time
+              ? { time: String(rawVendor.opens_at.time), dayOffset: Number(rawVendor.opens_at.day_offset) || 0, day: toText(rawVendor.opens_at.day) }
+              : null,
         }
       : {
           id: toText(
@@ -175,14 +208,10 @@ export function normalizeDish(raw = {}, vendorRef = null) {
     isPreorder: toBool(raw.is_preorder ?? raw.isPreorder, false),
     preorderCutoff: toText(raw.preorder_cutoff ?? raw.preorderCutoff),
     popular: toBool(raw.popular ?? raw.is_popular, false),
-    options: Array.isArray(raw.options)
-      ? raw.options.map((option) => ({
-          name: toText(option?.name, option?.label, 'Option'),
-          choices: Array.isArray(option?.choices)
-            ? option.choices
-            : Array.isArray(option?.items) ? option.items : [],
-        }))
-      : [],
+    categoryId: toText(raw.category_id),
+    // Lists may leave the options out and only say whether there are any.
+    hasOptions: toBool(raw.has_options, Array.isArray(raw.options) && raw.options.length > 0),
+    options: normalizeDishOptions(raw.options),
     vendor,
     rating: Number(toNumber(raw.rating, 0).toFixed(2)),
     matchedFields: Array.isArray(raw.matched_fields) ? raw.matched_fields : [],

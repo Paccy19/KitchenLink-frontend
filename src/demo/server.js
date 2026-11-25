@@ -134,6 +134,22 @@ const feeForKm = (km) =>
   feeFromRanges(state.settings.delivery_fee_ranges, km ?? 3) ??
   Math.max(800, Math.round((500 + 200 * (km ?? 3)) / 100) * 100);
 
+/** The next opening time from a weekly schedule (browser local time stands in for Kigali). */
+function demoNextOpening(hours = []) {
+  const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const kigaliTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const today = kigaliTime.getUTCDay();
+  const nowMinutes = kigaliTime.getUTCHours() * 60 + kigaliTime.getUTCMinutes();
+  for (let offset = 0; offset <= 7; offset += 1) {
+    const day = DAYS[(today + offset) % 7];
+    const slot = hours.find((h) => h.day === day && !h.is_closed && /^\d{1,2}:\d{2}$/.test(h.open_time || ''));
+    if (!slot) continue;
+    const [hh, mm] = slot.open_time.split(':').map(Number);
+    if (offset > 0 || hh * 60 + mm > nowMinutes) return { day, time: slot.open_time, day_offset: offset };
+  }
+  return null;
+}
+
 function paginate(list, query, defaultLimit = 20) {
   const page = Math.max(1, Number(query.get('page')) || 1);
   const limit = Math.max(1, Number(query.get('limit')) || defaultLimit);
@@ -1072,6 +1088,44 @@ const customerRoutes = [
       dishes: dishes.map(publicDish),
       vendors: vendors.map((v) => publicVendor(v, from)),
       counts: { dishes: dishes.length, vendors: vendors.length },
+    };
+  }],
+  // Every available dish, a page at a time (mirrors the backend's GET /home/dishes).
+  ['GET', '/home/dishes', (r) => {
+    const category = r.query.get('category') || r.query.get('category_id');
+    const sort = r.query.get('sort') || 'recommended';
+    const prep = (item) => item.preparation_time_minutes || findVendor(item.vendor_id)?.estimated_prep_time || 30;
+    const rating = (item) => findVendor(item.vendor_id)?.rating || 0;
+    const open = (item) => (findVendor(item.vendor_id)?.is_open === false ? 0 : 1);
+    const ordered = (item) => item.orders_count ?? Number(item.is_popular);
+    const sorters = {
+      price_asc: (a, b) => a.price_rwf - b.price_rwf,
+      price_desc: (a, b) => b.price_rwf - a.price_rwf,
+      rating: (a, b) => rating(b) - rating(a),
+      delivery_time: (a, b) => prep(a) - prep(b),
+    };
+    const list = liveItems()
+      .filter((item) => item.is_available && !item.deleted_at && (!category || item.category_id === category))
+      .sort((a, b) => {
+        const primary = sorters[sort]?.(a, b);
+        if (primary !== undefined) return primary || ordered(b) - ordered(a) || a.id.localeCompare(b.id);
+        return open(b) - open(a) || ordered(b) - ordered(a) || rating(b) - rating(a) || a.name.localeCompare(b.name);
+      });
+    const { page, limit, total, slice } = paginate(list, r.query, 8);
+    return {
+      dishes: slice.map((item) => {
+        const vendor = findVendor(item.vendor_id);
+        const dish = publicDish(item);
+        return {
+          ...dish,
+          category_id: item.category_id,
+          category_name: dish.category,
+          estimated_prep_time: prep(item),
+          has_options: (item.options || []).length > 0,
+          vendor: { ...dish.vendor, is_open: vendor.is_open !== false, opens_at: vendor.is_open === false ? demoNextOpening(vendor.hours) : null },
+        };
+      }),
+      meta: { page, limit, total, has_more: page * limit < total, sort, category_id: category || null },
     };
   }],
 
