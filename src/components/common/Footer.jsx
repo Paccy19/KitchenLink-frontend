@@ -45,6 +45,8 @@ export default function Footer() {
               <li><Link to="/vendors?filter=preorder" className={link}>Tomorrow's Specials (Pre-Order)</Link></li>
               <li><Link to="/orders" className={link}>Order Tracking & History</Link></li>
               <li><Link to="/profile" className={link}>Saved Addresses & Preferences</Link></li>
+              <li><Link to="/login" className={link}>Sign In</Link></li>
+              <li><Link to="/signup" className={link}>Create Account</Link></li>
             </ul>
           </div>
 

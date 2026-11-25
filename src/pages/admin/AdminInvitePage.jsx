@@ -5,7 +5,6 @@ import {
   ShieldCheck, Store, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, Phone, KeyRound, Lock, Eye, EyeOff,
 } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
-import { useAuth } from '../../context/AuthContext';
 import {
   PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput,
 } from '../../utils/validation';
@@ -450,21 +449,19 @@ function PasswordStage({ token, verifiedPhone, onNeedsPhone, onDone }) {
 
 function Done({ email }) {
   const navigate = useNavigate();
-  const { openAuthModal } = useAuth();
   const goToSignIn = () => {
-    navigate('/', { replace: true });
-    openAuthModal();
+    navigate('/admin-login', { replace: true });
   };
   return (
     <div className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 sm:p-8 text-center space-y-3">
       <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
       <h1 className="text-lg font-black text-gray-900">Registration complete</h1>
       <p className="text-sm text-stone-600">
-        Your administrator account is active. To sign in, choose <strong className="text-gray-900">Customer</strong>, enter your verified
-        phone number and the code we send, then your admin email <strong className="text-gray-900">{email}</strong> and password.
+        Your administrator account is active. Sign in with your admin email <strong className="text-gray-900">{email}</strong> and password.
+        If two-factor authentication is enabled, enter the verification code sent to your phone.
       </p>
       <button type="button" onClick={goToSignIn} className={primaryButton.replace('w-full ', '')}>
-        Go to sign in <ArrowRight className="w-4 h-4" />
+        Admin sign in <ArrowRight className="w-4 h-4" />
       </button>
     </div>
   );

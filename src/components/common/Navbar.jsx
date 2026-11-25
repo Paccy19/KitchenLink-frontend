@@ -31,7 +31,6 @@ import { useNotifications } from '../../context/NotificationContext';
 import { notificationLink } from '../../utils/notificationLink';
 import FadeImage from './FadeImage';
 import NotificationPopups from './NotificationPopups';
-import RoleSelectModal from '../auth/RoleSelectModal';
 import ThemeToggle from './ThemeToggle';
 import useSupportUnread from '../../hooks/useSupportUnread';
 import { chatApi } from '../../api/endpoints';
@@ -99,7 +98,6 @@ export default function Navbar() {
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isRoleSelectOpen, setIsRoleSelectOpen] = useState(false);
 
   // Clicking anywhere outside the notifications or account dropdown (or pressing Esc) closes it.
   const notificationsRef = useRef(null);
@@ -570,13 +568,21 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => setIsRoleSelectOpen(true)}
-                className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-full bg-[#3d1b0c] hover:bg-[#2b1206] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#2b1206]/20 transition-all active:scale-95"
-              >
-                <User className="w-4 h-4 text-[#f7a23b]" />
-                <span>Sign In</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/signup"
+                  className="px-3 py-2.5 rounded-full border border-stone-200 bg-white hover:bg-[#faf6f2] text-[#542813] font-bold text-xs sm:text-sm transition-all active:scale-95"
+                >
+                  Sign Up
+                </Link>
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-full bg-[#3d1b0c] hover:bg-[#2b1206] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#2b1206]/20 transition-all active:scale-95"
+                >
+                  <User className="w-4 h-4 text-[#f7a23b]" />
+                  <span>Sign In</span>
+                </Link>
+              </div>
             )}
 
           </div>
@@ -626,10 +632,6 @@ export default function Navbar() {
 
       </div>
     </header>
-      <RoleSelectModal
-        open={isRoleSelectOpen}
-        onClose={() => setIsRoleSelectOpen(false)}
-      />
     </>
   );
 }

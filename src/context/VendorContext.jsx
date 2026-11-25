@@ -305,6 +305,18 @@ export function VendorProvider({ children }) {
     [pendingLoginPhone],
   );
 
+  const acceptUnifiedLogin = useCallback((result) => {
+    clearAllSessions();
+    setVendorToken(result.token);
+    setAuthToken(result.token);
+    setVendor(mapVendorAccount(result.vendor));
+    setPendingLoginPhone('');
+    setLoginOtpPreview('');
+    setAccountBlock(null);
+    setError('');
+    return result;
+  }, []);
+
   const logout = useCallback(() => {
     clearAllSessions();
     setAuthToken('');
@@ -603,6 +615,7 @@ export function VendorProvider({ children }) {
       loadCategories,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       accountBlock,
@@ -660,6 +673,7 @@ export function VendorProvider({ children }) {
       loadCategories,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       accountBlock,
