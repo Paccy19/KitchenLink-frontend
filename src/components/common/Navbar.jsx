@@ -200,19 +200,6 @@ export default function Navbar() {
         />
       )}
       <header ref={headerRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
-      {/* Top Banner for Pre-order & Scheduled Meals reminder */}
-      <div className="bg-[#2b1206] text-[#f5ebe1] text-xs py-1.5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 overflow-hidden">
-          <Link to="/vendors?filter=preorder" className="flex items-center gap-2 min-w-0 hover:text-white transition">
-            <span className="flex-shrink-0 bg-[#f28c18] text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-              New
-            </span>
-            <span className="min-w-0 truncate font-medium">Order now, or pre-order tomorrow's specials from Kigali's home cooks and kitchens!</span>
-          </Link>
-          <span className="hidden md:block flex-shrink-0 text-[#d9bda6] font-medium">Delicious food. Delivered with care.</span>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           
