@@ -1,190 +1,109 @@
-import React, { useRef } from 'react';
-import clsx from 'clsx';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  LayoutGrid, 
-  Soup, 
-  Flame, 
-  Sandwich, 
-  Salad, 
-  Croissant, 
-  Coffee, 
-  Clock, 
-  Beef, 
-  CupSoda, 
-  Cake, 
-  UtensilsCrossed 
-} from 'lucide-react';
-import FadeImage from '../common/FadeImage';
-import { scrollBehavior } from '../../utils/motion';
+import React from 'react';
+import { LayoutGrid } from 'lucide-react';
+import HomeCardRow, { RowCardIcon, RowCardImage, rowCardClass } from './HomeCardRow';
 import { CategoryBarSkeleton } from '../common/Skeleton';
 
 const isImageUrl = (value = '') =>
-  /^(https?:)?\/\//i.test(value) || value.startsWith('data:image');
+  /^(https?:)?\/\//i.test(value) || value.startsWith('data:image') || value.startsWith('/');
 
-const CATEGORY_ICON_MAP = {
-  all: LayoutGrid,
-  local: Soup,
-  african: Flame,
-  'fast-food': Sandwich,
-  fast_food: Sandwich,
-  healthy: Salad,
-  bakery: Croissant,
-  breakfast: Coffee,
-  lunch: Clock,
-  dinner: Beef,
-  drinks: CupSoda,
-  desserts: Cake,
+const PHOTO = (name) => `/images/home/food/${name}.jpg`;
+
+/**
+ * A food photo for a category, from words in its name (the categories are
+ * the live ones from the server; admins can rename or add them). First match
+ * wins; anything unknown gets a general plate.
+ */
+const PHOTO_RULES = [
+  [/pizza/, 'pizza'],
+  // Before "fast": "breakfast" contains it.
+  [/breakfast|pancake/, 'pancakes'],
+  [/burger|\bfast|street|snack/, 'burger'],
+  [/grill|brochette|bbq|barbecue|kebab|skewer/, 'skewers'],
+  [/meat|steak|dinner/, 'steak'],
+  [/healthy|salad|vegan|vegetarian|meal prep/, 'salad'],
+  [/rice|bowl|lunch|prepared/, 'bowl'],
+  [/pasta|noodle/, 'pasta'],
+  [/bread|bakery/, 'bread'],
+  [/pastr|croissant/, 'toast'],
+  [/cake|cookie|biscuit/, 'cake'],
+  [/dessert|sweet|ice cream/, 'dessert'],
+  [/coffee|tea|cafe/, 'coffee'],
+  [/drink|juice|smoothie|beverage/, 'juice'],
+  [/local|rwanda|african|traditional|signature|restaurant|catering|general/, 'plate'],
+];
+const photoFor = (name = '') => {
+  const lower = name.toLowerCase();
+  const rule = PHOTO_RULES.find(([pattern]) => pattern.test(lower));
+  return PHOTO(rule ? rule[1] : 'plate');
 };
 
-// Category names map to icons: "Local Food" -> local, "Fast Food" -> fast-food.
-const iconKeyFromName = (name = '') => {
-  const slug = name.toLowerCase().trim().replace(/\s+food$/, '').replace(/\s+/g, '-');
-  return slug === 'fast' ? 'fast-food' : slug;
-};
-
-function CategoryIcon({ iconKey, categoryId, name, active }) {
-  const lookupKey = (iconKey || categoryId || '').toLowerCase().replace(/_/g, '-');
-  const IconComponent =
-    CATEGORY_ICON_MAP[lookupKey] ||
-    CATEGORY_ICON_MAP[categoryId] ||
-    CATEGORY_ICON_MAP[iconKeyFromName(name)] ||
-    UtensilsCrossed;
-
-  const icon = (
-    <IconComponent
-      className={clsx(
-        'w-5 h-5 transition-transform duration-200 group-hover:scale-110',
-        active ? 'text-white' : 'text-[#542813]'
-      )}
-      aria-hidden="true"
-    />
+function CategoryCard({ name, image, active, onClick, label, title, icon: Icon = null }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      aria-label={label}
+      title={title}
+      onClick={onClick}
+      className={rowCardClass(active)}
+    >
+      {/* "All": an icon tile instead of a photo, as in the design. */}
+      {Icon ? <RowCardIcon icon={Icon} active={active} /> : <RowCardImage src={image} />}
+      <span className="block px-2 py-2.5 text-xs sm:text-[13px] font-bold leading-tight text-center line-clamp-2">
+        {name}
+      </span>
+    </button>
   );
-
-  // Uploaded icon image; a broken link falls back to the matching built-in icon.
-  if (isImageUrl(iconKey)) {
-    return <FadeImage src={iconKey} aria-hidden="true" className="h-6 w-6 object-contain" fallback={icon} />;
-  }
-  return icon;
 }
 
 /**
- * Persistent horizontal category bar for the homepage.
- * Tapping a category navigates to the filtered nearby-vendors list.
+ * "Popular Food Categories" row on the homepage: photo cards for the live
+ * categories (an image an admin uploaded for a category is used first).
+ * Tapping one opens the kitchens filtered by it, exactly as before.
  *
  * @param {{categories:Array, activeId?:string|null,
  *          onSelect:(categoryId:string|null)=>void, loading?:boolean}} props
  */
-export default function CategoryBar({ categories = [], activeId = null, onSelect, loading = false }) {
-  const scrollerRef = useRef(null);
-
-  const scrollBy = (amount) => {
-    scrollerRef.current?.scrollBy({ left: amount, behavior: scrollBehavior() });
-  };
-
+export default function CategoryBar({
+  categories = [],
+  activeId = null,
+  onSelect,
+  loading = false,
+  title = 'Explore by Category',
+  subtitle = 'Curated cuisines crafted by local culinary experts',
+}) {
   if (loading && categories.length === 0) return <CategoryBarSkeleton />;
 
   return (
-    <section aria-label="Food categories" className="relative group/bar">
-      <div className="flex items-center justify-between mb-3.5">
-        <div>
-          <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
-            Explore by Category
-          </h2>
-          <p className="text-xs text-stone-500 font-medium">Curated cuisines crafted by local culinary experts</p>
-        </div>
-        <div className="hidden sm:flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => scrollBy(-240)}
-            aria-label="Scroll categories left"
-            className="w-8 h-8 rounded-full bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:border-brand-400 hover:bg-brand-50 flex items-center justify-center transition shadow-sm active:scale-95"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollBy(240)}
-            aria-label="Scroll categories right"
-            className="w-8 h-8 rounded-full bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:border-brand-400 hover:bg-brand-50 flex items-center justify-center transition shadow-sm active:scale-95"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div
-        ref={scrollerRef}
-        className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x scrollbar-none"
-        role="tablist"
-        aria-label="Categories"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeId === null}
+    <HomeCardRow
+      ariaLabel="Food categories"
+      title={title}
+      subtitle={subtitle}
+      scrollLabel="categories"
+      listProps={{ role: 'tablist', 'aria-label': 'Categories' }}
+    >
+        <CategoryCard
+          name="All"
+          icon={LayoutGrid}
+          active={activeId === null}
+          label="Browse all kitchens"
           onClick={() => onSelect?.(null)}
-          className={clsx(
-            'group flex flex-col items-center gap-2 min-w-[80px] snap-start rounded-2xl px-2.5 py-2.5 transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-700/20 active:scale-95',
-            activeId === null
-              ? 'bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#200d05] text-white shadow-lg shadow-[#2b1206]/30 scale-[1.02]'
-              : 'bg-white text-stone-700 border border-stone-200/80 hover:border-brand-300 hover:bg-brand-50/50 hover:-translate-y-0.5 hover:shadow-md',
-          )}
-        >
-          <span
-            className={clsx(
-              'h-12 w-12 rounded-2xl flex items-center justify-center transition-colors shadow-sm',
-              activeId === null
-                ? 'bg-white/15 border border-white/20'
-                : 'bg-stone-50 border border-stone-100 group-hover:bg-[#faf5f0]',
-            )}
-          >
-            <LayoutGrid className={clsx('w-5 h-5 transition-transform duration-200 group-hover:scale-110', activeId === null ? 'text-white' : 'text-[#542813]')} aria-hidden="true" />
-          </span>
-          <span className="text-[11px] font-bold leading-tight text-center">All</span>
-        </button>
-
+        />
         {categories.map((category) => {
-          const active = activeId === category.id;
+          const uploaded = category.iconUrl && isImageUrl(category.iconUrl) ? category.iconUrl : '';
           return (
-            <button
+            <CategoryCard
               key={category.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              aria-label={`Browse ${category.name}`}
+              name={category.name}
+              image={uploaded || photoFor(category.name)}
+              active={activeId === category.id}
+              label={`Browse ${category.name}`}
               title={category.description || category.name}
               onClick={() => onSelect?.(category.id)}
-              className={clsx(
-                'group flex flex-col items-center gap-2 min-w-[80px] snap-start rounded-2xl px-2.5 py-2.5 transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-700/20 active:scale-95',
-                active
-                  ? 'bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#200d05] text-white shadow-lg shadow-[#2b1206]/30 scale-[1.02]'
-                  : 'bg-white text-stone-700 border border-stone-200/80 hover:border-brand-300 hover:bg-brand-50/50 hover:-translate-y-0.5 hover:shadow-md',
-              )}
-            >
-              <span
-                className={clsx(
-                  'h-12 w-12 rounded-2xl flex items-center justify-center transition-colors shadow-sm',
-                  active
-                    ? 'bg-white/15 border border-white/20'
-                    : 'bg-stone-50 border border-stone-100 group-hover:bg-[#faf5f0]',
-                )}
-              >
-                <CategoryIcon
-                  iconKey={category.iconUrl || category.icon}
-                  categoryId={category.id}
-                  name={category.name}
-                  active={active}
-                />
-              </span>
-              <span className="text-[11px] font-bold leading-tight text-center line-clamp-2">
-                {category.name}
-              </span>
-            </button>
+            />
           );
         })}
-      </div>
-    </section>
+    </HomeCardRow>
   );
 }

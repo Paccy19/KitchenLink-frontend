@@ -61,6 +61,22 @@ export function isValidEmail(value) {
   return email.length <= EMAIL_MAX_LENGTH && !email.includes('..') && EMAIL_REGEX.test(email);
 }
 
+/* One sign-in field: a phone number or an email address (the server decides which). */
+export const IDENTIFIER_PLACEHOLDER = '07XXXXXXXX or name@example.com';
+export const IDENTIFIER_ERROR = 'Enter a valid phone number (07XXXXXXXX or +2507XXXXXXXX) or email address.';
+export const IDENTIFIER_MAX_LENGTH = EMAIL_MAX_LENGTH;
+
+/** Anything with a letter or "@" is typed as an email; otherwise as a phone number. */
+export const looksLikeEmail = (value) => /[@a-z]/i.test(String(value ?? ''));
+
+export function sanitizeIdentifierInput(value) {
+  return looksLikeEmail(value) ? sanitizeEmailInput(value) : sanitizePhoneInput(value);
+}
+
+export function isValidIdentifier(value) {
+  return looksLikeEmail(value) ? isValidEmail(value) : isValidRwandaPhone(value);
+}
+
 /** Longest name for any account (customer, kitchen, owner, delivery worker, admin). Matches the backend. */
 export const NAME_MAX_LENGTH = 50;
 

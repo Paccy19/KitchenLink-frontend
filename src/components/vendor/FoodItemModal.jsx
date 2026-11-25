@@ -63,6 +63,7 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose, showKitch
 
   const isSaved = isInWishlist(item.id);
   const hasPrepTime = item.prepTime && item.prepTime !== '—';
+  const kitchenClosed = vendor?.isOpen === false;
 
   const handleWishlistToggle = async () => {
     try {
@@ -273,12 +274,16 @@ export default function FoodItemModal({ item, vendor, isOpen, onClose, showKitch
           <button
             type="button"
             onClick={handleAddToCart}
-            disabled={adding || item.isAvailable === false}
+            disabled={adding || item.isAvailable === false || kitchenClosed}
             className="flex-1 min-w-0 h-12 px-4 rounded-2xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-sm shadow-xl shadow-[#2b1206]/25 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-60 disabled:hover:scale-100"
           >
             <ShoppingBag className="w-4 h-4 text-[#d9bda6] flex-shrink-0" />
             <span className="truncate">
-              {item.isAvailable === false ? 'Sold out' : `Add · ${formatRwf(item.price * quantity)}`}
+              {item.isAvailable === false
+                ? 'Sold out'
+                : kitchenClosed
+                  ? 'Kitchen closed'
+                  : `Add · ${formatRwf(item.price * quantity)}`}
             </span>
           </button>
         </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { useToast } from '../../components/common/Toast';
-import { VENDOR_TYPES, suggestedCategories, vendorTypeLabel, vendorTypeTitle } from '../../data/vendorTypes';
+import { VENDOR_TYPES, vendorTypeLabel, vendorTypeTitle } from '../../data/vendorTypes';
+import { fetchVendorTypes } from '../../api/endpoints';
 import VendorTypeProfile from '../../components/common/VendorTypeProfile';
 import { parseCoords } from '../../components/vendor-dashboard/KitchenCoordinatesPicker';
 import KitchenLocationFields from '../../components/vendor-dashboard/KitchenLocationFields';
@@ -73,7 +74,6 @@ const INITIAL = {
   address: '',
   // Kitchen coordinates as typed / picked on the map (strings).
   coords: { lat: '', lng: '' },
-  foodCategories: [],
   openTime: '08:00',
   closeTime: '20:00',
   payoutMethod: 'MTN Mobile Money',
@@ -84,7 +84,7 @@ const INITIAL = {
 
 export default function VendorRegisterPage() {
   const navigate = useNavigate();
-  const { registerVendor, categories, categoryNames, loadCategories } = useVendor();
+  const { registerVendor } = useVendor();
   const { success, error } = useToast();
 
   const [step, setStep] = useState(1);
@@ -92,34 +92,30 @@ export default function VendorRegisterPage() {
   const [errors, setErrors] = useState({});
   const [created, setCreated] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [showAllCategories, setShowAllCategories] = useState(false);
-
-  // The categories that suit the chosen type come first; the rest stay one tap
-  // away (any kitchen may sell any food). Picked ones always stay visible.
-  const typeCategories = useMemo(
-    () => suggestedCategories(form.type, categoryNames, categories),
-    [form.type, categoryNames, categories],
-  );
-  const narrowCategories = typeCategories.length > 0 && !showAllCategories;
-  const shownCategories = narrowCategories
-    ? categoryNames.filter((category) => typeCategories.includes(category) || form.foodCategories.includes(category))
-    : categoryNames;
-  const hiddenCategoryCount = categoryNames.length - shownCategories.length;
-
+  // Food categories are not picked: KitchenLink assigns the chosen type's
+  // default categories when the account is created. Shown here so the vendor
+  // knows what they get (GET /vendors/types → default_categories).
+  const [typeDefaults, setTypeDefaults] = useState({});
   useEffect(() => {
-    if (categoryNames.length === 0) loadCategories();
-  }, [categoryNames.length, loadCategories]);
+    let alive = true;
+    fetchVendorTypes()
+      .then((data) => {
+        if (!alive) return;
+        const byCode = {};
+        (data?.vendor_types || []).forEach((type) => {
+          byCode[type.code] = (type.default_categories || []).map((category) => category.name);
+        });
+        setTypeDefaults(byCode);
+      })
+      .catch(() => null);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const autoCategories = form.type ? typeDefaults[form.type] || [] : [];
 
   const update = (patch) => setForm((prev) => ({ ...prev, ...patch }));
   const isBankPayout = form.payoutMethod === 'Bank Transfer';
-
-  const toggleCategory = (category) => {
-    update({
-      foodCategories: form.foodCategories.includes(category)
-        ? form.foodCategories.filter((entry) => entry !== category)
-        : [...form.foodCategories, category],
-    });
-  };
 
   const handleDocuments = (event) => {
     const files = Array.from(event.target.files || []);
@@ -144,7 +140,6 @@ export default function VendorRegisterPage() {
       if (!parseCoords(form.coords)) {
         next.coords = "Enter your kitchen's latitude and longitude, or pick it on the map.";
       }
-      if (form.foodCategories.length === 0) next.foodCategories = 'Select at least one food category.';
     }
     if (current === 3) {
       if (isBankPayout) {
@@ -213,6 +208,7 @@ export default function VendorRegisterPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
             <Summary label="Vendor type" value={vendorTypeLabel(created.typeCode || created.type)} />
+            {created.foodCategories?.length > 0 && <Summary label="Food categories" value={created.foodCategories.join(', ')} />}
             <Summary label="Location" value={created.location} />
             <Summary label="Status" value={created.verificationStatus} />
           </div>
@@ -356,6 +352,25 @@ export default function VendorRegisterPage() {
                   <p className="mt-1.5 text-[11px] text-stone-400">Same features as every kitchen type — customers can filter by Other to find unique kitchens.</p>
                 </div>
               )}
+              {/* The food categories this type gets automatically (no choosing needed). */}
+              {form.type && autoCategories.length > 0 && (
+                <div className="mt-2 rounded-2xl border border-stone-200 bg-white px-3.5 py-3">
+                  <p className="text-[11px] font-bold text-stone-600 mb-1.5">
+                    Your food categories (added automatically for {vendorTypeLabel(form.type)} kitchens)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5" aria-label="Food categories added automatically">
+                    {autoCategories.map((category) => (
+                      <span
+                        key={category}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#faf6f2] border border-[#ebd7c5] text-[11px] font-bold text-[#3d1b0c]"
+                      >
+                        <Check className="w-3 h-3" aria-hidden="true" />
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               {errors.type ? (
                 <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.type}</p>
               ) : (
@@ -419,7 +434,7 @@ export default function VendorRegisterPage() {
 
         {step === 2 && (
           <div className="space-y-4 animate-fade-in">
-            <StepHeader title="Operations" subtitle="Where you cook and what you serve" />
+            <StepHeader title="Operations" subtitle="Where you cook and when you are open" />
             <div>
               <p className="text-xs font-bold text-stone-500 flex items-center gap-1.5 mb-1">
                 <MapPin className="w-3.5 h-3.5 text-[#8a5332]" /> Kitchen location
@@ -441,45 +456,6 @@ export default function VendorRegisterPage() {
               />
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-stone-500 block mb-1">Food categories</label>
-              <p className="text-[11px] text-stone-500 mb-2">
-                {typeCategories.length > 0
-                  ? `Categories for ${vendorTypeLabel(form.type)} kitchens. Pick the ones you serve.`
-                  : 'Pick the categories you serve.'}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {shownCategories.map((category) => {
-                  const active = form.foodCategories.includes(category);
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => toggleCategory(category)}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition active:scale-95 ${
-                        active
-                          ? 'bg-[#542813] text-white border-transparent'
-                          : 'bg-white text-stone-600 border-stone-200 hover:border-[#d9bda6] hover:text-[#542813]'
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  );
-                })}
-              </div>
-              {typeCategories.length > 0 && (hiddenCategoryCount > 0 || showAllCategories) && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllCategories((all) => !all)}
-                  className="mt-2 text-[11px] font-bold text-[#542813] hover:underline"
-                >
-                  {showAllCategories ? `Show only ${vendorTypeLabel(form.type)} categories` : `Show all categories (${hiddenCategoryCount} more)`}
-                </button>
-              )}
-              {errors.foodCategories && (
-                <p className="text-[11px] text-red-500 font-semibold mt-1.5">{errors.foodCategories}</p>
-              )}
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <Field label="Opens at" icon={Clock}>

@@ -18,7 +18,7 @@ import { clearAllSessions } from '../api/session';
 const AdminContext = createContext(null);
 
 /**
- * Holds the signed-in admin (email + password session) and exposes the
+ * Holds the signed-in admin (identifier + password session) and exposes the
  * operations the admin panel needs. Kept separate from the customer/vendor/
  * driver contexts so a lingering customer session never affects the panel.
  */
@@ -86,21 +86,11 @@ export function AdminProvider({ children }) {
     };
   }, []);
 
-  // Returns { twoFactorRequired, challengeToken, sentTo, devOtp } when an SMS
-  // code is needed; finish with verifyTwoFactor.
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (identifier, password) => {
     setAuthBusy(true);
     setError('');
     try {
-      const result = await adminApi.login(email, password);
-      if (result.two_factor_required) {
-        return {
-          twoFactorRequired: true,
-          challengeToken: result.challenge_token,
-          sentTo: result.sent_to,
-          devOtp: result.dev_otp || '',
-        };
-      }
+      const result = await adminApi.login(identifier, password);
       clearAllSessions();
       setAdminToken(result.token);
       setAuthToken(result.token);
@@ -127,6 +117,24 @@ export function AdminProvider({ children }) {
     } catch (err) {
       setError(err.message || 'Could not verify the code.');
       throw err;
+    } finally {
+      if (mounted.current) setAuthBusy(false);
+    }
+  }, []);
+
+  // Finishes the sign-in that started at the customer phone login: the
+  // server checks the challenge and that these are the same admin's
+  // credentials, then issues the admin session.
+  const completePhoneLogin = useCallback(async (challengeToken, email, password) => {
+    setAuthBusy(true);
+    setError('');
+    try {
+      const result = await adminApi.phoneLogin(challengeToken, email, password);
+      clearAllSessions();
+      setAdminToken(result.token);
+      setAuthToken(result.token);
+      setAdmin(result.admin);
+      return result;
     } finally {
       if (mounted.current) setAuthBusy(false);
     }
@@ -183,13 +191,14 @@ export function AdminProvider({ children }) {
       permissions: admin?.permissions || [],
       login,
       verifyTwoFactor,
+      completePhoneLogin,
       logout,
       refreshProfile,
       isOwner: admin?.role === 'super_admin',
       can,
       limits,
     }),
-    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, verifyTwoFactor, logout, refreshProfile, can, limits],
+    [admin, isAuthenticated, hasToken, loading, authBusy, error, login, verifyTwoFactor, completePhoneLogin, logout, refreshProfile, can, limits],
   );
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

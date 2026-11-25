@@ -71,7 +71,7 @@ export default function AdminTeamPage() {
     <div className="space-y-5">
       <PageHeader
         title="Team"
-        description="Invite staff by email, give them a role, and the system sends the invitation to set their own password."
+        description="Invite staff by email, give them a role, and the system sends the invitation. They verify their phone with an SMS code, then set their own password."
         action={
           <Button onClick={() => { setInviteLink(''); setInviting(true); }}>
             <UserPlus className="w-4 h-4" /> Invite member
@@ -88,7 +88,7 @@ export default function AdminTeamPage() {
       {inviteLink && (
         <Card title="Share this invitation link">
           <p className="text-xs text-stone-500 mb-2">
-            The email could not be sent automatically. Send this link to the member yourself; it lets them set their password.
+            The email could not be sent automatically. Send this link to the member yourself; it lets them verify their phone and set their password.
           </p>
           <CopyField value={inviteLink} />
         </Card>
@@ -261,7 +261,7 @@ function InviteModal({ open, roles, onClose, onDone }) {
     >
       <div className="space-y-4">
         <p className="text-sm text-stone-600">
-          We email them a link to set their own password. They then sign in at the admin sign-in page with that email and password.
+          We email them a link: they verify their phone number with an SMS code, then set their own password. They then sign in from Customer with that phone, then their email and password.
         </p>
         <Field
           label="Email address"

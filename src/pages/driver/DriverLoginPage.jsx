@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Phone, User, ArrowRight, ShieldCheck, Bike, Check } from 'lucide-react';
 import { useDriver } from '../../context/DriverContext';
-import { PHONE_ERROR, PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidRwandaPhone, sanitizePhoneInput } from '../../utils/validation';
+import { IDENTIFIER_ERROR, IDENTIFIER_MAX_LENGTH, IDENTIFIER_PLACEHOLDER, isValidIdentifier, looksLikeEmail, sanitizeIdentifierInput } from '../../utils/validation';
 
 export default function DriverLoginPage() {
   const navigate = useNavigate();
@@ -22,8 +22,8 @@ export default function DriverLoginPage() {
 
   const submitPhone = async (event) => {
     event.preventDefault();
-    if (!isValidRwandaPhone(phone)) {
-      setError(PHONE_ERROR);
+    if (!isValidIdentifier(phone)) {
+      setError(IDENTIFIER_ERROR);
       return;
     }
     setError('');
@@ -59,7 +59,7 @@ export default function DriverLoginPage() {
           </div>
           <h1 className="mt-4 text-2xl font-black text-gray-900 tracking-tight">Delivery Worker Login</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Sign in securely using a one-time code sent to your phone.
+            Sign in securely using a one-time code sent to your phone or email.
           </p>
         </div>
 
@@ -69,17 +69,19 @@ export default function DriverLoginPage() {
         >
           {step === 'phone' ? (
             <div>
-              <label className="text-xs font-bold text-stone-500 block mb-1.5">Phone number</label>
+              <label className="text-xs font-bold text-stone-500 block mb-1.5">Phone number or email</label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
                 <input
-                  type="tel"
-                  inputMode="tel"
-                  maxLength={PHONE_MAX_LENGTH}
+                  type="text"
+                  inputMode={looksLikeEmail(phone) ? 'email' : 'tel'}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  maxLength={IDENTIFIER_MAX_LENGTH}
                   value={phone}
-                  onChange={(event) => setPhone(sanitizePhoneInput(event.target.value))}
-                  placeholder={PHONE_PLACEHOLDER}
-                  autoComplete="tel"
+                  onChange={(event) => setPhone(sanitizeIdentifierInput(event.target.value))}
+                  placeholder={IDENTIFIER_PLACEHOLDER}
+                  autoComplete="username"
                   required
                   className="w-full pl-9 pr-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#3b5327] focus:ring-2 focus:ring-[#3b5327]/10 outline-none"
                 />
@@ -133,7 +135,7 @@ export default function DriverLoginPage() {
               }}
               className="w-full text-xs font-bold text-[#3b5327] hover:text-[#1c2b12]"
             >
-              Change phone number
+              Change phone or email
             </button>
           )}
         </form>

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { Bike, CreditCard, Loader2, MapPin, Navigation, Smartphone, Wallet, X } from 'lucide-react';
+import { Bike, CreditCard, Loader2, Smartphone, Wallet, X } from 'lucide-react';
 import { quoteSwitchToDelivery, switchOrderToDelivery } from '../../api/endpoints';
-import { useLocation } from '../../context/LocationContext';
 import { useAuth } from '../../context/AuthContext';
+import KitchenLocationFields from '../vendor-dashboard/KitchenLocationFields';
+import { addressPoint } from '../checkout/FulfillmentSection';
+import { formatDistance } from '../../utils/distance';
 import ModalPortal from '../common/ModalPortal';
 import { PHONE_MAX_LENGTH, PHONE_PLACEHOLDER, isValidMomoPhone, isValidRwandaPhone, sanitizePhoneInput, toLocalRwandaPhone } from '../../utils/validation';
 
@@ -22,12 +24,13 @@ const money = (value) => `${Number(value || 0).toLocaleString()} RWF`;
  * and paying it. After the switch the order is offered to delivery workers.
  */
 export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched }) {
-  const { coords, label, source, status: gpsStatus, requestGps } = useLocation();
   const { user } = useAuth();
   const saved = user?.addresses?.find((address) => address.isDefault) || user?.addresses?.[0];
 
   const [street, setStreet] = useState('');
   const [area, setArea] = useState('');
+  // Where the food goes: a map pin the customer sets (not their phone's position).
+  const [pin, setPin] = useState({ lat: '', lng: '' });
   const [note, setNote] = useState('');
   const [quote, setQuote] = useState(null);
   const [quoting, setQuoting] = useState(false);
@@ -41,7 +44,9 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
   useEffect(() => {
     if (!open) return;
     setStreet(saved?.street || '');
-    setArea(saved?.district || (source !== 'default' ? label : ''));
+    setArea(saved?.district || '');
+    const savedPoint = addressPoint(saved);
+    setPin(savedPoint ? { lat: String(savedPoint.lat), lng: String(savedPoint.lng) } : { lat: '', lng: '' });
     setNote(saved?.instructions || '');
     setPhone(user?.phone ? toLocalRwandaPhone(user.phone) : '');
     setQuote(null);
@@ -56,20 +61,26 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
     return () => window.removeEventListener('keydown', onKey);
   }, [open, busy, onClose]);
 
+  const pinPoint = addressPoint(pin.lat === '' || pin.lng === '' ? null : pin);
   const location = () => ({
-    address: street.trim() || label,
+    address: street.trim() || area.trim() || 'Delivery address',
     neighborhood: area.trim(),
-    latitude: coords.lat,
-    longitude: coords.lng,
+    latitude: pinPoint.lat,
+    longitude: pinPoint.lng,
     note: note.trim(),
   });
 
-  // Price it whenever the place changes (the fee depends on the distance).
+  // Price it whenever the pin moves (the fee depends on the road distance to it).
   useEffect(() => {
     if (!open) return undefined;
+    setQuote(null);
+    if (!pinPoint) {
+      setQuoting(false);
+      return undefined;
+    }
     let cancelled = false;
     setQuoting(true);
-    setQuote(null);
+    setError('');
     const timer = setTimeout(() => {
       quoteSwitchToDelivery(order.id, location())
         .then((result) => !cancelled && setQuote(result))
@@ -81,7 +92,7 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, coords.lat, coords.lng]);
+  }, [open, pinPoint?.lat, pinPoint?.lng]);
 
   if (!open) return null;
 
@@ -90,8 +101,7 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
   const phoneOk = method === 'mobile_money' ? isValidMomoPhone(phone) : isValidRwandaPhone(phone);
   const cardOk = /^\d{13,19}$/.test(cardNumber) && /^(0[1-9]|1[0-2])\/\d{2}$/.test(cardExpiry);
   const paymentOk = payNow === 0 || (needsPhone ? phoneOk : cardOk);
-  const addressOk = street.trim().length >= 3;
-  const located = source !== 'default';
+  const addressOk = street.trim().length >= 3 && Boolean(pinPoint);
 
   const confirm = async () => {
     setBusy(true);
@@ -139,26 +149,26 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
         {/* Where to */}
         <div className="space-y-2">
           <p className="text-xs font-bold text-stone-500">Deliver to</p>
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-3 flex items-center gap-3">
-            <MapPin className="w-4 h-4 text-[#8a5332] flex-shrink-0" />
-            <div className="min-w-0 flex-1 text-xs">
-              <p className="font-bold text-gray-900 truncate">{source === 'gps' ? 'My current location' : label}</p>
-              <p className="text-stone-500">{located ? 'The delivery worker comes to this spot.' : 'Share your location so the worker can find you.'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={requestGps}
-              disabled={gpsStatus === 'requesting'}
-              className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-stone-200 bg-white text-[11px] font-bold text-stone-700 hover:bg-stone-100 disabled:opacity-60"
-            >
-              <Navigation className="w-3.5 h-3.5" /> {gpsStatus === 'requesting' ? 'Locating…' : 'Use my location'}
-            </button>
-          </div>
-          <input value={street} onChange={(event) => setStreet(event.target.value.slice(0, 120))} placeholder="Street, building or landmark" className={field} />
-          <div className="grid grid-cols-2 gap-2">
-            <input value={area} onChange={(event) => setArea(event.target.value.slice(0, 80))} placeholder="Area (e.g. Kimironko)" className={field} />
-            <input value={note} onChange={(event) => setNote(event.target.value.slice(0, 200))} placeholder="Note for the worker" className={field} />
-          </div>
+          <p className="text-[11px] text-stone-500">
+            The delivery fee is calculated by road from the kitchen to this pin, so put it where the food should arrive.
+          </p>
+          <KitchenLocationFields
+            area={area}
+            address={street}
+            coords={pin}
+            onChange={(patch) => {
+              if (patch.area !== undefined) setArea(patch.area.slice(0, 80));
+              if (patch.address !== undefined) setStreet(patch.address.slice(0, 120));
+              if (patch.coords !== undefined) setPin(patch.coords);
+            }}
+            inputClass={() => field}
+            areaLabel="Area"
+            addressLabel="Street, building or landmark"
+            place="the delivery spot"
+            placeSpot="the exact spot where the food should arrive"
+            currentLocationHint="At the delivery address right now? Detect it. Otherwise search the area and street, or tap the map."
+          />
+          <input value={note} onChange={(event) => setNote(event.target.value.slice(0, 200))} placeholder="Note for the worker" className={field} />
         </div>
 
         {/* Fee */}
@@ -167,13 +177,13 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
             <p className="flex items-center gap-2 text-stone-500 text-xs"><Loader2 className="w-4 h-4 animate-spin" /> Working out the delivery fee…</p>
           ) : quote ? (
             <div className="space-y-1">
-              <p className="flex justify-between"><span className="text-stone-600">Distance</span><span className="font-bold">{quote.distance_km} km</span></p>
+              <p className="flex justify-between"><span className="text-stone-600">Distance</span><span className="font-bold">{formatDistance(quote.distance_m, quote.distance_km)}</span></p>
               <p className="flex justify-between"><span className="text-stone-600">Delivery fee</span><span className="font-black text-[#4e2410]">{money(quote.delivery_fee_rwf)}</span></p>
               <p className="flex justify-between text-xs"><span className="text-stone-500">New order total</span><span className="font-bold">{money(quote.new_total_rwf)}</span></p>
               {payNow === 0 && <p className="text-[11px] text-stone-500 pt-1">Your order isn't paid yet — the fee is added to what you pay.</p>}
             </div>
           ) : (
-            <p className="text-xs text-red-600">Couldn't price the delivery for this location.</p>
+            <p className="text-xs text-red-600">{pinPoint ? "Couldn't price the delivery to this pin." : "Put the pin on the map to see the delivery fee."}</p>
           )}
         </div>
 
@@ -254,7 +264,7 @@ export default function SwitchToDeliveryModal({ order, open, onClose, onSwitched
             Cancel
           </button>
         </div>
-        {!addressOk && <p className="text-[11px] text-stone-400 -mt-2">Add a street, building or landmark so the worker can find you.</p>}
+        {!addressOk && <p className="text-[11px] text-stone-400 -mt-2">{pinPoint ? "Add a street, building or landmark so the worker can find you." : "Put the delivery spot on the map."}</p>}
       </div>
     </div>
     </ModalPortal>

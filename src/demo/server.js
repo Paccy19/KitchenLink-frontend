@@ -134,6 +134,22 @@ const feeForKm = (km) =>
   feeFromRanges(state.settings.delivery_fee_ranges, km ?? 3) ??
   Math.max(800, Math.round((500 + 200 * (km ?? 3)) / 100) * 100);
 
+/** The next opening time from a weekly schedule (browser local time stands in for Kigali). */
+function demoNextOpening(hours = []) {
+  const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const kigaliTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+  const today = kigaliTime.getUTCDay();
+  const nowMinutes = kigaliTime.getUTCHours() * 60 + kigaliTime.getUTCMinutes();
+  for (let offset = 0; offset <= 7; offset += 1) {
+    const day = DAYS[(today + offset) % 7];
+    const slot = hours.find((h) => h.day === day && !h.is_closed && /^\d{1,2}:\d{2}$/.test(h.open_time || ''));
+    if (!slot) continue;
+    const [hh, mm] = slot.open_time.split(':').map(Number);
+    if (offset > 0 || hh * 60 + mm > nowMinutes) return { day, time: slot.open_time, day_offset: offset };
+  }
+  return null;
+}
+
 function paginate(list, query, defaultLimit = 20) {
   const page = Math.max(1, Number(query.get('page')) || 1);
   const limit = Math.max(1, Number(query.get('limit')) || defaultLimit);
@@ -296,6 +312,21 @@ function groupOptions(options = []) {
 const visibleVendors = () => state.vendors.filter((v) => v.status === 'approved');
 const liveItems = () =>
   state.menuItems.filter((item) => findVendor(item.vendor_id)?.status === 'approved');
+const liveCategories = () => {
+  const vendorsByCategory = new Map();
+  liveItems().forEach((item) => {
+    const vendor = findVendor(item.vendor_id);
+    if (!item.is_available || item.deleted_at || !item.category_id || vendor?.is_open === false) return;
+    if (!vendorsByCategory.has(item.category_id)) vendorsByCategory.set(item.category_id, new Set());
+    vendorsByCategory.get(item.category_id).add(item.vendor_id);
+  });
+  return state.categories
+    .filter((category) => category.is_active && vendorsByCategory.has(category.id))
+    .map((category) => ({
+      ...category,
+      vendor_count: vendorsByCategory.get(category.id).size,
+    }));
+};
 
 function filterVendors(list, query) {
   const category = query.get('category_id');
@@ -349,10 +380,12 @@ function customerOrder(order) {
     delivery: order.fulfillment === 'delivery'
       ? {
           status: deliveryStatusOf(order),
-          proof_of_delivery_code: order.delivery_code,
           otp_required: true,
           otp_verified: order.status === 'delivered',
-          can_confirm: false,
+          code_issued: order.status !== 'delivered' && Boolean(order.delivery_code),
+          code_sent_via: 'email',
+          code_sent_to: 'de•••@example.com',
+          can_resend_code: order.status !== 'delivered',
         }
       : {},
     rider: driver ? { name: driver.name, phone: driver.phone } : null,
@@ -606,6 +639,81 @@ function linkedName(phone, name) {
 
 function checkOtp(code) {
   if (String(code).trim() !== DEMO_OTP) fail(400, `Wrong code. In demo mode the code is ${DEMO_OTP}.`, 'OTP_INVALID');
+}
+
+function demoIdentifierKey(value) {
+  const identifier = String(value || '').trim();
+  return identifier.includes('@')
+    ? identifier.toLowerCase()
+    : identifier.replace(/\D/g, '').slice(-9);
+}
+
+function demoLoginAccounts(identifier) {
+  const key = demoIdentifierKey(identifier);
+  const matches = (value) => value && demoIdentifierKey(value) === key;
+  return [
+    ...state.customers.filter((customer) => matches(customer.phone_number) || matches(customer.email))
+      .map((account) => ({ role: 'customer', account })),
+    ...state.vendors.filter((vendor) => matches(vendor.phone) || matches(vendor.email))
+      .map((account) => ({ role: 'vendor', account })),
+    ...state.drivers.filter((driver) => matches(driver.phone) || matches(driver.email))
+      .map((account) => ({ role: 'driver', account })),
+  ];
+}
+
+function sendDemoUnifiedOtp(request) {
+  const identifier = String(request.body.identifier || '').trim();
+  const identifierKey = demoIdentifierKey(identifier);
+  const adminAccount = state.team.find((admin) => (
+    admin.status !== 'deleted'
+    && (demoIdentifierKey(admin.phone) === identifierKey || demoIdentifierKey(admin.email) === identifierKey)
+  ));
+  if (adminAccount) {
+    return {
+      role: 'admin',
+      requires_password: true,
+      identifier,
+      identifier_type: identifier.includes('@') ? 'email' : 'phone',
+    };
+  }
+
+  const accounts = demoLoginAccounts(identifier);
+  if (!accounts.length) fail(404, 'No customer, vendor or delivery worker account was found for this phone number or email address.', 'ACCOUNT_NOT_FOUND');
+  const roles = [...new Set(accounts.map((account) => account.role))];
+  if (roles.length > 1 && !request.body.role) {
+    return { requires_role_selection: true, roles, identifier };
+  }
+  const role = request.body.role || roles[0];
+  if (!roles.includes(role)) fail(404, 'That account type is not associated with this phone number or email address.', 'ACCOUNT_ROLE_NOT_FOUND');
+  return {
+    role,
+    requires_role_selection: false,
+    identifier,
+    identifier_type: identifier.includes('@') ? 'email' : 'phone',
+    ...(identifier.includes('@') ? {} : { dev_otp: DEMO_OTP }),
+    expires_in_seconds: 300,
+    resend_after_seconds: 30,
+  };
+}
+
+function verifyDemoUnifiedOtp(request) {
+  const identifier = String(request.body.identifier || '').trim();
+  const identifierKey = demoIdentifierKey(identifier);
+  if (state.team.some((admin) => (
+    admin.status !== 'deleted'
+    && (demoIdentifierKey(admin.phone) === identifierKey || demoIdentifierKey(admin.email) === identifierKey)
+  ))) {
+    fail(400, 'Administrator accounts sign in with their password.', 'PASSWORD_REQUIRED');
+  }
+  checkOtp(request.body.code);
+  const accounts = demoLoginAccounts(identifier);
+  const match = accounts.find((account) => account.role === request.body.role);
+  if (!match) fail(404, 'That account type is not associated with this phone number or email address.', 'ACCOUNT_ROLE_NOT_FOUND');
+  const { role, account } = match;
+  sessions[role] = account.id;
+  if (role === 'customer') return { role, token: TOKENS.customer, customer: account };
+  if (role === 'vendor') return { role, token: TOKENS.vendor, vendor: vendorAccount(account) };
+  return { role, token: TOKENS.driver, driver: driverAccount(account) };
 }
 
 function vendorAccount(vendor) {
@@ -958,13 +1066,19 @@ const KIGALI_PLACES = [
 ];
 
 const customerRoutes = [
+  ['POST', '/auth/login/send-otp', sendDemoUnifiedOtp],
+  ['POST', '/auth/login/verify-otp', verifyDemoUnifiedOtp],
   ['POST', '/auth/send-otp', (r) => {
-    linkedName(String(r.body.phone_number || ''), r.body.name);
-    return { phone_number: r.body.phone_number, dev_otp: DEMO_OTP, expires_in_seconds: 300 };
+    const identifier = String(r.body.identifier ?? r.body.phone_number ?? '').trim();
+    const isEmail = identifier.includes('@');
+    if (!isEmail) linkedName(identifier, r.body.name);
+    return isEmail
+      ? { identifier, identifier_type: 'email', channel: 'email', sent_to: identifier, expires_in_seconds: 300 }
+      : { identifier, phone_number: identifier, identifier_type: 'phone', channel: 'sms', dev_otp: DEMO_OTP, expires_in_seconds: 300 };
   }],
   ['POST', '/auth/verify-otp', (r) => {
     checkOtp(r.body.code);
-    const phone = String(r.body.phone_number || '');
+    const phone = String(r.body.identifier ?? r.body.phone_number ?? '');
     const registeredName = linkedName(phone, r.body.name);
     let customer = state.customers.find((c) => c.phone_number === phone);
     if (!customer && registeredName) {
@@ -991,16 +1105,14 @@ const customerRoutes = [
   }],
   ['PUT', '/auth/me/location', () => ({ ok: true })],
 
-  ['GET', '/home/categories', () => ({
-    categories: state.categories.filter((c) => c.is_active).map((c) => ({ ...c, vendor_count: visibleVendors().filter((v) => v.categories.includes(c.id)).length })),
-  })],
+  ['GET', '/home/categories', () => ({ categories: liveCategories() })],
   ['GET', '/home/feed', (r) => {
     const from = coordsOf(r.query);
     const vendors = filterVendors(visibleVendors(), r.query);
     const open = vendors.filter((v) => v.is_open);
     return {
       location: from ? { ...from, label: r.query.get('label') || 'Your location' } : { ...KIGALI, label: 'Kigali' },
-      categories: state.categories.filter((c) => c.is_active),
+      categories: liveCategories(),
       featured_vendors: [...open].sort((a, b) => b.rating - a.rating).slice(0, 6).map((v) => publicVendor(v, from)),
       nearby_vendors: sortVendors(open, r.query, from || KIGALI).map((v) => publicVendor(v, from)),
       popular_dishes: liveItems().filter((item) => item.is_popular && open.some((v) => v.id === item.vendor_id)).slice(0, 12).map(publicDish),
@@ -1053,6 +1165,44 @@ const customerRoutes = [
       dishes: dishes.map(publicDish),
       vendors: vendors.map((v) => publicVendor(v, from)),
       counts: { dishes: dishes.length, vendors: vendors.length },
+    };
+  }],
+  // Every available dish, a page at a time (mirrors the backend's GET /home/dishes).
+  ['GET', '/home/dishes', (r) => {
+    const category = r.query.get('category') || r.query.get('category_id');
+    const sort = r.query.get('sort') || 'recommended';
+    const prep = (item) => item.preparation_time_minutes || findVendor(item.vendor_id)?.estimated_prep_time || 30;
+    const rating = (item) => findVendor(item.vendor_id)?.rating || 0;
+    const open = (item) => (findVendor(item.vendor_id)?.is_open === false ? 0 : 1);
+    const ordered = (item) => item.orders_count ?? Number(item.is_popular);
+    const sorters = {
+      price_asc: (a, b) => a.price_rwf - b.price_rwf,
+      price_desc: (a, b) => b.price_rwf - a.price_rwf,
+      rating: (a, b) => rating(b) - rating(a),
+      delivery_time: (a, b) => prep(a) - prep(b),
+    };
+    const list = liveItems()
+      .filter((item) => item.is_available && !item.deleted_at && (!category || item.category_id === category))
+      .sort((a, b) => {
+        const primary = sorters[sort]?.(a, b);
+        if (primary !== undefined) return primary || ordered(b) - ordered(a) || a.id.localeCompare(b.id);
+        return open(b) - open(a) || ordered(b) - ordered(a) || rating(b) - rating(a) || a.name.localeCompare(b.name);
+      });
+    const { page, limit, total, slice } = paginate(list, r.query, 8);
+    return {
+      dishes: slice.map((item) => {
+        const vendor = findVendor(item.vendor_id);
+        const dish = publicDish(item);
+        return {
+          ...dish,
+          category_id: item.category_id,
+          category_name: dish.category,
+          estimated_prep_time: prep(item),
+          has_options: (item.options || []).length > 0,
+          vendor: { ...dish.vendor, is_open: vendor.is_open !== false, opens_at: vendor.is_open === false ? demoNextOpening(vendor.hours) : null },
+        };
+      }),
+      meta: { page, limit, total, has_more: page * limit < total, sort, category_id: category || null },
     };
   }],
 
@@ -1193,6 +1343,7 @@ const customerRoutes = [
     order.payment_status = 'paid';
     return customerOrder(order);
   }],
+  ['POST', '/orders/:id/delivery-code/resend', () => ({ sent: true, channel: 'email', sent_to: 'de•••@example.com' })],
   ['POST', '/orders/:id/cancel', (r, p) => {
     const order = customerOwned(r, p.id);
     if (!['placed', 'confirmed', 'preparing', 'ready'].includes(order.status)) fail(400, 'This order can no longer be cancelled.');
@@ -1305,7 +1456,7 @@ function vendorOwned(request, id) {
 }
 
 const vendorRoutes = [
-  ['POST', '/vendor/auth/send-otp', (r) => ({ phone_number: r.body.phone, dev_otp: DEMO_OTP })],
+  ['POST', '/vendor/auth/send-otp', (r) => (String(r.body.phone || '').includes('@') ? { identifier: r.body.phone, identifier_type: 'email' } : { identifier: r.body.phone, phone_number: r.body.phone, dev_otp: DEMO_OTP })],
   ['POST', '/vendor/auth/verify-otp', (r) => {
     checkOtp(r.body.code);
     const vendor = state.vendors.find((v) => v.phone === r.body.phone) || findVendor(DEMO_IDS.vendor);
@@ -1542,7 +1693,7 @@ function driverEarnings(driver) {
 }
 
 const driverRoutes = [
-  ['POST', '/driver/auth/send-otp', (r) => ({ phone_number: r.body.phone, dev_otp: DEMO_OTP })],
+  ['POST', '/driver/auth/send-otp', (r) => (String(r.body.phone || '').includes('@') ? { identifier: r.body.phone, identifier_type: 'email' } : { identifier: r.body.phone, phone_number: r.body.phone, dev_otp: DEMO_OTP })],
   ['POST', '/driver/auth/verify-otp', (r) => {
     checkOtp(r.body.code);
     const driver = state.drivers.find((d) => d.phone === r.body.phone) || findDriver(DEMO_IDS.driver);
@@ -1795,11 +1946,14 @@ const paymentRows = () =>
 
 const adminRoutes = [
   ['POST', '/admin/auth/login', (r) => {
-    if (!r.body.email || !r.body.password) fail(400, 'Enter your email and password.');
-    // With SMS codes turned on (Settings), sign-in asks for the code too.
-    if (state.admin2fa) {
-      return { two_factor_required: true, challenge_token: 'demo-challenge', sent_to: '+250 78• ••• 001', dev_otp: DEMO_OTP };
-    }
+    const identifier = String(r.body.identifier || r.body.email || '').trim();
+    const identifierKey = demoIdentifierKey(identifier);
+    if (!identifier || !r.body.password) fail(400, 'Enter your account identifier and password.');
+    const adminAccount = state.team.find((admin) => (
+      admin.status !== 'deleted'
+      && (demoIdentifierKey(admin.phone) === identifierKey || demoIdentifierKey(admin.email) === identifierKey)
+    ));
+    if (!adminAccount) fail(401, 'Invalid email or password.', 'INVALID_CREDENTIALS');
     return { token: TOKENS.admin, admin: adminProfile() };
   }],
   ['POST', '/admin/auth/logout', () => ({ ok: true })],
@@ -2804,10 +2958,34 @@ const extraAdminRoutes = [
     const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited');
     if (!member) fail(404, 'This invitation link is not valid any more. Ask the owner for a new one.');
     const role = roleOf(member.role);
-    return { invitation: { email: member.email, role: role.id, role_label: role.label, role_description: role.description } };
+    return {
+      invitation: {
+        email: member.email, role: role.id, role_label: role.label, role_description: role.description,
+        phone_verified: Boolean(member.invitePhoneVerified), verified_phone: member.invitePhoneVerified ? '•••••••••' + member.invitePhoneVerified.slice(-3) : '',
+      },
+    };
+  }],
+  // Joining: phone + SMS code before the password (the demo code is DEMO_OTP).
+  ['POST', '/admin/auth/invitations/:token/phone/send-code', (r, p) => {
+    const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited') || fail(404, 'This invitation link is not valid any more.');
+    const phone = String(r.body.phone || '').replace(/\s/g, '');
+    if (!/^(07[2389]\d{7}|\+?2507[2389]\d{7})$/.test(phone)) fail(400, 'phone_number is not a valid Rwandan phone number.');
+    member.invitePhonePending = phone;
+    member.invitePhoneVerified = '';
+    return { sent_to: '•••••••••' + phone.slice(-3), expires_in_seconds: 300, resend_after_seconds: 30, dev_otp: DEMO_OTP };
+  }],
+  ['POST', '/admin/auth/invitations/:token/phone/verify', (r, p) => {
+    const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited') || fail(404, 'This invitation link is not valid any more.');
+    if (!member.invitePhonePending) fail(400, 'Enter your phone number and request a code first.');
+    checkOtp(r.body.code);
+    member.invitePhoneVerified = member.invitePhonePending;
+    return { phone_verified: true, verified_phone: '•••••••••' + member.invitePhoneVerified.slice(-3), valid_for_minutes: 30 };
   }],
   ['POST', '/admin/auth/invitations/:token/accept', (r, p) => {
     const member = state.team.find((m) => `demo-invite-${m.id}` === p.token && m.status === 'invited') || fail(404, 'This invitation link is not valid any more.');
+    if (!member.invitePhoneVerified) fail(403, 'Verify your phone number before creating your password.', 'PHONE_VERIFICATION_REQUIRED');
+    member.phone = member.invitePhoneVerified;
+    member.two_factor_enabled = true;
     member.status = 'active';
     member.name = r.body.name || member.name || member.email.split('@')[0];
     member.invite_expires_at = null;

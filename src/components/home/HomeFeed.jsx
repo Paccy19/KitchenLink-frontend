@@ -1,29 +1,24 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChefHat, MapPinOff, RefreshCw } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 
+import BrandStrip from './BrandStrip';
+import HeroSlider from './HeroSlider';
+import KitchensRow from './KitchensRow';
+import AllDishes from './AllDishes';
 import SearchBar from './SearchBar';
-import CategoryBar from './CategoryBar';
-import VendorCard from './VendorCard';
 import DishCard from './DishCard';
-import SpecialCard from './SpecialCard';
-import LocationIndicator from './LocationIndicator';
 import PullToRefreshIndicator from './PullToRefreshIndicator';
-import EmptyState, { ErrorState } from '../common/EmptyState';
-import VendorTypeFilter from '../common/VendorTypeFilter';
+import { ErrorState } from '../common/EmptyState';
 import useVendorTypeParam from '../../hooks/useVendorTypeParam';
-import { HomeFeedSkeleton, VendorTileSkeleton, DishCardSkeleton } from '../common/Skeleton';
+import { HomeFeedSkeleton, Skeleton } from '../common/Skeleton';
 import { useToast } from '../common/Toast';
 
 import useHomeFeed from '../../hooks/useHomeFeed';
-import useCategories from '../../hooks/useCategories';
 import useVendorSpecials from '../../hooks/useVendorSpecials';
 import useAllVendors from '../../hooks/useAllVendors';
 import useVendorOffers from '../../hooks/useVendorOffers';
-import OfferDayCard from './OfferDayCard';
 import useDebounce from '../../hooks/useDebounce';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
-import { useLocation } from '../../context/LocationContext';
 
 // Code-split the search results experience (heavy list rendering).
 const SearchResults = lazy(() => import('./SearchResults'));
@@ -50,30 +45,41 @@ function SectionHeader({ title, subtitle, to, linkLabel = 'See all' }) {
   );
 }
 
+/** Placeholder for a compact DishCard while the feed loads. */
+function CompactDishSkeleton() {
+  return (
+    <div className="w-[168px] lg:w-auto flex-shrink-0 bg-white rounded-2xl border border-gray-100 overflow-hidden" aria-hidden="true">
+      <Skeleton className="h-24 lg:h-16 w-full rounded-none" />
+      <div className="p-2.5 space-y-2">
+        <Skeleton className="h-2.5 w-1/3" />
+        <Skeleton className="h-3.5 w-5/6" />
+        <Skeleton className="h-3 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 /**
- * Homepage feed: search → location → categories → featured kitchens →
- * popular dishes, with pull-to-refresh and graceful loading/error/empty
- * states. Everything data-driven comes from the React Query hooks.
+ * Homepage feed: search, hero slider, popular dishes, Kitchens Near You, and All Dishes.
+ * Pull-to-refresh and graceful loading/error/empty states are included.
  */
 export default function HomeFeed() {
-  const navigate = useNavigate();
   const toast = useToast();
-  const { isUsingFallback, isPrimerOpen } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlQuery = searchParams.get('q') ?? '';
   const [query, setQuery] = useState(urlQuery);
   const debouncedQuery = useDebounce(query, SEARCH_DEBOUNCE_MS);
 
-  // Kitchen type filter (?type=home_cook,cafe) — applies to the kitchen lists and search.
+  // Search results retain their existing kitchen-type filter.
   const [vendorTypes, setVendorTypes] = useVendorTypeParam();
-  const typeQuery = vendorTypes.length ? `?type=${vendorTypes.join(',')}` : '';
 
-  const feed = useHomeFeed({ vendorTypes });
-  const categories = useCategories({ enabled: !urlQuery.trim() });
+  const feed = useHomeFeed();
+  // "Kitchens Near You": nearest first from the server, regardless of type.
+  const nearKitchens = useAllVendors({ perPage: 20, enabled: !urlQuery.trim() });
   const specials = useVendorSpecials();
   const offers = useVendorOffers();
-  const allVendors = useAllVendors({ perPage: 6, vendorTypes, enabled: !urlQuery.trim() });
 
   // Keep the URL shareable: debounce input → `?q=` (replace, no history spam).
   useEffect(() => {
@@ -101,12 +107,9 @@ export default function HomeFeed() {
 
   const pull = usePullToRefresh(refreshFeed);
 
-  const handleCategorySelect = (categoryId) => {
-    navigate(categoryId ? `/vendors?category=${encodeURIComponent(categoryId)}` : '/vendors');
-  };
-
   const isSearching = urlQuery.trim().length > 0;
   const data = feed.data;
+  const popularDishes = (data?.popularDishes ?? []).slice(0, 4);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-16" {...pull.handlers}>
@@ -116,48 +119,67 @@ export default function HomeFeed() {
         refreshing={pull.refreshing}
       />
 
-      {/* ── Search + location row ─────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center mb-4">
-        <SearchBar
-          value={query}
-          onChange={setQuery}
-          onSubmit={(value) => setQuery(value)}
-          className="flex-1"
-        />
-        {/* Grid so the event button's column is exactly as wide as the location pill */}
-        <div className="grid grid-cols-[auto_auto] items-center gap-2 justify-between sm:justify-start">
-          <LocationIndicator />
-          <button
-            type="button"
-            onClick={pull.refresh}
-            aria-label="Refresh homepage feed"
-            disabled={pull.refreshing}
-            className="w-9 h-9 rounded-full bg-white border border-stone-200 text-stone-500 hover:text-[#542813] hover:border-[#d9bda6] hover:bg-[#faf6f2] flex items-center justify-center transition disabled:opacity-60 shadow-sm active:scale-95"
-          >
-            <RefreshCw className={`w-4 h-4 ${pull.refreshing ? 'animate-spin' : ''}`} />
-          </button>
-          {/* Big events → every kitchen that takes event orders (see nationwideFor) */}
-          <Link
-            to="/vendors?events=1"
-            className="col-start-1 w-full flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full bg-[#542813] text-white text-sm font-black tracking-tight shadow-sm hover:bg-[#2b1206] hover:shadow-md transition active:scale-95"
-          >
-            <img src="/icons/party-popper.png" alt="" aria-hidden="true" className="w-5 h-5 drop-shadow" />
-            Big Event
-          </Link>
+      {/* ── Top: search + hero slider | popular dishes ─────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-7">
+        <div className="min-w-0 flex flex-col">
+          <section aria-label="Find food and kitchens" className="mb-4">
+            <h1 className="mb-2 text-xl sm:text-2xl font-black tracking-tight text-[#3d1b0c]">
+              Find food near you
+            </h1>
+            <SearchBar
+              compact
+              inputId="home-search"
+              value={query}
+              onChange={setQuery}
+              onSubmit={setQuery}
+              placeholder="Search meals or kitchens..."
+            />
+          </section>
+
+          {/* Big Events, then one slide per Tomorrow's Special / Offer Day. */}
+          <HeroSlider fill specials={specials.data ?? []} offers={offers.data ?? []} className="lg:flex-1" />
+          {/* The specials live in the slider; this links to all of them. */}
+          {((specials.data?.length ?? 0) > 0 || (offers.data?.length ?? 0) > 0) && (
+            <div className="mt-2 flex justify-end">
+              <Link
+                to="/vendors?filter=preorder"
+                className="text-xs font-black text-[#542813] hover:text-[#2b1206] whitespace-nowrap flex items-center gap-1 group transition-colors"
+              >
+                <span>View all specials</span>
+                <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+              </Link>
+            </div>
+          )}
         </div>
+
+        <section aria-label="Popular dishes near you" className="min-w-0">
+          <SectionHeader
+            title="Popular Dishes Near You"
+            subtitle="What people around you are ordering today"
+            to="/vendors"
+            linkLabel="See all"
+          />
+          {/* A swipeable row on phones and tablets, a 2×2 grid next to the slider. */}
+          <div className="flex gap-3 overflow-x-auto snap-x pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:pb-0">
+            {popularDishes.map((dish) => (
+              <DishCard key={dish.id} dish={dish} compact className="w-[168px] lg:w-auto" />
+            ))}
+            {popularDishes.length === 0 && (feed.isPending || feed.isFetching) &&
+              Array.from({ length: 4 }, (_, i) => <CompactDishSkeleton key={i} />)}
+          </div>
+          {popularDishes.length === 0 && !feed.isPending && !feed.isFetching && (
+            <p className="rounded-2xl bg-[#faf6f2] border border-[#f1e2d2] px-4 py-6 text-center text-xs font-semibold text-stone-500">
+              No popular dishes near you yet.
+            </p>
+          )}
+        </section>
       </div>
 
-      {/* Subtle fallback notice when GPS is unavailable / denied */}
-      {isUsingFallback && !isPrimerOpen && !isSearching && (
-        <p className="text-[11px] text-gray-400 -mt-2 mb-4 flex items-center gap-1.5">
-          <MapPinOff className="w-3.5 h-3.5" aria-hidden="true" />
-          Showing kitchens around {feed.data?.location?.label ?? 'Kigali'} — allow location or pick a
-          neighbourhood for exact distances.
-        </p>
-      )}
+      <div className="mt-10 sm:mt-12" />
 
       {/* ── Search results view ───────────────────────────────── */}
       {isSearching ? (
+        // Search results have their own kitchen-type filter.
         <Suspense fallback={<HomeFeedSkeleton />}>
           <SearchResults query={urlQuery} onSuggest={setQuery} vendorTypes={vendorTypes} onVendorTypesChange={setVendorTypes} />
         </Suspense>
@@ -171,141 +193,23 @@ export default function HomeFeed() {
           isRetrying={feed.isFetching}
         />
       ) : (
-        <div className="space-y-9">
-          {/* Categories */}
-          <CategoryBar
-            categories={data?.categories ?? categories.data ?? []}
-            activeId={null}
-            onSelect={handleCategorySelect}
-            loading={categories.isPending}
+        <div className="space-y-10 sm:space-y-12">
+          {/* Kitchens near the customer (open first, then by rating); tapping one opens it. */}
+          <KitchensRow
+            vendors={nearKitchens.data?.vendors ?? []}
+            loading={nearKitchens.isPending}
+            allTo="/vendors"
           />
 
-          {/* Kitchen type filter */}
-          <VendorTypeFilter value={vendorTypes} onChange={setVendorTypes} className="-mt-3" />
-
-          {/* Featured / nearby kitchens */}
-          <section aria-label="Featured kitchens">
-            <SectionHeader
-              title="Top Deals Near You"
-              subtitle={
-                data?.updatedAt
-                  ? `Updated ${new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                  : 'Kitchens around you right now'
-              }
-              to={`/vendors${typeQuery}`}
-              linkLabel="See all kitchens"
-            />
-            {feed.isError && data ? (
-              <ErrorState onRetry={feed.refetch} isRetrying={feed.isFetching} />
-            ) : (
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
-                {(data?.featuredVendors ?? []).map((vendor) => (
-                  <VendorCard key={vendor.id} vendor={vendor} variant="tile" />
-                ))}
-                {feed.isFetching && !data?.featuredVendors?.length && (
-                  <>
-                    <VendorTileSkeleton />
-                    <VendorTileSkeleton />
-                    <VendorTileSkeleton />
-                  </>
-                )}
-              </div>
-            )}
-
-            {!feed.isPending && (data?.featuredVendors?.length ?? 0) === 0 && !feed.isError && (
-              <EmptyState
-                icon={<ChefHat className="w-8 h-8" />}
-                title={vendorTypes.length ? 'No kitchens of this type nearby' : 'No kitchens nearby yet'}
-                message={
-                  vendorTypes.length
-                    ? 'Try another kitchen type, or clear the filter to see every kitchen.'
-                    : 'Widen your search radius or switch neighbourhood to discover more kitchens.'
-                }
-                actionLabel="Browse nearby kitchens"
-                onAction={() => navigate('/vendors')}
-              />
-            )}
-          </section>
-
-          {/* All kitchens — near or far, nearest to the customer first */}
-          <section aria-label="All kitchens">
-            <SectionHeader
-              title="All Kitchens"
-              subtitle={
-                allVendors.data?.locationUsed
-                  ? 'Every kitchen on the platform — nearest to you first'
-                  : 'Every kitchen on the platform — use your location to see nearby ones first'
-              }
-              to={`/vendors${typeQuery}`}
-              linkLabel={
-                allVendors.data?.total ? `See all ${allVendors.data.total}` : 'See all'
-              }
-            />
-            {allVendors.isPending ? (
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0">
-                <VendorTileSkeleton />
-                <VendorTileSkeleton />
-                <VendorTileSkeleton />
-              </div>
-            ) : allVendors.isError ? (
-              <ErrorState onRetry={allVendors.refetch} isRetrying={allVendors.isFetching} />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {(allVendors.data?.vendors ?? []).map((vendor) => (
-                  <VendorCard key={vendor.id} vendor={vendor} />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Tomorrow's Specials — vendor pre-order announcements */}
-          {((specials.data?.length ?? 0) > 0 || (offers.data?.length ?? 0) > 0) && (
-            <section aria-label="Tomorrow's specials">
-              <SectionHeader
-                title="Tomorrow's Specials"
-                subtitle="Pre-order specials and upcoming kitchen offers"
-                to="/vendors?filter=preorder"
-                linkLabel="See all"
-              />
-              <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
-                {(specials.data ?? []).map((entry) => (
-                  <SpecialCard
-                    key={entry.vendor.id}
-                    vendor={entry.vendor}
-                    special={entry.special}
-                  />
-                ))}
-                {(offers.data ?? []).map((offer) => (
-                  <OfferDayCard key={offer.id} offer={offer} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Popular dishes near you */}
-          <section aria-label="Popular dishes near you">
-            <SectionHeader
-              title="Popular Dishes Near You"
-              subtitle="What people around you are ordering today"
-              to="/vendors"
-              linkLabel="Browse menus"
-            />
-            <div className="flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x">
-              {(data?.popularDishes ?? []).map((dish) => (
-                <DishCard key={dish.id} dish={dish} />
-              ))}
-              {feed.isFetching && (data?.popularDishes?.length ?? 0) === 0 && (
-                <>
-                  <DishCardSkeleton />
-                  <DishCardSkeleton />
-                  <DishCardSkeleton />
-                </>
-              )}
-            </div>
-          </section>
+          {/* Every dish from every kitchen, 8 at a time, with category chips and sorting. */}
+          <AllDishes />
 
         </div>
       )}
+
+      <div className="mt-12 sm:mt-14">
+        <BrandStrip />
+      </div>
     </div>
   );
 }

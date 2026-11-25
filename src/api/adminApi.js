@@ -79,7 +79,7 @@ async function adminRequest(path, { method = 'GET', body } = {}) {
   if (!response.ok) {
     throw new ApiError(
       data?.error?.message || data?.message || `Request failed (${response.status}).`,
-      { status: response.status, path, code: data?.error?.code || '' },
+      { status: response.status, path, code: data?.error?.code || '', details: data?.error?.details || null },
     );
   }
   notifyDataChanged(method, path);
@@ -97,12 +97,15 @@ const qs = (params = {}) => {
 };
 
 export const adminApi = {
-  login: (email, password) =>
-    adminRequest('/admin/auth/login', { method: 'POST', body: { email, password } }),
+  login: (identifier, password) =>
+    adminRequest('/admin/auth/login', { method: 'POST', body: { identifier, password } }),
   me: () => adminRequest('/admin/auth/me'),
   changePassword: (payload) =>
     adminRequest('/admin/auth/change-password', { method: 'POST', body: payload }),
   // SMS codes: second sign-in step, setup, and codes confirming money actions.
+  // Stage 2 of the sign-in through the customer phone login (email + password).
+  phoneLogin: (challengeToken, email, password) =>
+    adminRequest('/admin/auth/phone-login', { method: 'POST', body: { challenge_token: challengeToken, email, password } }),
   verifyTwoFactor: (challengeToken, code) =>
     adminRequest('/admin/auth/verify-2fa', { method: 'POST', body: { challenge_token: challengeToken, code } }),
   startTwoFactor: (phone) => adminRequest('/admin/auth/2fa/start', { method: 'POST', body: { phone } }),
@@ -180,6 +183,14 @@ export const adminApi = {
   saveOperationsRules: (body) => adminRequest('/admin/operations/rules', { method: 'PUT', body }),
   // Delivery timing rules (warning / late charge / automatic reassign), in minutes.
   // Delivery fee by distance ranges.
+  // Delivery Management → big-event delivery pricing (separate from the standard fee).
+  bigEventDelivery: () => adminRequest('/admin/settings/big-event-delivery'),
+  saveBigEventDelivery: (body) => adminRequest('/admin/settings/big-event-delivery', { method: 'PUT', body }),
+  // Special delivery negotiations: requests, quotations, chats, disputes.
+  specialDeliveries: (params) => adminRequest(`/admin/special-deliveries${qs(params)}`),
+  specialDelivery: (id) => adminRequest(`/admin/special-deliveries/${encodeURIComponent(id)}`),
+  resolveSpecialDeliveryDispute: (id, body) =>
+    adminRequest(`/admin/special-deliveries/${encodeURIComponent(id)}/resolve-dispute`, { method: 'POST', body }),
   deliveryFees: () => adminRequest('/admin/settings/delivery-fees'),
   saveDeliveryFees: (body) => adminRequest('/admin/settings/delivery-fees', { method: 'PUT', body }),
   // Orders charged the standard delivery fee (distance, prices used, detour flags).
@@ -192,6 +203,9 @@ export const adminApi = {
 
   listOrders: (params) => adminRequest(`/admin/orders${qs(params)}`),
   getOrder: (id) => adminRequest(`/admin/orders/${encodeURIComponent(id)}`),
+  // This order's commission % (null = back to the commission rules), until the kitchen is paid.
+  setOrderCommission: (id, body) =>
+    adminRequest(`/admin/orders/${encodeURIComponent(id)}/commission`, { method: 'PUT', body }),
   // Delivery workers near the kitchen, for support to call before reassigning.
   nearbyDrivers: (id, params) => adminRequest(`/admin/orders/${encodeURIComponent(id)}/nearby-drivers${qs(params)}`),
   updateOrderStatus: (id, body) =>
@@ -262,6 +276,11 @@ export const adminApi = {
 
   // Invitation link (no sign-in)
   getInvitation: (token) => adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}`),
+  // Joining: a phone verified with an SMS code before the password.
+  sendInvitePhoneCode: (token, phone) =>
+    adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/phone/send-code`, { method: 'POST', body: { phone } }),
+  verifyInvitePhone: (token, code) =>
+    adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/phone/verify`, { method: 'POST', body: { code } }),
   acceptInvitation: (token, body) =>
     adminRequest(`/admin/auth/invitations/${encodeURIComponent(token)}/accept`, { method: 'POST', body }),
 };

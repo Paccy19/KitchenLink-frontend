@@ -360,7 +360,7 @@ export function DriverProvider({ children }) {
     setError('');
     try {
       const result = await driverApi.sendLoginOtp(phone);
-      setPendingLoginPhone(result.phone_number);
+      setPendingLoginPhone(result.identifier || result.phone_number);
       setLoginOtpPreview(result.dev_otp || '');
       return result;
     } catch (err) {
@@ -392,6 +392,17 @@ export function DriverProvider({ children }) {
     },
     [pendingLoginPhone],
   );
+
+  const acceptUnifiedLogin = useCallback((result) => {
+    clearAllSessions();
+    setDriverToken(result.token);
+    setAuthToken(result.token);
+    setDriver(mapDriverAccount(result.driver));
+    setPendingLoginPhone('');
+    setLoginOtpPreview('');
+    setError('');
+    return result;
+  }, []);
 
   const logout = useCallback(() => {
     clearAllSessions();
@@ -661,6 +672,7 @@ export function DriverProvider({ children }) {
       updateDriverProfile,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       logout,
@@ -711,6 +723,7 @@ export function DriverProvider({ children }) {
       updateDriverProfile,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       logout,

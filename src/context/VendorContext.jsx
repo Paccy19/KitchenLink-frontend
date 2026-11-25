@@ -266,7 +266,7 @@ export function VendorProvider({ children }) {
       setAccountBlock(null);
       try {
         const result = await vendorApi.sendLoginOtp(phone);
-        setPendingLoginPhone(result.phone_number);
+        setPendingLoginPhone(result.identifier || result.phone_number);
         setLoginOtpPreview(result.dev_otp || '');
         return result;
       } catch (err) {
@@ -305,6 +305,18 @@ export function VendorProvider({ children }) {
     [pendingLoginPhone],
   );
 
+  const acceptUnifiedLogin = useCallback((result) => {
+    clearAllSessions();
+    setVendorToken(result.token);
+    setAuthToken(result.token);
+    setVendor(mapVendorAccount(result.vendor));
+    setPendingLoginPhone('');
+    setLoginOtpPreview('');
+    setAccountBlock(null);
+    setError('');
+    return result;
+  }, []);
+
   const logout = useCallback(() => {
     clearAllSessions();
     setAuthToken('');
@@ -335,7 +347,7 @@ export function VendorProvider({ children }) {
         longitude: data.longitude,
       }),
     );
-    form.append('food_categories', JSON.stringify(data.foodCategories || []));
+    // No food_categories: the server assigns the vendor type's defaults.
     const day = 'monday';
     form.append(
       'operating_hours',
@@ -603,6 +615,7 @@ export function VendorProvider({ children }) {
       loadCategories,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       accountBlock,
@@ -660,6 +673,7 @@ export function VendorProvider({ children }) {
       loadCategories,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       accountBlock,

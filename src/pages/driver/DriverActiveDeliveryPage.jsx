@@ -75,9 +75,11 @@ function ConfirmDeliveryModal({ delivery, onClose }) {
           </p>
         </div>
 
-        {delivery.otpCode && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 font-medium">
-            Development code: <strong>{delivery.otpCode}</strong>
+        {/* The code is only ever sent to the customer: ask them for it once they have the food. */}
+        {delivery.customerHasNoCodeChannel && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 font-medium">
+            The customer couldn&apos;t be sent a code (no verified email). Ask them to verify their email and tap
+            &quot;Send my delivery code&quot; in their order, or contact support to complete this delivery.
           </p>
         )}
 

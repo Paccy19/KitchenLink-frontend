@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation as useRouterLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation as useRouterLocation, useSearchParams } from 'react-router-dom';
 import { 
   ShoppingBag, 
   User, 
@@ -31,7 +31,6 @@ import { useNotifications } from '../../context/NotificationContext';
 import { notificationLink } from '../../utils/notificationLink';
 import FadeImage from './FadeImage';
 import NotificationPopups from './NotificationPopups';
-import RoleSelectModal from '../auth/RoleSelectModal';
 import ThemeToggle from './ThemeToggle';
 import useSupportUnread from '../../hooks/useSupportUnread';
 import { chatApi } from '../../api/endpoints';
@@ -39,10 +38,20 @@ import {
   Bell,
   CheckCheck,
   MessageCircle,
+  Truck,
+  Search,
 } from 'lucide-react';
 
 export default function Navbar() {
   const { pathname } = useRouterLocation();
+  // The homepage shows its own search bar, so the header one is hidden there.
+  const hideSearch = pathname === '/';
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Header search: shows the current homepage search, submits to it.
+  const urlQuery = pathname === '/' ? searchParams.get('q') ?? '' : '';
+  const [headerQuery, setHeaderQuery] = useState(urlQuery);
+  useEffect(() => setHeaderQuery(urlQuery), [urlQuery]);
   const { user, isAuthenticated, logout } = useAuth();
   const { totalItemCount, setIsCartOpen } = useCart();
   const { items: wishlistItems } = useWishlist();
@@ -89,7 +98,6 @@ export default function Navbar() {
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isRoleSelectOpen, setIsRoleSelectOpen] = useState(false);
 
   // Clicking anywhere outside the notifications or account dropdown (or pressing Esc) closes it.
   const notificationsRef = useRef(null);
@@ -190,30 +198,50 @@ export default function Navbar() {
         />
       )}
       <header ref={headerRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-sm">
-      {/* Top Banner for Pre-order & Scheduled Meals reminder */}
-      <div className="bg-gradient-to-r from-[#1c0a03] via-[#3a1a0c] to-[#1c0a03] border-b border-[#4e2410]/50 text-[#f5ebe1] text-xs py-1.5 px-4 text-center font-medium flex items-center justify-center gap-2 overflow-hidden">
-        <span className="flex-shrink-0 bg-[#542813] text-[#ebd7c5] border border-[#7a3a19]/50 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-          New
-        </span>
-        <span className="min-w-0 truncate">Empowering Kigali's Home Cooks & Kitchens! Order immediate meals or pre-order tomorrow's home specials.</span>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 sm:gap-3 flex-shrink-0 group">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-[#2b1206] via-[#481f0d] to-[#1c0a03] flex items-center justify-center text-white shadow-md shadow-[#2b1206]/25 group-hover:scale-105 group-hover:shadow-lg transition-all duration-300">
-              <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2] text-[#f5ebe1]" />
+              <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2] text-[#f7a23b]" />
             </div>
             <div className="min-w-0 hidden min-[420px]:block">
               <div className="font-extrabold text-lg sm:text-xl tracking-tight text-gray-900 group-hover:text-[#542813] transition-colors flex items-center gap-1.5">
-                Kitchen<span className="text-[#8a5332]">Link</span>
-                <span className="hidden lg:inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5]">Market</span>
+                <span>Kitchen<span className="text-[#f28c18]">Link</span></span>
               </div>
               <p className="hidden sm:block text-[11px] text-stone-500 font-medium">Any Cook · Any Food · Anywhere</p>
             </div>
           </Link>
+
+          {/* Search: opens the homepage results (/?q=…), the same search as the hero.
+              Hidden on the homepage, which has its own search under the header;
+              the row's justify-between then keeps the logo left and the actions right. */}
+          {!hideSearch && (
+          <form
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const q = headerQuery.trim();
+              if (q) navigate(`/?q=${encodeURIComponent(q)}`);
+            }}
+            className="hidden xl:block flex-1 min-w-0 max-w-lg mx-2"
+          >
+            <label htmlFor="header-search" className="sr-only">Search for meals, restaurants, or cuisines</label>
+            <div className="relative">
+              <Search className="w-4 h-4 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
+              <input
+                id="header-search"
+                type="search"
+                value={headerQuery}
+                onChange={(event) => setHeaderQuery(event.target.value)}
+                placeholder="Search for meals, restaurants, or cuisines..."
+                autoComplete="off"
+                className="w-full pl-11 pr-4 py-2.5 rounded-full bg-[#faf6f2] border border-[#ebd7c5] text-sm text-gray-900 placeholder:text-stone-400 focus:bg-white focus:border-[#f28c18] focus:ring-4 focus:ring-[#f28c18]/15 outline-none transition"
+              />
+            </div>
+          </form>
+          )}
 
           {/* Right Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 xl:gap-3 flex-shrink-0">
@@ -408,6 +436,10 @@ export default function Navbar() {
                             </span>
                           )}
                         </Link>
+                        <Link to="/special-deliveries" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
+                          <Truck className="w-4 h-4 text-stone-400" />
+                          <span>Special Deliveries</span>
+                        </Link>
                         <Link to="/wishlist" onClick={() => setIsUserMenuOpen(false)} className={accountLinkClass}>
                           <Heart className="w-4 h-4 text-rose-500" />
                           <span>Saved Dishes</span>
@@ -536,13 +568,21 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => setIsRoleSelectOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] hover:via-[#5c2810] hover:to-[#2c1206] text-white font-bold text-xs shadow-md shadow-[#2b1206]/20 transition-all active:scale-95"
-              >
-                <User className="w-3.5 h-3.5 text-[#d9bda6]" />
-                <span>Sign In</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/signup"
+                  className="px-3 py-2.5 rounded-full border border-stone-200 bg-white hover:bg-[#faf6f2] text-[#542813] font-bold text-xs sm:text-sm transition-all active:scale-95"
+                >
+                  Sign Up
+                </Link>
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-full bg-[#3d1b0c] hover:bg-[#2b1206] text-white font-bold text-xs sm:text-sm shadow-md shadow-[#2b1206]/20 transition-all active:scale-95"
+                >
+                  <User className="w-4 h-4 text-[#f7a23b]" />
+                  <span>Sign In</span>
+                </Link>
+              </div>
             )}
 
           </div>
@@ -592,10 +632,6 @@ export default function Navbar() {
 
       </div>
     </header>
-      <RoleSelectModal
-        open={isRoleSelectOpen}
-        onClose={() => setIsRoleSelectOpen(false)}
-      />
     </>
   );
 }

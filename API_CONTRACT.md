@@ -161,7 +161,8 @@ Called from `src/api/endpoints.js` (60 endpoints). The function names are in tha
 
 | Method | Path | Sign-in | Website function | Notes |
 | --- | --- | --- | --- | --- |
-| GET | `/home/categories` | Public | `fetchCategories` |  |
+| GET | `/home/categories` | Public | `fetchCategories` | Active categories with an available menu item from a live kitchen. |
+| GET | `/home/dishes` | Public | `fetchDishes` | Query: `page&limit&category&sort`. Returns available dishes from active kitchens (including closed kitchens), plus `{ page, limit, total, has_more, sort, category_id }`; sorts: `recommended`, `price_asc`, `price_desc`, `rating`, `delivery_time`. |
 | GET | `/home/feed` | Public | `fetchHomeFeed` | Query: `lat={lat}&lng={lng}`. Combined home screen payload: categories + featured/nearby kitchens + popular dishes for the given coordinates. |
 | GET | `/home/search` | Public | `searchHome` | Query: `q={query}&lat={lat}&lng={lng}`. |
 | GET | `/home/vendors` | Public | `fetchAllVendors` | Query: `lat&lng&category_id&sort&page&limit`. every kitchen in the system, near or far; with lat/lng the nearby ones (`is_nearby`) come first. |
@@ -212,7 +213,7 @@ Called from `src/api/endpoints.js` (60 endpoints). The function names are in tha
 
 | Method | Path | Sign-in | Website function | Notes |
 | --- | --- | --- | --- | --- |
-| GET | `/vendors/:vendorId` | Public | `fetchVendorStorefront` |  |
+| GET | `/vendors/:vendorId` | Public | `fetchVendorStorefront` | Available menu items include their selectable options. |
 | GET | `/vendors/:vendorId/delivery-quote` | Public | `fetchDeliveryQuote` | Query: `lat&lng`. Delivery fee priced by road distance from the kitchen to the drop-off. |
 | GET | `/vendors/offers` | Public | `fetchVendorOffers` | Query: `lat&lng`. upcoming "Offer Days" from every kitchen, soonest first. |
 | GET | `/vendors/specials` | Public | `fetchVendorSpecials` | Query: `lat&lng`. Active "Tomorrow's Special" announcements across nearby kitchens. |

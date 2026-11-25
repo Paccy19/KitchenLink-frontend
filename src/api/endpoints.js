@@ -83,6 +83,15 @@ export function fetchAllVendors(params = {}) {
 }
 
 /**
+ * GET /home/dishes?page&limit&category&sort — every available dish from every
+ * kitchen, one page at a time. sort: recommended | price_asc | price_desc |
+ * rating | delivery_time. Each dish says whether its kitchen is open.
+ */
+export function fetchDishes(params = {}) {
+  return apiRequest('/home/dishes', params);
+}
+
+/**
  * GET /home/search?q={query}&lat={lat}&lng={lng}
  *
  * @param {{q:string, lat:number|string, lng:number|string}} params
@@ -125,18 +134,45 @@ export function fetchDeliveryQuote(vendorId, { lat, lng }) {
   return apiRequest(`/vendors/${encodeURIComponent(vendorId)}/delivery-quote`, { lat, lng });
 }
 
-export const sendOtp = (phoneNumber, name) =>
+/**
+ * `identifier`: a phone number or an email address (the server decides which).
+ * `registrationPhone`: optional phone of a new customer signing up with an email.
+ */
+export const sendOtp = (identifier, name, registrationPhone = '') =>
   apiJson('POST', '/auth/send-otp', {
-    phone_number: phoneNumber,
+    identifier,
     ...(name ? { name } : {}),
+    ...(registrationPhone ? { phone_number: registrationPhone } : {}),
   });
 
-export const verifyOtp = (phoneNumber, code, name) =>
+export const verifyOtp = (identifier, code, name) =>
   apiJson('POST', '/auth/verify-otp', {
-    phone_number: phoneNumber,
+    identifier,
     code,
     ...(name ? { name } : {}),
   });
+
+export const sendUnifiedLoginOtp = (identifier, role) =>
+  apiJson('POST', '/auth/login/send-otp', {
+    identifier,
+    ...(role ? { role } : {}),
+  });
+
+export const verifyUnifiedLoginOtp = (identifier, code, role) =>
+  apiJson('POST', '/auth/login/verify-otp', { identifier, code, role });
+
+// A new phone / email only counts once its code is verified.
+export const startPhoneChange = (phoneNumber) => apiJson('POST', '/auth/me/phone/send-code', { phone_number: phoneNumber });
+export const confirmPhoneChange = (code) => apiJson('POST', '/auth/me/phone/verify', { code });
+export const startEmailVerification = (email) => apiJson('POST', '/auth/me/email/send-code', email ? { email } : {});
+export const confirmEmailVerification = (code) => apiJson('POST', '/auth/me/email/verify', { code });
+
+/** The customer's delivery code, sent again to their verified email (never returned). */
+export const resendDeliveryCode = (orderId) => apiJson('POST', `/orders/${encodeURIComponent(orderId)}/delivery-code/resend`, {});
+
+/** A verified phone that also belongs to an admin: sign in as the customer instead. */
+export const continueAsCustomer = (challengeToken) =>
+  apiJson('POST', '/auth/continue-as-customer', { challenge_token: challengeToken });
 
 export const fetchCurrentCustomer = () => apiJson('GET', '/auth/me');
 
@@ -217,6 +253,37 @@ export const chatApi = {
   get: (id, params = {}) => apiRequest(`/chats/${encodeURIComponent(id)}`, params),
   send: (id, body) => apiJson('POST', `/chats/${encodeURIComponent(id)}/messages`, { body }),
   markRead: (id) => apiJson('POST', `/chats/${encodeURIComponent(id)}/read`),
+};
+
+/**
+ * Special delivery negotiation (big events): when the automatic big-event
+ * delivery fee can't be used, the customer asks the kitchen, they talk in a
+ * dedicated chat and the kitchen sends formal quotations to accept or not.
+ */
+const sd = (id, rest = '') => `/special-deliveries/${encodeURIComponent(id)}${rest}`;
+export const specialDeliveryApi = {
+  list: (params = {}) => apiRequest('/special-deliveries', params),
+  create: (payload) => apiJson('POST', '/special-deliveries', payload),
+  get: (id) => apiRequest(sd(id)),
+  cancel: (id, reason = '') => apiJson('POST', sd(id, '/cancel'), { reason }),
+  provideInformation: (id, message) => apiJson('POST', sd(id, '/information'), { message }),
+  acceptQuotation: (id, quotationId) => apiJson('POST', sd(id, `/quotations/${encodeURIComponent(quotationId)}/accept`), {}),
+  requestRevision: (id, quotationId, note = '') =>
+    apiJson('POST', sd(id, `/quotations/${encodeURIComponent(quotationId)}/request-revision`), { note }),
+  rejectQuotation: (id, quotationId, note = '') =>
+    apiJson('POST', sd(id, `/quotations/${encodeURIComponent(quotationId)}/reject`), { note }),
+  dispute: (id, reason) => apiJson('POST', sd(id, '/dispute'), { reason }),
+  messages: (id, params = {}) => apiRequest(sd(id, '/messages'), params),
+  send: (id, body) => apiJson('POST', sd(id, '/messages'), { body }),
+  shareLocation: (id, { latitude, longitude, label = '' }) =>
+    apiJson('POST', sd(id, '/messages'), { kind: 'location', latitude, longitude, label }),
+  sendImage: (id, file, caption = '') => {
+    const form = new FormData();
+    form.append('image', file);
+    if (caption) form.append('caption', caption);
+    return apiJson('POST', sd(id, '/attachments'), form);
+  },
+  markRead: (id) => apiJson('POST', sd(id, '/read'), {}),
 };
 
 export const fetchNotifications = (params = {}) =>

@@ -1,21 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, User, Store, Bike, ShieldCheck, ArrowRight } from 'lucide-react';
+import { X, User, Store, Bike, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RoleSelectModal({ open, onClose }) {
   const navigate = useNavigate();
-  const { openAuthModal } = useAuth();
+  const { openCustomerRegistrationModal } = useAuth();
 
   if (!open) return null;
 
   const chooseCustomer = () => {
     onClose();
-    openAuthModal();
+    openCustomerRegistrationModal();
   };
 
   const chooseRole = (path) => {
-    onClose();
     navigate(path);
   };
 
@@ -33,7 +32,7 @@ export default function RoleSelectModal({ open, onClose }) {
       title: 'Vendor',
       description: 'Sell your food, manage your menu, orders & earnings',
       icon: Store,
-      onClick: () => chooseRole('/vendor-login'),
+      onClick: () => chooseRole('/vendor-register'),
       accent: 'from-[#3d1b0c] via-[#6d391d] to-[#2b1206]',
     },
     {
@@ -41,16 +40,8 @@ export default function RoleSelectModal({ open, onClose }) {
       title: 'Delivery Worker',
       description: 'Pick up & deliver orders, track your deliveries & earnings',
       icon: Bike,
-      onClick: () => chooseRole('/driver-login'),
+      onClick: () => chooseRole('/driver-register'),
       accent: 'from-[#1c2b12] via-[#3b5327] to-[#12200b]',
-    },
-    {
-      key: 'admin',
-      title: 'Admin',
-      description: 'Manage the marketplace, users, orders, payments & analytics',
-      icon: ShieldCheck,
-      onClick: () => chooseRole('/admin-login'),
-      accent: 'from-[#111827] via-[#1f2937] to-[#0b1220]',
     },
   ];
 
@@ -67,10 +58,10 @@ export default function RoleSelectModal({ open, onClose }) {
 
         <div className="text-center mb-6">
           <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">
-            How do you want to sign in?
+            How do you want to sign up?
           </h3>
           <p className="text-xs text-stone-500 font-medium">
-            Choose your role and we will take you to the right login page.
+            Choose your role and we'll take you to the right registration page.
           </p>
         </div>
 

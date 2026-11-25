@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   fetchCurrentCustomer,
   sendOtp as sendOtpRequest,
   verifyOtp as verifyOtpRequest,
+  continueAsCustomer as continueAsCustomerRequest,
   updateCurrentCustomerProfile,
 } from '../api/endpoints';
 import { clearAllSessions } from '../api/session';
@@ -39,12 +41,18 @@ const customerUser = (customer, existing = guestUser) => ({
   ...existing,
   id: customer.id,
   name: customer.name,
-  phone: customer.phone_number,
+  phone: customer.phone_number || '',
   email: customer.email || '',
+  // Only a verified email receives delivery codes; a phone/email waiting for its code.
+  emailVerified: Boolean(customer.email_verified),
+  pendingPhone: customer.pending_phone_number || '',
+  pendingEmail: customer.pending_email || '',
   avatar: customer.profile_image_url || existing.avatar || '',
 });
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_KEY));
   const [user, setUser] = useState(() => {
     // A stored profile is only meaningful while its access token is present.
@@ -100,24 +108,38 @@ export const AuthProvider = ({ children }) => {
   }, [accessToken]);
 
   const openAuthModal = () => {
+    if (location.pathname !== '/login') {
+      navigate('/login', { state: { from: location } });
+    }
+  };
+
+  const openCustomerRegistrationModal = () => {
     setAuthStep('phone');
     setIsAuthModalOpen(true);
   };
 
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
-  const sendOtp = async (phone, name = '') => {
+  /**
+   * `identifier`: the phone number or email typed in the one sign-in field.
+   * The code goes to that phone or inbox. Only an SMS code on a development
+   * server ever comes back (`dev_otp`); email codes never do.
+   */
+  const sendOtp = async (identifier, name = '', registrationPhone = '') => {
     setAuthError('');
-    setPendingPhone(phone);
+    setPendingPhone(identifier);
     setPendingName(name);
-    const result = await sendOtpRequest(phone, name);
-    setPendingPhone(result.phone_number);
-    setOtpPreview(result.dev_otp ?? '');
+    const result = await sendOtpRequest(identifier, name, registrationPhone);
+    setPendingPhone(result.identifier || result.phone_number);
+    setOtpPreview(result.identifier_type === 'email' ? '' : result.dev_otp ?? '');
     setAuthStep('otp');
   };
 
-  const verifyOtp = async (code, name = pendingName) => {
-    const result = await verifyOtpRequest(pendingPhone, code, name);
+  /** Re-reads the account (after verifying a new phone or email). */
+  const applyCustomer = (customer) => setUser((current) => customerUser(customer, current));
+
+  /** Signs the customer in with a session the server issued. */
+  const startCustomerSession = (result) => {
     // Roles are exclusive: wipe any vendor/driver/admin session first.
     clearAllSessions();
     localStorage.setItem(ACCESS_TOKEN_KEY, result.token);
@@ -128,6 +150,26 @@ export const AuthProvider = ({ children }) => {
     setOtpPreview('');
     return true;
   };
+
+  /**
+   * Returns true when signed in as a customer, or
+   * { adminVerificationRequired, challengeToken } when the server says this
+   * verified phone belongs to an admin (it decides — never this app). No
+   * session exists yet in that case; nothing is stored.
+   */
+  const verifyOtp = async (code, name = pendingName) => {
+    const result = await verifyOtpRequest(pendingPhone, code, name);
+    if (result.admin_verification_required) {
+      setIsAuthModalOpen(false);
+      setAuthStep('phone');
+      setOtpPreview('');
+      return { adminVerificationRequired: true, challengeToken: result.challenge_token, expiresInSeconds: result.expires_in_seconds };
+    }
+    return startCustomerSession(result);
+  };
+
+  /** From the admin verification screen: sign in as the customer instead. */
+  const continueAsCustomer = async (challengeToken) => startCustomerSession(await continueAsCustomerRequest(challengeToken));
 
   const logout = () => {
     clearAllSessions();
@@ -143,6 +185,15 @@ export const AuthProvider = ({ children }) => {
       isDefault: user.addresses.length === 0,
     };
     setUser((prev) => ({ ...prev, addresses: [...prev.addresses, addr] }));
+    return addr;
+  };
+
+  /** Changes a saved address (e.g. adds the map pin to an address saved without one). */
+  const updateAddress = (id, patch) => {
+    setUser((prev) => ({
+      ...prev,
+      addresses: prev.addresses.map((address) => (address.id === id ? { ...address, ...patch } : address)),
+    }));
   };
 
   const setDefaultAddress = (id) => {
@@ -201,16 +252,32 @@ export const AuthProvider = ({ children }) => {
     otpPreview,
     authError,
     openAuthModal,
+    openCustomerRegistrationModal,
+    acceptUnifiedCustomerSession: startCustomerSession,
     closeAuthModal,
     setAuthStep,
     sendOtp,
     verifyOtp,
+    continueAsCustomer,
     logout,
     addAddress,
+    updateAddress,
     setDefaultAddress,
     deleteAddress,
     updateProfile,
-  }), [user, accessToken, isAuthModalOpen, authStep, pendingPhone, pendingName, otpPreview, authError]);
+    applyCustomer,
+  }), [
+    user,
+    accessToken,
+    isAuthModalOpen,
+    authStep,
+    pendingPhone,
+    pendingName,
+    otpPreview,
+    authError,
+    navigate,
+    location,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

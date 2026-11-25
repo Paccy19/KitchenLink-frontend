@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FadeImage from '../components/common/FadeImage';
-import { KIGALI_AREAS } from '../utils/kigaliAreas';
+import KitchenLocationFields from '../components/vendor-dashboard/KitchenLocationFields';
 import {
   NAME_MAX_LENGTH,
   formatNameInput,
@@ -29,7 +29,67 @@ import {
   isValidRwandaPhone,
   sanitizeEmailInput,
   sanitizePhoneInput,
+  toLocalRwandaPhone,
 } from '../utils/validation';
+import { confirmEmailVerification, confirmPhoneChange, startEmailVerification, startPhoneChange } from '../api/endpoints';
+
+/**
+ * A new phone or email only replaces the old one once the code sent to it is
+ * entered (the server keeps the number/address it sent the code to). Email
+ * codes are never shown; an SMS code is shown only by a development server.
+ */
+function VerifyContactForm({ pending, onVerified, onCancel }) {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const isPhone = pending.kind === 'phone';
+
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(code)) return setError('Enter the 6-digit code.');
+    setBusy(true);
+    setError('');
+    try {
+      const { customer } = await (isPhone ? confirmPhoneChange(code) : confirmEmailVerification(code));
+      onVerified(customer);
+    } catch (err) {
+      setCode('');
+      setError(err?.message || 'Could not verify the code.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="bg-white rounded-3xl p-6 border border-[#ebd7c5] shadow-sm mb-8 space-y-3 animate-scale-in">
+      <h3 className="font-extrabold text-gray-900 text-sm">{isPhone ? 'Verify your new phone number' : 'Verify your email address'}</h3>
+      <p className="text-xs text-stone-500">
+        Enter the code we sent to <strong className="text-gray-900">{pending.sentTo || pending.target}</strong>.
+        {isPhone ? ' Your current number stays on your account until then.' : ' Delivery codes are sent only to a verified email.'}
+      </p>
+      {pending.devOtp && (
+        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">Development code: {pending.devOtp}</p>
+      )}
+      <input
+        type="text"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={6}
+        value={code}
+        onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        placeholder="6-digit code"
+        className="w-full sm:w-48 text-sm p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] tracking-widest font-bold"
+      />
+      {error && <p className="text-xs font-semibold text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={busy} className="px-5 py-2.5 bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 disabled:opacity-60">
+          {busy ? 'Verifying…' : 'Verify'}
+        </button>
+        <button type="button" onClick={onCancel} className="px-4 py-2.5 rounded-xl bg-stone-100 text-stone-700 font-bold text-xs">Later</button>
+      </div>
+    </form>
+  );
+}
 
 const initialsOf = (name) => {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -38,8 +98,9 @@ const initialsOf = (name) => {
 
 export default function ProfilePage() {
   const { 
-    user, 
-    updateProfile, 
+    user,
+    updateProfile,
+    applyCustomer,
     addAddress, 
     deleteAddress, 
     setDefaultAddress 
@@ -59,13 +120,25 @@ export default function ProfilePage() {
   const [title, setTitle] = useState('Home');
   const [street, setStreet] = useState('');
   const [district, setDistrict] = useState('');
+  // The address's map pin ({ lat, lng } strings): delivery is priced to it.
+  const [pin, setPin] = useState({ lat: '', lng: '' });
+  const [addrError, setAddrError] = useState('');
   const [instructions, setInstructions] = useState('');
 
   const [profileError, setProfileError] = useState('');
+  // A phone/email waiting for its code: { kind: 'phone'|'email', target, sentTo, devOtp }.
+  const [pendingContact, setPendingContact] = useState(null);
 
-  const handleSaveProfile = (e) => {
+  /** Sends the code that proves a new phone or email (the server refuses another customer's). */
+  const requestCode = async (kind, target) => {
+    const result = kind === 'phone' ? await startPhoneChange(target) : await startEmailVerification(target);
+    // Only an SMS code on a development server ever comes back; never an email code.
+    setPendingContact({ kind, target, sentTo: result.sent_to, devOtp: kind === 'phone' ? result.dev_otp || '' : '' });
+  };
+
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!isValidRwandaPhone(phone)) {
+    if (phone && !isValidRwandaPhone(phone)) {
       setProfileError(PHONE_ERROR);
       return;
     }
@@ -74,10 +147,26 @@ export default function ProfilePage() {
       return;
     }
     setProfileError('');
-    // Keep the form open if the server refuses (e.g. phone/email already used by another customer).
-    updateProfile({ name, phone, email })
-      .then(() => setIsEditing(false))
-      .catch((error) => setProfileError(error?.message || 'Could not save your profile.'));
+    const phoneChanged = Boolean(phone) && toLocalRwandaPhone(phone) !== toLocalRwandaPhone(user.phone || '');
+    const emailChanged = Boolean(email.trim()) && email.trim().toLowerCase() !== (user.email || '').toLowerCase();
+    try {
+      // The name (and removing the email) save straight away; a new phone or
+      // email is saved only after its code (the server refuses another
+      // customer's number, keeping the form open with its message).
+      await updateProfile({ name, ...(!email.trim() && user.email ? { email: '' } : {}) });
+      if (phoneChanged) await requestCode('phone', phone.trim());
+      else if (emailChanged) await requestCode('email', email.trim());
+      setIsEditing(false);
+    } catch (error) {
+      setProfileError(error?.message || 'Could not save your profile.');
+    }
+  };
+
+  const onContactVerified = (customer) => {
+    applyCustomer(customer);
+    setPhone(customer.phone_number || '');
+    setEmail(customer.email || '');
+    setPendingContact(null);
   };
 
   const handleAvatarChange = (e) => {
@@ -96,11 +185,22 @@ export default function ProfilePage() {
 
   const handleAddAddress = (e) => {
     e.preventDefault();
-    if (!street || !district.trim()) return;
-    addAddress({ title, street, district: district.trim(), city: 'Kigali', instructions });
+    if (!street.trim() || !district.trim()) {
+      setAddrError('Enter the area and the street or a landmark.');
+      return;
+    }
+    const lat = Number(pin.lat);
+    const lng = Number(pin.lng);
+    if (pin.lat === '' || pin.lng === '' || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      setAddrError('Put the pin on the delivery spot: search the street, tap the map, or use your current location.');
+      return;
+    }
+    addAddress({ title, street: street.trim(), district: district.trim(), city: 'Kigali', instructions, lat, lng });
     setShowAddAddr(false);
     setStreet('');
     setDistrict('');
+    setPin({ lat: '', lng: '' });
+    setAddrError('');
     setInstructions('');
   };
 
@@ -141,6 +241,18 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-2xl font-black text-gray-900">{user.name}</h1>
             <p className="text-xs text-stone-500 font-medium mt-0.5 break-all">{[user.phone, user.email].filter(Boolean).join(' · ')}</p>
+            {/* Unverified contact details never sign in or receive delivery codes. */}
+            {user.email && !user.emailVerified && !pendingContact && (
+              <button type="button" onClick={() => requestCode('email', user.email).catch((err) => setProfileError(err?.message || 'Could not send the code.'))} className="mt-1 block text-[11px] font-bold text-amber-700 underline">
+                Email not verified: send a code to verify it
+              </button>
+            )}
+            {user.pendingPhone && !pendingContact && (
+              <button type="button" onClick={() => requestCode('phone', user.pendingPhone).catch((err) => setProfileError(err?.message || 'Could not send the code.'))} className="mt-1 block text-[11px] font-bold text-amber-700 underline">
+                Verify your phone number {user.pendingPhone}
+              </button>
+            )}
+            {!isEditing && profileError && <p className="mt-1 text-[11px] font-semibold text-red-600">{profileError}</p>}
             <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
               Verified Customer Account
             </span>
@@ -164,6 +276,10 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {pendingContact && (
+        <VerifyContactForm pending={pendingContact} onVerified={onContactVerified} onCancel={() => setPendingContact(null)} />
+      )}
 
       {/* Profile Edit Form if active */}
       {isEditing && (
@@ -258,34 +374,34 @@ export default function ProfilePage() {
           {showAddAddr && (
             <form onSubmit={handleAddAddress} className="p-5 bg-white rounded-3xl border border-stone-200 space-y-3 animate-scale-in">
               <h4 className="font-bold text-xs text-stone-800">Add New Address in Kigali</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Label (e.g. Home, Work, Aunt's House)"
-                  className="p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
-                  required
-                />
-                <input
-                  list="profile-kigali-areas"
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value.slice(0, 80))}
-                  placeholder="Area (any part of Kigali)"
-                  className="p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
-                  required
-                />
-                <datalist id="profile-kigali-areas">
-                  {KIGALI_AREAS.map((area) => <option key={area} value={area} />)}
-                </datalist>
-              </div>
               <input
                 type="text"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-                placeholder="Street name / Landmark"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Label (e.g. Home, Work, Aunt's House)"
                 className="w-full p-2.5 text-xs rounded-xl border border-stone-200 outline-none focus:border-[#542813]"
                 required
+              />
+              {/* The map pin is where the delivery fee is calculated to. */}
+              <KitchenLocationFields
+                area={district}
+                address={street}
+                coords={pin}
+                onChange={(patch) => {
+                  setAddrError('');
+                  if (patch.area !== undefined) setDistrict(patch.area.slice(0, 80));
+                  if (patch.address !== undefined) setStreet(patch.address);
+                  if (patch.coords !== undefined) setPin(patch.coords);
+                }}
+                errors={addrError ? { coords: addrError } : {}}
+                inputClass={(error) =>
+                  `w-full p-2.5 text-xs rounded-xl border outline-none focus:border-[#542813] ${error ? 'border-red-300' : 'border-stone-200'}`
+                }
+                areaLabel="Area"
+                addressLabel="Street name / Landmark"
+                place="the delivery spot"
+                placeSpot="the exact spot where the food should arrive"
+                currentLocationHint="At this address right now? Detect it. Otherwise search the area and street, or tap the map."
               />
               <input
                 type="text"
@@ -329,6 +445,11 @@ export default function ProfilePage() {
                   </div>
                   <p className="text-xs text-stone-700 font-medium">{addr.street}</p>
                   <p className="text-xs text-stone-400">{addr.district}, Kigali</p>
+                  {(addr.lat == null || addr.lng == null) && (
+                    <p className="text-[11px] text-amber-700 font-semibold mt-1">
+                      No map pin yet: add it at checkout so the delivery fee can be calculated.
+                    </p>
+                  )}
                   {addr.instructions && (
                     <p className="text-[11px] text-stone-500 italic mt-2">Note: {addr.instructions}</p>
                   )}

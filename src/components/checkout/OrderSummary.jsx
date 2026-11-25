@@ -84,6 +84,11 @@ export default function OrderSummary({
                 : formatDistance(deliveryQuote.distanceM, deliveryQuote.distanceKm) || '—'}
             </span>
           </div>
+          {deliveryQuote.needsPin && (
+            <p role="alert" className="rounded-xl bg-amber-50 border border-amber-200 p-2 text-amber-800 font-semibold">
+              Put this address on the map ("Add the pin") to see the delivery fee.
+            </p>
+          )}
           {deliveryQuote.errorMessage && (
             <div role="alert" className="flex items-start justify-between gap-2 rounded-xl bg-amber-50 border border-amber-200 p-2 text-amber-800 font-semibold">
               <span>{deliveryQuote.errorMessage}</span>
