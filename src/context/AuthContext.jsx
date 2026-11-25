@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   fetchCurrentCustomer,
   sendOtp as sendOtpRequest,
@@ -50,6 +51,8 @@ const customerUser = (customer, existing = guestUser) => ({
 });
 
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_KEY));
   const [user, setUser] = useState(() => {
     // A stored profile is only meaningful while its access token is present.
@@ -105,6 +108,12 @@ export const AuthProvider = ({ children }) => {
   }, [accessToken]);
 
   const openAuthModal = () => {
+    if (location.pathname !== '/login') {
+      navigate('/login', { state: { from: location } });
+    }
+  };
+
+  const openCustomerRegistrationModal = () => {
     setAuthStep('phone');
     setIsAuthModalOpen(true);
   };
@@ -243,6 +252,8 @@ export const AuthProvider = ({ children }) => {
     otpPreview,
     authError,
     openAuthModal,
+    openCustomerRegistrationModal,
+    acceptUnifiedCustomerSession: startCustomerSession,
     closeAuthModal,
     setAuthStep,
     sendOtp,
@@ -255,7 +266,18 @@ export const AuthProvider = ({ children }) => {
     deleteAddress,
     updateProfile,
     applyCustomer,
-  }), [user, accessToken, isAuthModalOpen, authStep, pendingPhone, pendingName, otpPreview, authError]);
+  }), [
+    user,
+    accessToken,
+    isAuthModalOpen,
+    authStep,
+    pendingPhone,
+    pendingName,
+    otpPreview,
+    authError,
+    navigate,
+    location,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

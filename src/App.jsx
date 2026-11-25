@@ -43,11 +43,9 @@ const VendorNotificationsPage = lazy(() => import('./pages/vendor/VendorNotifica
 const VendorProfilePage = lazy(() => import('./pages/vendor/VendorProfilePage'));
 const VendorSupportPage = lazy(() => import('./pages/vendor/VendorSupportPage'));
 const VendorRegisterPage = lazy(() => import('./pages/vendor/VendorRegisterPage'));
-const VendorLoginPage = lazy(() => import('./pages/vendor/VendorLoginPage'));
 
 // Driver app (separate shell without the customer chrome).
 const DriverLayout = lazy(() => import('./components/driver-dashboard/DriverLayout'));
-const DriverLoginPage = lazy(() => import('./pages/driver/DriverLoginPage'));
 const DriverRegisterPage = lazy(() => import('./pages/driver/DriverRegisterPage'));
 const DriverDashboardPage = lazy(() => import('./pages/driver/DriverDashboardPage'));
 const DriverActiveDeliveryPage = lazy(() => import('./pages/driver/DriverActiveDeliveryPage'));
@@ -79,6 +77,8 @@ const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminTeamPage = lazy(() => import('./pages/admin/AdminTeamPage'));
 const AdminPlatformBooksPage = lazy(() => import('./pages/admin/AdminPlatformBooksPage'));
 const AdminInvitePage = lazy(() => import('./pages/admin/AdminInvitePage'));
+const UnifiedLoginPage = lazy(() => import('./pages/UnifiedLoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
 
 export default function App() {
   const location = useLocation();
@@ -129,10 +129,13 @@ export default function App() {
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/special-deliveries" element={<SpecialDeliveriesPage />} />
               <Route path="/special-deliveries/:requestId" element={<SpecialDeliveryPage />} />
+              <Route path="/login" element={<UnifiedLoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/register" element={<Navigate to="/signup" replace />} />
               <Route path="/vendor-register" element={<VendorRegisterPage />} />
-              <Route path="/vendor-login" element={<VendorLoginPage />} />
+              <Route path="/vendor-login" element={<Navigate to="/login" replace />} />
               <Route path="/driver-register" element={<DriverRegisterPage />} />
-              <Route path="/driver-login" element={<DriverLoginPage />} />
+              <Route path="/driver-login" element={<Navigate to="/login" replace />} />
               <Route path="/admin-login" element={<AdminLoginPage />} />
               <Route path="/admin-verify" element={<AdminVerifyPage />} />
               <Route path="/admin-invite" element={<AdminInvitePage />} />

@@ -86,10 +86,10 @@ export default function AuthModal() {
             </div>
 
             <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-1">
-              Welcome to KitchenLink
+              Create your customer account
             </h3>
             <p className="text-xs text-stone-500 mb-6 font-medium">
-              Enter your phone number or email to sign in or create your customer account
+              Enter your name and phone number or email. We’ll send you a one-time verification code.
             </p>
 
             {(error || authError) && (
@@ -165,6 +165,19 @@ export default function AuthModal() {
                 <ArrowRight className="w-4 h-4 text-[#d9bda6]" />
               </button>
             </form>
+            <p className="mt-4 text-center text-xs text-stone-500">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  closeAuthModal();
+                  navigate('/login');
+                }}
+                className="font-bold text-[#542813] hover:text-[#2b1206] underline underline-offset-2"
+              >
+                Sign in
+              </button>
+            </p>
           </div>
         ) : (
           <div>

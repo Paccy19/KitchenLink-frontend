@@ -152,6 +152,15 @@ export const verifyOtp = (identifier, code, name) =>
     ...(name ? { name } : {}),
   });
 
+export const sendUnifiedLoginOtp = (identifier, role) =>
+  apiJson('POST', '/auth/login/send-otp', {
+    identifier,
+    ...(role ? { role } : {}),
+  });
+
+export const verifyUnifiedLoginOtp = (identifier, code, role) =>
+  apiJson('POST', '/auth/login/verify-otp', { identifier, code, role });
+
 // A new phone / email only counts once its code is verified.
 export const startPhoneChange = (phoneNumber) => apiJson('POST', '/auth/me/phone/send-code', { phone_number: phoneNumber });
 export const confirmPhoneChange = (code) => apiJson('POST', '/auth/me/phone/verify', { code });

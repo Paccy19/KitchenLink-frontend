@@ -393,6 +393,17 @@ export function DriverProvider({ children }) {
     [pendingLoginPhone],
   );
 
+  const acceptUnifiedLogin = useCallback((result) => {
+    clearAllSessions();
+    setDriverToken(result.token);
+    setAuthToken(result.token);
+    setDriver(mapDriverAccount(result.driver));
+    setPendingLoginPhone('');
+    setLoginOtpPreview('');
+    setError('');
+    return result;
+  }, []);
+
   const logout = useCallback(() => {
     clearAllSessions();
     setAuthToken('');
@@ -661,6 +672,7 @@ export function DriverProvider({ children }) {
       updateDriverProfile,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       logout,
@@ -711,6 +723,7 @@ export function DriverProvider({ children }) {
       updateDriverProfile,
       requestLoginOtp,
       verifyLoginOtp,
+      acceptUnifiedLogin,
       pendingLoginPhone,
       loginOtpPreview,
       logout,

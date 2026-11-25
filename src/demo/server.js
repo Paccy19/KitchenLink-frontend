@@ -641,6 +641,59 @@ function checkOtp(code) {
   if (String(code).trim() !== DEMO_OTP) fail(400, `Wrong code. In demo mode the code is ${DEMO_OTP}.`, 'OTP_INVALID');
 }
 
+function demoIdentifierKey(value) {
+  const identifier = String(value || '').trim();
+  return identifier.includes('@')
+    ? identifier.toLowerCase()
+    : identifier.replace(/\D/g, '').slice(-9);
+}
+
+function demoLoginAccounts(identifier) {
+  const key = demoIdentifierKey(identifier);
+  const matches = (value) => value && demoIdentifierKey(value) === key;
+  return [
+    ...state.customers.filter((customer) => matches(customer.phone_number) || matches(customer.email))
+      .map((account) => ({ role: 'customer', account })),
+    ...state.vendors.filter((vendor) => matches(vendor.phone) || matches(vendor.email))
+      .map((account) => ({ role: 'vendor', account })),
+    ...state.drivers.filter((driver) => matches(driver.phone) || matches(driver.email))
+      .map((account) => ({ role: 'driver', account })),
+  ];
+}
+
+function sendDemoUnifiedOtp(request) {
+  const identifier = String(request.body.identifier || '').trim();
+  const accounts = demoLoginAccounts(identifier);
+  if (!accounts.length) fail(404, 'No customer, vendor or delivery worker account was found for this phone number or email address.', 'ACCOUNT_NOT_FOUND');
+  const roles = [...new Set(accounts.map((account) => account.role))];
+  if (roles.length > 1 && !request.body.role) {
+    return { requires_role_selection: true, roles, identifier };
+  }
+  const role = request.body.role || roles[0];
+  if (!roles.includes(role)) fail(404, 'That account type is not associated with this phone number or email address.', 'ACCOUNT_ROLE_NOT_FOUND');
+  return {
+    role,
+    requires_role_selection: false,
+    identifier,
+    identifier_type: identifier.includes('@') ? 'email' : 'phone',
+    ...(identifier.includes('@') ? {} : { dev_otp: DEMO_OTP }),
+    expires_in_seconds: 300,
+  };
+}
+
+function verifyDemoUnifiedOtp(request) {
+  checkOtp(request.body.code);
+  const identifier = String(request.body.identifier || '').trim();
+  const accounts = demoLoginAccounts(identifier);
+  const match = accounts.find((account) => account.role === request.body.role);
+  if (!match) fail(404, 'That account type is not associated with this phone number or email address.', 'ACCOUNT_ROLE_NOT_FOUND');
+  const { role, account } = match;
+  sessions[role] = account.id;
+  if (role === 'customer') return { role, token: TOKENS.customer, customer: account };
+  if (role === 'vendor') return { role, token: TOKENS.vendor, vendor: vendorAccount(account) };
+  return { role, token: TOKENS.driver, driver: driverAccount(account) };
+}
+
 function vendorAccount(vendor) {
   const withdrawn = withdrawnBy(`vendor:${vendor.id}`);
   const totals = vendorTotals(vendor);
@@ -991,6 +1044,8 @@ const KIGALI_PLACES = [
 ];
 
 const customerRoutes = [
+  ['POST', '/auth/login/send-otp', sendDemoUnifiedOtp],
+  ['POST', '/auth/login/verify-otp', verifyDemoUnifiedOtp],
   ['POST', '/auth/send-otp', (r) => {
     const identifier = String(r.body.identifier ?? r.body.phone_number ?? '').trim();
     const isEmail = identifier.includes('@');
