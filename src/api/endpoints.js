@@ -83,6 +83,15 @@ export function fetchAllVendors(params = {}) {
 }
 
 /**
+ * GET /home/dishes?page&limit&category&sort — every available dish from every
+ * kitchen, one page at a time. sort: recommended | price_asc | price_desc |
+ * rating | delivery_time. Each dish says whether its kitchen is open.
+ */
+export function fetchDishes(params = {}) {
+  return apiRequest('/home/dishes', params);
+}
+
+/**
  * GET /home/search?q={query}&lat={lat}&lng={lng}
  *
  * @param {{q:string, lat:number|string, lng:number|string}} params
