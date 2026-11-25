@@ -18,7 +18,7 @@ import { clearAllSessions } from '../api/session';
 const AdminContext = createContext(null);
 
 /**
- * Holds the signed-in admin (email + password session) and exposes the
+ * Holds the signed-in admin (identifier + password session) and exposes the
  * operations the admin panel needs. Kept separate from the customer/vendor/
  * driver contexts so a lingering customer session never affects the panel.
  */
@@ -86,21 +86,11 @@ export function AdminProvider({ children }) {
     };
   }, []);
 
-  // Returns { twoFactorRequired, challengeToken, sentTo, devOtp } when an SMS
-  // code is needed; finish with verifyTwoFactor.
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (identifier, password) => {
     setAuthBusy(true);
     setError('');
     try {
-      const result = await adminApi.login(email, password);
-      if (result.two_factor_required) {
-        return {
-          twoFactorRequired: true,
-          challengeToken: result.challenge_token,
-          sentTo: result.sent_to,
-          devOtp: result.dev_otp || '',
-        };
-      }
+      const result = await adminApi.login(identifier, password);
       clearAllSessions();
       setAdminToken(result.token);
       setAuthToken(result.token);
