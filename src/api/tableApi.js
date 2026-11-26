@@ -20,6 +20,22 @@ export const openTableSession = (token, body = {}, sessionKey = '') =>
 export const placeTableOrder = (token, body, sessionKey = '') =>
   apiJson('POST', `/tables/${t(token)}/orders`, body, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
 
+/** GET /tables/:token/payment-seats — only the caller's seat and active consents. */
+export const fetchTablePaymentSeats = (token, sessionKey = '') =>
+  apiGet(`/tables/${t(token)}/payment-seats`, {}, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
+
+/** Payment-consent and Paypack endpoints are scoped to the caller's seat session. */
+export const authorizeTablePayment = (token, sessionKey = '') =>
+  apiJson('POST', `/tables/${t(token)}/payment-authorizations`, {}, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
+export const acceptTablePaymentAuthorization = (token, code, sessionKey = '') =>
+  apiJson('POST', `/tables/${t(token)}/payment-authorizations/join`, { code }, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
+export const revokeTablePaymentAuthorization = (token, authorizationId, sessionKey = '') =>
+  apiJson('DELETE', `/tables/${t(token)}/payment-authorizations/${encodeURIComponent(authorizationId)}`, {}, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
+export const startTablePayment = (token, body, sessionKey = '') =>
+  apiJson('POST', `/tables/${t(token)}/payments`, body, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
+export const checkTablePayment = (token, paymentId, sessionKey = '') =>
+  apiJson('POST', `/tables/${t(token)}/payments/${encodeURIComponent(paymentId)}/check`, {}, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
+
 /** GET /tables/:token/orders/:id — progress per department and the bill (guest key in a header). */
 export const fetchTableOrder = (token, orderId, guestKey) =>
   apiGet(`/tables/${t(token)}/orders/${encodeURIComponent(orderId)}`, {}, guestKey ? { 'X-Guest-Key': guestKey } : {});

@@ -87,6 +87,13 @@ export default function VendorTablesPage() {
                     <DoorClosed className="w-4 h-4" /> Close visit
                   </Button>
                 )}
+                {table.active_table_session_id && can('tables.view') && (
+                  <TableSeatBalances
+                    table={table}
+                    canRecordPayment={can('invoices.process_payment')}
+                    canReleaseSeat={can('tables.assign')}
+                  />
+                )}
                 {can('tables.delete') && (
                   <Button
                     variant="danger"
@@ -105,6 +112,133 @@ export default function VendorTablesPage() {
       )}
       {editing && <TableForm table={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
       {qrTable && <QrModal table={qrTable} kitchenName={vendor?.name} canRotate={can('tables.qr')} onClose={() => setQrTable(null)} onRotated={(t) => { setQrTable(t); reload(); }} />}
+    </div>
+  );
+}
+
+function TableSeatBalances({ table, canRecordPayment, canReleaseSeat }) {
+  const [open, setOpen] = useState(false);
+  const [seats, setSeats] = useState([]);
+  const [selected, setSelected] = useState({});
+  const [method, setMethod] = useState('cash');
+  const [reference, setReference] = useState('');
+  const [error, setError] = useState('');
+  const action = useAction();
+  const load = async () => {
+    try {
+      const result = await kitchenApi.seatBalances(table.id);
+      setSeats(result.seats || []);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const toggle = (seat) => setSelected((current) => {
+    if (current[seat.customer_session_id]) {
+      const next = { ...current };
+      delete next[seat.customer_session_id];
+      return next;
+    }
+    return { ...current, [seat.customer_session_id]: seat.balance_rwf };
+  });
+  const total = seats.reduce((sum, seat) => (
+    selected[seat.customer_session_id] ? sum + (Number(selected[seat.customer_session_id]) || 0) : sum
+  ), 0);
+  const record = () => action.run('record', async () => {
+    const allocations = seats
+      .filter((seat) => selected[seat.customer_session_id])
+      .map((seat) => ({
+        customer_session_id: seat.customer_session_id,
+        amount_rwf: Number(selected[seat.customer_session_id]),
+        balance_version: seat.balance_version,
+      }));
+    const body = { seats: allocations, method, reference: reference.trim() || undefined };
+    const fingerprint = JSON.stringify(body);
+    const storageKey = `ofk_cashier_seat_payment_${table.id}`;
+    let saved = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+    } catch {
+      saved = null;
+    }
+    const idempotencyKey = saved?.fingerprint === fingerprint
+      ? saved.key
+      : (window.crypto?.randomUUID?.() || `cash-${Date.now()}-${Math.random().toString(36).slice(2, 18)}`);
+    sessionStorage.setItem(storageKey, JSON.stringify({ fingerprint, key: idempotencyKey }));
+    const result = await kitchenApi.recordSeatPayment(table.id, { ...body, idempotency_key: idempotencyKey });
+    if (result.status === 'successful') {
+      sessionStorage.removeItem(storageKey);
+      setSelected({});
+      setReference('');
+      await load();
+    }
+  });
+  const release = (seat) => {
+    if (!window.confirm(`Release paid seat ${seat.seat_number}? Its order history will remain in the table session.`)) return;
+    action.run(`release:${seat.seat_number}`, async () => {
+      await kitchenApi.releaseSeat(table.id, seat.seat_number);
+      await load();
+    });
+  };
+
+  return (
+    <div className="w-full">
+      <Button variant="soft" className="!py-2 !text-xs" onClick={async () => { setOpen((value) => !value); if (!open) await load(); }}>
+        <Receipt className="w-4 h-4" /> {open ? 'Hide seats' : 'Seat balances'}
+      </Button>
+      {open && (
+        <div className="mt-3 space-y-2 rounded-xl bg-stone-50 p-3">
+          {seats.map((seat) => (
+            <div key={seat.customer_session_id} className="rounded-lg border border-stone-200 bg-white p-2.5">
+              <div className="flex items-center gap-2">
+                {canRecordPayment && seat.payable && (
+                  <input type="checkbox" aria-label={`Select seat ${seat.seat_number} for payment`} checked={Boolean(selected[seat.customer_session_id])} onChange={() => toggle(seat)} />
+                )}
+                <div className="flex-1">
+                  <p className="text-xs font-black">Seat {seat.seat_number} · {seat.payment_status.replaceAll('_', ' ')}</p>
+                  <p className="text-[11px] text-stone-500">Paid {money(seat.paid_rwf)} · Due {money(seat.balance_rwf)}</p>
+                </div>
+                {canReleaseSeat && seat.payment_status === 'paid' && (
+                  <button type="button" className="text-[11px] font-bold text-red-700" disabled={action.busy === `release:${seat.seat_number}`} onClick={() => release(seat)}>Release</button>
+                )}
+              </div>
+              {selected[seat.customer_session_id] && (
+                <label className="mt-2 ml-6 flex items-center justify-between text-[11px] text-stone-600">
+                  Amount (RWF)
+                  <input type="number" min="1" max={seat.balance_rwf} step="1" value={selected[seat.customer_session_id]} onChange={(event) => setSelected((current) => ({ ...current, [seat.customer_session_id]: event.target.value }))} className="w-28 rounded border border-stone-200 px-2 py-1 text-right text-xs" />
+                </label>
+              )}
+              {(seat.payment_history || []).map((payment) => (
+                <p key={payment.reference} className="mt-1 text-[10px] text-stone-500">
+                  {money(payment.amount_rwf)} · {payment.reference} · paid by {payment.payer_seat_number ? `Seat ${payment.payer_seat_number}` : 'cashier'}
+                </p>
+              ))}
+            </div>
+          ))}
+          {seats.length === 0 && <p className="text-xs text-stone-500">No active seats.</p>}
+          {canRecordPayment && Object.keys(selected).length > 0 && (
+            <div className="space-y-2 border-t border-stone-200 pt-2">
+              <label className="block text-xs font-bold">Payment method
+                <select value={method} onChange={(event) => setMethod(event.target.value)} className={`${inputClass} mt-1`}>
+                  <option value="cash">Cash</option>
+                  <option value="mobile_money">Mobile money</option>
+                  <option value="card">Card</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label className="block text-xs font-bold">Receipt reference (optional)
+                <input value={reference} onChange={(event) => setReference(event.target.value)} maxLength={80} className={`${inputClass} mt-1`} />
+              </label>
+              <p className="text-xs font-black">Selected total: {money(total)}</p>
+              <Button className="w-full" busy={action.busy === 'record'} disabled={total <= 0 || seats.some((seat) => selected[seat.customer_session_id] && Number(selected[seat.customer_session_id]) > seat.balance_rwf)} onClick={record}>
+                Record payment for selected seats
+              </Button>
+            </div>
+          )}
+          <ErrorNote message={error || action.error} />
+          <button type="button" onClick={load} className="text-xs font-bold text-[#9a3412]">Refresh seat balances</button>
+        </div>
+      )}
     </div>
   );
 }
