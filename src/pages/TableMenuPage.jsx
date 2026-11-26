@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2, Minus, Plus, ShoppingBag, UtensilsCrossed, CheckCircle2, Clock, X, Receipt } from 'lucide-react';
-import { fetchTableMenu, placeTableOrder, fetchTableOrder } from '../api/tableApi';
+import { fetchTableMenu, openTableSession, placeTableOrder, fetchTableOrder } from '../api/tableApi';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import ModalPortal from '../components/common/ModalPortal';
 import MenuPhotos from '../components/common/MenuPhotos';
@@ -9,6 +9,7 @@ import MenuPhotos from '../components/common/MenuPhotos';
 const money = (value) => `RWF ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
 const cartKey = (token) => `ofk_table_cart_${token}`;
 const ordersKey = (token) => `ofk_table_orders_${token}`;
+const sessionKey = (token) => `ofk_table_session_${token}`;
 const read = (key, fallback) => {
   try {
     return JSON.parse(localStorage.getItem(key)) ?? fallback;
@@ -25,15 +26,16 @@ const STATUS_TONE = {
 };
 
 /**
- * What a table's QR code opens: the kitchen's whole menu (every department),
- * one basket, and one order for the table. The table comes from the code,
- * so guests never pick it. Guests follow their orders here (their browser
- * keeps each order's key).
+ * A QR opens the kitchen's unified menu. Seat QR codes also open an
+ * independently owned customer session; each customer can place several
+ * orders without selecting or exposing another guest's session.
  */
 export default function TableMenuPage() {
   const { token } = useParams();
   const [menu, setMenu] = useState(null);
   const [error, setError] = useState('');
+  const [seatSession, setSeatSession] = useState(null);
+  const [seatSessionError, setSeatSessionError] = useState('');
   const [department, setDepartment] = useState('');
   const [cart, setCart] = useState(() => read(cartKey(token), []));
   const [myOrders, setMyOrders] = useState(() => read(ordersKey(token), []));
@@ -41,9 +43,35 @@ export default function TableMenuPage() {
   const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    setMenu(null);
+    setError('');
+    setSeatSession(null);
+    setSeatSessionError('');
     fetchTableMenu(token)
-      .then(setMenu)
-      .catch((err) => setError(err.message));
+      .then(async (result) => {
+        if (cancelled) return;
+        setMenu(result);
+        if (!result.table.seat || !result.ordering.can_order) return;
+        try {
+          const savedKey = localStorage.getItem(sessionKey(token)) || '';
+          const session = await openTableSession(token, {}, savedKey);
+          if (cancelled) return;
+          if (session.session_key) localStorage.setItem(sessionKey(token), session.session_key);
+          setSeatSession(session);
+        } catch (err) {
+          if (!cancelled) setSeatSessionError(err.message);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      });
+    return () => { cancelled = true; };
+  }, [token]);
+  useEffect(() => {
+    setCart(read(cartKey(token), []));
+    setMyOrders(read(ordersKey(token), []));
+    setDepartment('');
   }, [token]);
   useEffect(() => localStorage.setItem(cartKey(token), JSON.stringify(cart)), [cart, token]);
   useEffect(() => localStorage.setItem(ordersKey(token), JSON.stringify(myOrders.slice(-10))), [myOrders, token]);
@@ -70,6 +98,7 @@ export default function TableMenuPage() {
   const change = (key, delta) => setCart((lines) => lines.map((l) => (l.key === key ? { ...l, quantity: l.quantity + delta } : l)).filter((l) => l.quantity > 0));
   const count = cart.reduce((s, l) => s + l.quantity, 0);
   const estimate = cart.reduce((s, l) => s + l.unit * l.quantity, 0);
+  const canOrder = Boolean(orderingCanOrder(menu) && (!menu?.table?.seat || seatSession));
 
   if (error && !menu) {
     return (
@@ -93,6 +122,16 @@ export default function TableMenuPage() {
       <header className="pt-6 pb-4">
         <p className="text-[11px] font-black uppercase tracking-wide text-[#c2410c]">{table.label}{table.area ? ` · ${table.area}` : ''}</p>
         <h1 className="text-2xl font-black text-gray-900">{kitchen.name}</h1>
+        {table.seat && (
+          <p className="mt-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold px-3 py-2">
+            Seat {table.seat.number} · Your orders are kept separate from other guests at this table.
+          </p>
+        )}
+        {seatSessionError && (
+          <p role="alert" className="mt-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold px-3 py-2">
+            {seatSessionError}
+          </p>
+        )}
         {!ordering.can_order ? (
           <p className="mt-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold px-3 py-2">{ordering.reason}</p>
         ) : (
@@ -128,7 +167,7 @@ export default function TableMenuPage() {
                   {item.description && <p className="text-xs text-stone-500 line-clamp-2">{item.description}</p>}
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-black text-sm">{money(item.price_rwf)}</span>
-                    {ordering.can_order && (
+                    {canOrder && (
                       <button type="button" onClick={() => (item.options.length ? setChoosing(item) : addLine(item))} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#f28c18] text-white text-xs font-black active:scale-95">
                         <Plus className="w-3.5 h-3.5" /> Add
                       </button>
@@ -160,6 +199,7 @@ export default function TableMenuPage() {
           estimate={estimate}
           onChange={change}
           onClose={() => setCartOpen(false)}
+          sessionKey={localStorage.getItem(sessionKey(token)) || ''}
           onPlaced={(placed) => {
             setMyOrders((list) => [...list, { id: placed.order.id, key: placed.guest_key, number: placed.order.order_number }]);
             setCart([]);
@@ -170,6 +210,10 @@ export default function TableMenuPage() {
       )}
     </div>
   );
+}
+
+function orderingCanOrder(menu) {
+  return Boolean(menu?.ordering?.can_order);
 }
 
 function Sheet({ title, onClose, children }) {
@@ -214,7 +258,7 @@ function OptionsSheet({ item, onClose, onAdd }) {
   );
 }
 
-function CartSheet({ token, table, cart, estimate, onChange, onClose, onPlaced }) {
+function CartSheet({ token, table, cart, estimate, sessionKey, onChange, onClose, onPlaced }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -225,7 +269,7 @@ function CartSheet({ token, table, cart, estimate, onChange, onClose, onPlaced }
       const placed = await placeTableOrder(token, {
         guest_name: name.trim() || undefined,
         items: cart.map((l) => ({ menu_item_id: l.menu_item_id, quantity: l.quantity, option_ids: l.option_ids, note: l.note || undefined })),
-      });
+      }, sessionKey);
       onPlaced(placed);
     } catch (err) {
       setError(err.message);

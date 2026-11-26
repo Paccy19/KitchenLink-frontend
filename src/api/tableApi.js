@@ -12,8 +12,13 @@ const t = (token) => encodeURIComponent(token);
 /** GET /tables/:token — the kitchen, the table, its departments and the whole menu. */
 export const fetchTableMenu = (token) => apiGet(`/tables/${t(token)}`);
 
-/** POST /tables/:token/orders — { items: [{ menu_item_id, quantity, option_ids, note }], guest_name, note }. */
-export const placeTableOrder = (token, body) => apiJson('POST', `/tables/${t(token)}/orders`, body);
+/** POST /tables/:token/session — opens or recovers this seat's private customer session. */
+export const openTableSession = (token, body = {}, sessionKey = '') =>
+  apiJson('POST', `/tables/${t(token)}/session`, body, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
+
+/** POST /tables/:token/orders — { items, guest_name, note }; seat QR orders require the session key. */
+export const placeTableOrder = (token, body, sessionKey = '') =>
+  apiJson('POST', `/tables/${t(token)}/orders`, body, sessionKey ? { 'X-Dining-Session-Key': sessionKey } : {});
 
 /** GET /tables/:token/orders/:id — progress per department and the bill (guest key in a header). */
 export const fetchTableOrder = (token, orderId, guestKey) =>
