@@ -13,6 +13,7 @@
 
 import { DEMO_IDS, DEMO_OTP, createSeed } from './seed';
 import { VENDOR_TYPES, vendorTypeLabel } from '../data/vendorTypes';
+import { kitchenOpsRoutes } from './kitchenOps';
 
 const STATE_KEY = 'ofk_demo_state';
 const TOKENS = {
@@ -279,6 +280,24 @@ function publicVendor(vendor, from = null) {
   };
 }
 
+/** A kitchen's public page: details, its services (departments) and the menu by category. */
+function publicVendorDetail(vendorId) {
+  const vendor = findVendor(vendorId);
+  if (!vendor || vendor.status !== 'approved') fail(404, 'This kitchen is not on KitchenLink.');
+  const departments = (state.kitchenOps?.[vendor.id]?.departments || []).filter((d) => d.is_active !== false);
+  const off = new Set((state.kitchenOps?.[vendor.id]?.departments || []).filter((d) => d.is_active === false).map((d) => d.id));
+  const items = state.menuItems.filter((item) => item.vendor_id === vendor.id && !off.has(item.department_id));
+  const groups = [...new Set(items.map((item) => categoryName(item.category_id)))];
+  return {
+    ...publicVendor(vendor),
+    location: { neighborhood: vendor.neighborhood, address: vendor.address, latitude: vendor.latitude, longitude: vendor.longitude },
+    departments: departments.map((d) => ({ id: d.id, name: d.name, category: d.category, description: d.description || '' })),
+    menu_photos: state.kitchenOps?.[vendor.id]?.menuPhotos || [],
+    menu_categories: groups,
+    menu: groups.map((category) => ({ category, items: items.filter((item) => categoryName(item.category_id) === category).map(publicDish) })),
+  };
+}
+
 function publicDish(item) {
   const vendor = findVendor(item.vendor_id);
   return {
@@ -293,6 +312,7 @@ function publicDish(item) {
     is_preorder: item.is_preorder,
     preorder_cutoff: item.preorder_cutoff,
     popular: item.is_popular,
+    department_id: item.department_id || null,
     options: groupOptions(item.options),
     vendor: { id: vendor.id, name: vendor.name, vendor_type: vendor.vendor_type },
     rating: vendor.rating,
@@ -1225,18 +1245,7 @@ const customerRoutes = [
         .map((o) => ({ ...o, vendor: publicVendor(findVendor(o.vendor_id), from) })),
     };
   }],
-  ['GET', '/vendors/:id', (r, p) => {
-    const vendor = findVendor(p.id);
-    if (!vendor || vendor.status !== 'approved') fail(404, 'This kitchen is not on KitchenLink.');
-    const items = state.menuItems.filter((item) => item.vendor_id === vendor.id);
-    const groups = [...new Set(items.map((item) => categoryName(item.category_id)))];
-    return {
-      ...publicVendor(vendor),
-      location: { neighborhood: vendor.neighborhood, address: vendor.address, latitude: vendor.latitude, longitude: vendor.longitude },
-      menu_categories: groups,
-      menu: groups.map((category) => ({ category, items: items.filter((item) => categoryName(item.category_id) === category).map(publicDish) })),
-    };
-  }],
+  ['GET', '/vendors/:id', (r, p) => publicVendorDetail(p.id)],
   ['GET', '/vendors/:id/delivery-quote', (r, p) => {
     const vendor = findVendor(p.id) || fail(404, 'Kitchen not found.');
     const km = distanceKm(vendorPoint(vendor), coordsOf(r.query) || KIGALI);
@@ -1396,6 +1405,8 @@ function rawMenuItem(item) {
     is_preorder: item.is_preorder,
     preorder_cutoff: item.preorder_cutoff,
     is_popular: item.is_popular,
+    department_id: item.department_id || null,
+    preparation_notes: item.preparation_notes || '',
     options: item.options,
   };
 }
@@ -1413,6 +1424,8 @@ function menuPatch(form) {
     if (get(key) != null) patch[key] = String(get(key)) === 'true';
   });
   if (get('category_id')) patch.category_id = String(get('category_id'));
+  if (get('department_id') != null) patch.department_id = String(get('department_id')) || null;
+  if (get('preparation_notes') != null) patch.preparation_notes = String(get('preparation_notes'));
   try {
     if (get('options')) patch.options = JSON.parse(get('options'));
   } catch {
@@ -3466,6 +3479,20 @@ const extraAdminRoutes = [
 /* -------------------------------- routing -------------------------------- */
 
 const ROUTES = [
+  ...kitchenOpsRoutes({
+    getState: () => state,
+    me,
+    fail,
+    nextId,
+    nowIso,
+    findVendor,
+    publicVendorDetail,
+    // The demo signs employees in to their kitchen's account (the demo has one kitchen session).
+    signInStaff: (vendorId, staff) => {
+      sessions.vendor = vendorId;
+      return { token: TOKENS.vendor, vendor: vendorAccount(findVendor(vendorId)), staff: { id: staff.id, name: staff.name, username: staff.username } };
+    },
+  }),
   ...customerRoutes,
   ...extraCustomerRoutes,
   ...vendorRoutes,

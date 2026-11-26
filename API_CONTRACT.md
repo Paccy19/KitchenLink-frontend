@@ -5,7 +5,10 @@ Any backend that answers these requests the same way can run the website —
 our own backend does, and a new one built from this document will too.
 
 - 223 endpoints: 60 for the customer website, 45 for the kitchen
-  dashboard, 27 for the delivery worker app, 91 for the admin panel.
+  dashboard, 27 for the delivery worker app, 91 for the admin panel —
+  plus 3 for table QR ordering and 60 for kitchen operations (departments,
+  staff, tables, preparation, service, invoices, stock, reports), listed in
+  their own sections below.
 - Generated from the website's own code (`src/api/`) and checked against the
   reference backend: every endpoint below exists there with the sign-in shown.
 - If this document and the code ever disagree, the code in `src/api/` wins.
@@ -219,6 +222,16 @@ Called from `src/api/endpoints.js` (60 endpoints). The function names are in tha
 | GET | `/vendors/specials` | Public | `fetchVendorSpecials` | Query: `lat&lng`. Active "Tomorrow's Special" announcements across nearby kitchens. |
 | GET | `/vendors/types` | Public | `fetchVendorTypes` | every kitchen type with its label and description. |
 
+### /tables (table QR codes)
+
+Called from `src/api/tableApi.js`. A table's QR code opens `/menu/:token` on the website. The token is random (never a database id), and a deactivated, removed or replaced table answers 404/409. Guests need no account; a customer token, when sent, saves the order to that account too.
+
+| Method | Path | Sign-in | Website function | Notes |
+| --- | --- | --- | --- | --- |
+| GET | `/tables/:token` | Public | `fetchTableMenu` | `{ table, kitchen (the storefront, dishes carry department_id), departments, ordering: { can_order, reason, payment_timing, payment_timing_label, pay_before_preparation } }`. |
+| POST | `/tables/:token/orders` | Public (customer optional) | `placeTableOrder` | Body `{ items: [{ menu_item_id, quantity, option_ids, note }], guest_name, note }`. The server prices it, splits it into one ticket per department and adds it to the table's open bill. Returns `{ order, guest_key }`; 10 a minute per network. |
+| GET | `/tables/:token/orders/:orderId` | Public (`X-Guest-Key` header) | `fetchTableOrder` | The order with each department's progress (`departments[]`) and the bill. The key must be sent as a header, never in the URL. |
+
 ### /wishlist
 
 | Method | Path | Sign-in | Website function | Notes |
@@ -356,6 +369,80 @@ Called from `src/api/vendorApi.js` (45 endpoints). The function names are in tha
 | --- | --- | --- | --- | --- |
 | GET | `/vendor/wallet` | Kitchen | `wallet` |  |
 | POST | `/vendor/wallet/withdrawals` | Kitchen (approved) | `requestWithdrawal` |  |
+
+## Kitchen operations
+
+Called from `src/api/kitchenApi.js` with the kitchen session. Responses are raw JSON (like the admin panel). Design notes: `../KitchenLink-backend/KITCHEN_OPERATIONS.md`.
+
+**Who is signed in.** The kitchen account (owner) and employees both use the kitchen session. Employees are created under Staff by the kitchen administrator, who gives them a username and password: they sign in with `POST /vendor/auth/staff-login { username, password }` (`staffLogin` in `vendorApi.js`; the username may also be their phone or email; wrong passwords count towards a lockout). Employees with a phone or email can also sign in with the normal kitchen code (`/vendor/auth/send-otp` → `verify-otp`, or the unified `/auth/login/send-otp` → `verify-otp`); their token carries `staff_id`. `GET /vendor/auth/me` then also returns `access` and `staff`, and hides payout details and the balance from non-administrators.
+
+**Permissions.** Every `/vendor/*` route (old and new) is checked on the server against the person's permissions: `403 KITCHEN_PERMISSION_DENIED` (or `KITCHEN_ADMIN_ONLY`) when not allowed. The kitchen account and staff marked `is_admin` hold every permission. Wallet (`account.wallet`) and kitchen settings (`account.settings`) are administrator only. Department permissions apply only to the departments of the role, else of the employee, else the whole kitchen. `GET /vendor/permissions` lists them all.
+
+**Orders.** Every order now has `tickets[]` (one per department; dishes without a department go to the kitchen's own ticket) and each item has `department_id`, `department_name`, `ticket_id` and `service_status` (`pending → waiting_collection → collected → served / handed_over`), kept apart from preparation. The order's own status follows from its tickets (all ready → ready). Changing the whole order in Orders still works and brings its tickets along. New: `fulfillment: 'dine_in'`, `table`, `guest_name`, `source` (`marketplace`, `table_qr`, `event`), `invoice_id`, and `payment_method: 'in_person'` for dine-in bills.
+
+| Method | Path | Permission | Website function | Notes |
+| --- | --- | --- | --- | --- |
+| GET | `/vendor/workspace` | Kitchen | `workspace` | `{ actor, is_owner, is_admin, permissions: { key: 'all' or [department ids] }, departments, counts: { queue, ready_orders, open_invoices, tables, staff }, settings }`. Polled for badges. |
+| GET | `/vendor/permissions` | Kitchen | `permissions` | Permission groups, department categories, payment timings. |
+| GET | `/vendor/operations` | Kitchen | `operations` | `{ payment_timing, table_ordering_enabled, allow_partial_service, inventory_auto_deduct }`. |
+| PUT | `/vendor/operations` | Administrator (approved) | `saveOperations` | Dine-in orders keep the payment rule they were placed under. |
+| GET | `/vendor/activity` | `reports.activity` | `activity` | Query `action` (prefix), `actor_id`, `page`, `limit`. |
+| GET | `/vendor/departments` | `departments.view` | `departments` | With `staff_count`, `product_count`, `open_tickets`, and `categories`. |
+| POST | `/vendor/departments` | `departments.create` | `createDepartment` | `{ name, category, custom_category, description, code_prefix, is_active, workflow: { use_accept, use_preparing, labels }, stations, operating_hours, manager_staff_ids }`. |
+| GET | `/vendor/departments/:id` | `departments.view` | `department` | With its `staff`. |
+| PATCH | `/vendor/departments/:id` | `departments.edit` (that department) | `updateDepartment` | Workflow needs `departments.configure_workflow`; managers need `staff.assign_roles`. |
+| DELETE | `/vendor/departments/:id` | `departments.delete` | `deleteDepartment` | Refused while tickets are open; dishes and stock fall back to the whole kitchen. |
+| PUT | `/vendor/departments/:id/staff` | `departments.manage_staff` | `setDepartmentStaff` | `{ staff_ids }`. |
+| GET | `/vendor/roles` | `staff.view` | `roles` | Default roles are created the first time. Includes `catalogue`. |
+| POST | `/vendor/roles` | `staff.manage_permissions` | `createRole` | `{ name, description, permissions, department_ids }`. Nobody grants what they don't hold. |
+| PATCH | `/vendor/roles/:id` | `staff.manage_permissions` | `updateRole` | Applies to its employees on their next request. |
+| DELETE | `/vendor/roles/:id` | `staff.manage_permissions` | `deleteRole` | Refused while employees hold it. |
+| GET | `/vendor/staff` | `staff.view` | `staff` | Query `department_id`, `status`. |
+| POST | `/vendor/staff` | `staff.create` | `createStaff` | `{ name, username, password, phone, email, job_title, role_ids, department_ids, is_admin }`: a username, phone or email is required. A username without a password gets one made. The response then has `credentials: { username, password, generated }`, shown once (only a hash is kept). Usernames, phones and emails are unique across kitchens. |
+| PATCH | `/vendor/staff/:id` | `staff.edit` / `staff.assign_roles` | `updateStaff` | Same fields; `password` sets a new one, `generate_password: true` makes one (both return `credentials` and sign the employee out). Nobody changes their own roles; only administrators change administrators. |
+| PATCH | `/vendor/staff/:id/status` | `staff.deactivate` | `setStaffActive` | `{ is_active }`. Deactivating signs them out at once. |
+| DELETE | `/vendor/staff/:id` | `staff.deactivate` | `deleteStaff` |  |
+| GET | `/vendor/tables` | `tables.view` | `tables` | Each with `menu_url`, `active_orders`, `ready_items`, `open_invoice`. |
+| POST | `/vendor/tables` | `tables.create` | `createTable` | `{ label, area, capacity }`. Its QR token is created at once. |
+| POST | `/vendor/tables/batch` | `tables.create` | `createTables` | `{ prefix, from, to, area, capacity }` → `{ created, skipped }`. |
+| GET | `/vendor/tables/:id` | `tables.view` | `table` | With recent orders and the open bill. |
+| PATCH | `/vendor/tables/:id` | `tables.edit` / `tables.assign` | `updateTable` | `is_active: false` stops its QR code. |
+| DELETE | `/vendor/tables/:id` | `tables.delete` | `deleteTable` | Refused while it has open orders. |
+| GET | `/vendor/tables/:id/qr` | `tables.qr` | `tableQr` | Query `format=svg|png`, `download=1`. The image, not JSON. |
+| POST | `/vendor/tables/:id/qr/rotate` | `tables.qr` | `rotateTableQr` | New token; the old QR code stops working. |
+| GET | `/vendor/kitchen/queue` | `kitchen.view_queue` | `queue` | Query `department_id` (or `main`), `status=history`. Only the person's departments. Each ticket has `allowed_next_statuses` and `payment_hold`. |
+| PATCH | `/vendor/kitchen/orders/:orderId/tickets/:ticketId` | `kitchen.accept_tasks` / `start_preparation` / `mark_ready` (that department) | `advanceTicket` | `{ status: accepted|preparing|ready }`. Returns `{ ticket, order_status, order_note }`. |
+| GET | `/vendor/service/board` | `service.view_ready` | `serviceBoard` | Query `fulfillment`, `table_id`, `only=ready`. Orders on the floor with each department's progress, items and destination. |
+| POST | `/vendor/service/orders/:orderId/collect` | `service.collect` | `collectItems` | `{ item_ids }` (or all waiting). Delivery orders only once every department is done. |
+| POST | `/vendor/service/orders/:orderId/serve` | `service.serve` | `serveItems` | Dine-in only. Everything served → the order is completed. |
+| GET | `/vendor/invoices` | `invoices.view` | `invoices` | Query `status` (`open`, `unpaid`, `partially_paid`, `paid`, …), `kind`, `table_id`, `q`, `from`, `to`. With `summary`. |
+| POST | `/vendor/invoices` | `invoices.generate` | `generateInvoice` | `{ order_id }`. Invoices are made automatically; this opens the order's one. |
+| GET | `/vendor/invoices/:id` | `invoices.view` | `invoice` | Lines with departments, department totals, payments, refunds, kitchen details for the receipt. |
+| PATCH | `/vendor/invoices/:id` | `invoices.edit` | `editInvoice` | `{ discount_rwf, notes, customer_name }` (open table bills only). |
+| POST | `/vendor/invoices/:id/payments` | `invoices.process_payment` | `recordPayment` | `{ amount_rwf, method: cash|mobile_money|card|other, reference }`. Partial payments allowed, never above the balance. Paid in full → its dine-in orders are paid. |
+| POST | `/vendor/invoices/:id/refunds` | `invoices.refund` | `refundInvoice` | `{ amount_rwf, method, reason }`. Only money taken in person. |
+| POST | `/vendor/invoices/:id/close` | `invoices.edit` / `tables.assign` | `closeInvoice` | Ends the table session: new orders at the table start a new bill. |
+| GET | `/vendor/inventory` | `inventory.view` | `inventory` | Query `department_id` (or `none`), `q`, `low=true`. With `summary`. |
+| POST | `/vendor/inventory` | `inventory.add` | `createStockItem` | `{ name, unit, quantity, low_stock_threshold, cost_per_unit_rwf, department_id, supplier_id, sku }`. |
+| PATCH | `/vendor/inventory/:id` | `inventory.update` | `updateStockItem` |  |
+| DELETE | `/vendor/inventory/:id` | `inventory.remove` | `deleteStockItem` |  |
+| POST | `/vendor/inventory/:id/adjust` | `inventory.update` / `inventory.remove` | `adjustStock` | `{ reason: purchase|return|usage|waste|adjustment, delta, note, supplier_id }`. Every change is recorded. |
+| GET | `/vendor/inventory/movements` | `inventory.view` | `stockMovements` | Query `item_id`, `reason`. |
+| GET | `/vendor/suppliers` | `inventory.suppliers` / `inventory.view` | `suppliers` |  |
+| POST | `/vendor/suppliers` | `inventory.suppliers` | `createSupplier` |  |
+| PATCH | `/vendor/suppliers/:id` | `inventory.suppliers` | `updateSupplier` |  |
+| DELETE | `/vendor/suppliers/:id` | `inventory.suppliers` | `deleteSupplier` |  |
+| GET | `/vendor/menu/photos` | `menu.view` | `MenuPhotosCard` | Photos of the kitchen's printed menu: `{ photos: [{ id, url, caption }], max: 12 }`. |
+| POST (multipart form) | `/vendor/menu/photos` | `menu.create` / `menu.edit` | `MenuPhotosCard` | Field `image` (JPG, PNG or WebP, 5 MB), optional `caption`. At most 12. |
+| PATCH | `/vendor/menu/photos/:id` | `menu.edit` | `MenuPhotosCard` | `{ caption }`. |
+| DELETE | `/vendor/menu/photos/:id` | `menu.delete` / `menu.edit` | `MenuPhotosCard` |  |
+| PUT | `/vendor/menu/:id/recipe` | `menu.edit` | `setRecipe` | `{ recipe: [{ inventory_item_id, quantity }] }`: deducted when a ticket is ready, if automatic deduction is on. |
+| GET | `/vendor/reports` | `reports.sales` / `reports.departments` | `report` | Query `period=daily|weekly|monthly|yearly|custom`, `date` (or `from&to`), `department_id`. Summary, highlights, sales, departments, products, payments, staff, stock, comparison with the previous period. Closed periods come from the saved report. |
+| GET | `/vendor/reports/today` | `reports.sales` / `reports.departments` | `reportToday` |  |
+| GET | `/vendor/reports/history` | `reports.sales` | `reportHistory` | Query `period`. Reports saved automatically when each day, week, month and year ends. |
+| GET | `/vendor/reports/export` | `reports.sales` / `reports.departments` | `reportCsv` | Same query; a CSV file. |
+
+The menu endpoints also take `department_id` (`''` = the whole kitchen) and `preparation_notes`, and return `department_id`, `preparation_notes` and `recipe`. `GET /vendors/:vendorId` returns the kitchen's active `departments` and its `menu_photos`. `POST /vendor/auth/change-password { current_password, new_password }` also lets an employee change their own password.
 
 ## Delivery worker app
 

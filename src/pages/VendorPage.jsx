@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import MenuPhotos from '../components/common/MenuPhotos';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -72,13 +73,18 @@ export default function VendorPage() {
     [vendor],
   );
 
+  // Kitchens with several services (Food, Coffee, Bakery …) can be browsed by service.
+  const [activeDepartment, setActiveDepartment] = useState('');
+  const departments = vendor?.departments ?? [];
+
   // "All" is one flat grid; a category heading only appears once the customer picks a category.
   const visibleMenu = useMemo(() => {
     if (!vendor?.menu) return [];
+    const inService = activeDepartment ? vendor.menu.filter((dish) => dish.departmentId === activeDepartment) : vendor.menu;
     return activeCategory === 'All'
-      ? vendor.menu
-      : vendor.menu.filter((dish) => dish.category === activeCategory);
-  }, [vendor, activeCategory]);
+      ? inService
+      : inService.filter((dish) => dish.category === activeCategory);
+  }, [vendor, activeCategory, activeDepartment]);
 
   const handleQuickAdd = async (dish) => {
     if (!vendor) return;
@@ -330,6 +336,24 @@ export default function VendorPage() {
         {/* The order panel only takes space once something from this kitchen is in the basket. */}
         <div className={cartVendorItems.length > 0 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start' : ''}>
         <div className="min-w-0">
+        <MenuPhotos photos={vendor?.menuPhotos || []} />
+        {departments.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-3" aria-label="Services">
+            {[{ id: '', name: 'All services' }, ...departments].map((d) => (
+              <button
+                key={d.id || 'all'}
+                type="button"
+                onClick={() => setActiveDepartment(d.id)}
+                aria-pressed={activeDepartment === d.id}
+                className={`flex-shrink-0 px-4 py-2 rounded-2xl text-sm font-black border transition ${
+                  activeDepartment === d.id ? 'bg-[#f28c18] text-white border-[#f28c18]' : 'bg-white text-stone-700 border-stone-200 hover:border-[#f28c18]'
+                }`}
+              >
+                {d.name}
+              </button>
+            ))}
+          </div>
+        )}
         {/* ── Menu category tabs ──────────────────────────────── */}
         <div
           className="flex items-center gap-2 overflow-x-auto pb-2 mb-5 sticky top-[var(--app-header-h,132px)] z-30 bg-[#faf7f4]/90 backdrop-blur-md py-2 -mx-1 px-1 rounded-2xl"

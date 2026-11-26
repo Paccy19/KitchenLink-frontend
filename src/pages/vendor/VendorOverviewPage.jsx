@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { shrinkAvatar } from '../../utils/shrinkImage';
 import { Link } from 'react-router-dom';
+import { vendorRequest } from '../../api/vendorApi';
 import {
   ShoppingBag,
   Clock,
@@ -27,7 +28,18 @@ import FadeImage from '../../components/common/FadeImage';
 
 const money = (value) => `${value.toLocaleString()} RWF`;
 
+/**
+ * The kitchen account and anyone allowed to see sales get the full overview;
+ * other employees get their own: their queue, the counter and open bills.
+ */
 export default function VendorOverviewPage() {
+  const { workspace, can } = useVendor();
+  if (!workspace) return null;
+  if (!can('reports.sales')) return <StaffOverview />;
+  return <OwnerOverview />;
+}
+
+function OwnerOverview() {
   const {
     vendor,
     stats,
@@ -271,5 +283,81 @@ export default function VendorOverviewPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+const STAFF_TILES = [
+  { perm: 'kitchen.view_queue', to: '/vendor-dashboard/kitchen', label: 'Tickets to prepare', count: 'queue' },
+  { perm: 'service.view_ready', to: '/vendor-dashboard/service', label: 'Orders with items ready', count: 'ready_orders' },
+  { perm: 'invoices.view', to: '/vendor-dashboard/invoices', label: 'Open bills', count: 'open_invoices' },
+  { perm: 'tables.view', to: '/vendor-dashboard/tables', label: 'Tables', count: 'tables' },
+  { perm: 'staff.view', to: '/vendor-dashboard/staff', label: 'Employees', count: 'staff' },
+];
+
+function StaffOverview() {
+  const { workspace, can, vendor } = useVendor();
+  const tiles = STAFF_TILES.filter((tile) => can(tile.perm));
+  const departments = (workspace.departments || []).filter((d) => (workspace.department_ids || []).includes(d.id));
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Hello, {workspace.actor?.name?.split(' ')[0] || 'there'}</h2>
+        <p className="text-xs text-stone-500 font-medium">
+          {vendor.name}
+          {departments.length ? ` · ${departments.map((d) => d.name).join(', ')}` : ''}
+        </p>
+      </div>
+      {tiles.length === 0 ? (
+        <p className="text-sm text-stone-500">Your role has no tasks yet. Ask your kitchen administrator to give you one.</p>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {tiles.map((tile) => (
+            <Link key={tile.to} to={tile.to} className="rounded-2xl bg-white border border-stone-200/80 shadow-sm p-4 hover:border-[#c08a63] transition">
+              <p className="text-3xl font-black text-gray-900">{workspace.counts?.[tile.count] ?? 0}</p>
+              <p className="text-xs font-bold text-stone-500 mt-1">{tile.label}</p>
+            </Link>
+          ))}
+        </div>
+      )}
+      <ChangeMyPassword />
+    </div>
+  );
+}
+
+/** An employee replaces the password their administrator gave them. */
+function ChangeMyPassword() {
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [state, setState] = useState({ busy: false, error: '', done: false });
+  const submit = async (event) => {
+    event.preventDefault();
+    setState({ busy: true, error: '', done: false });
+    try {
+      await vendorRequest('/vendor/auth/change-password', { method: 'POST', body: { current_password: current, new_password: next } });
+      setCurrent('');
+      setNext('');
+      setState({ busy: false, error: '', done: true });
+    } catch (err) {
+      setState({ busy: false, error: err.message || 'Could not change your password.', done: false });
+    }
+  };
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="text-xs font-bold text-[#542813] underline underline-offset-2">
+        Change my password
+      </button>
+    );
+  }
+  const input = 'w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm';
+  return (
+    <form onSubmit={submit} className="max-w-sm rounded-2xl bg-white border border-stone-200/80 p-4 space-y-3">
+      <p className="font-black text-sm">Change my password</p>
+      <input className={input} type="password" placeholder="Current password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
+      <input className={input} type="password" placeholder="New password (8+ characters)" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" minLength={8} required />
+      {state.error && <p role="alert" className="text-xs font-semibold text-red-600">{state.error}</p>}
+      {state.done && <p className="text-xs font-semibold text-emerald-700">Password changed. Other devices were signed out.</p>}
+      <button type="submit" disabled={state.busy} className="w-full py-2.5 rounded-xl bg-[#2b1206] text-white text-sm font-bold disabled:opacity-60">{state.busy ? 'Saving…' : 'Save new password'}</button>
+    </form>
   );
 }
