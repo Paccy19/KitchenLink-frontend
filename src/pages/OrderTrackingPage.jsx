@@ -24,6 +24,7 @@ import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES, KITCHEN_DELIVERY_ORDE
 import RefundCard from '../components/orders/RefundCard';
 import DeliveryCodeCard from '../components/orders/DeliveryCodeCard';
 import EventBalanceCard from '../components/orders/EventBalanceCard';
+import MobileMoneyPending from '../components/orders/MobileMoneyPending';
 import SwitchToDeliveryModal from '../components/orders/SwitchToDeliveryModal';
 import CallKitchenButton from '../components/orders/CallKitchenButton';
 import KitchenDirectionsModal from '../components/orders/KitchenDirectionsModal';
@@ -224,6 +225,10 @@ export default function OrderTrackingPage() {
             <ContactKitchen order={order} className="mt-2 sm:justify-end" />
           </div>
         </div>
+
+        {order.payment.status === 'pending' && ['processing', 'failed'].includes(order.payment.attempt) && !isCancelled && (
+          <MobileMoneyPending order={order} onChanged={() => refreshOrder(order.id)} />
+        )}
 
         {/* Big events: deposit paid, balance due a day before the event */}
         {order.deposit && !isCancelled && (

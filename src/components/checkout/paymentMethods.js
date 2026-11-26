@@ -1,6 +1,6 @@
 import { Coins, CreditCard, Smartphone, Wallet } from 'lucide-react';
 
-export const PAYMENT_METHODS = [
+const ALL_PAYMENT_METHODS = [
   {
     code: 'mobile_money',
     label: 'Mobile Money',
@@ -26,6 +26,11 @@ export const PAYMENT_METHODS = [
     icon: Wallet,
   },
 ];
+
+// Only MTN MoMo and Airtel Money (through Paypack) for now; the backend refuses
+// the others too. Add a code here once its provider is connected.
+const ENABLED = ['mobile_money'];
+export const PAYMENT_METHODS = ALL_PAYMENT_METHODS.filter((m) => ENABLED.includes(m.code));
 
 export const EMPTY_PAYMENT_INPUTS = {
   mobile_money: { phone: '' },

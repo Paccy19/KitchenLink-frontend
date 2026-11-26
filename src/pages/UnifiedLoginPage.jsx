@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { staffLogin } from '../api/vendorApi';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Bike, Check, Eye, EyeOff, Store, UtensilsCrossed, User } from 'lucide-react';
 import { sendUnifiedLoginOtp, verifyUnifiedLoginOtp } from '../api/endpoints';
@@ -33,6 +34,8 @@ export default function UnifiedLoginPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // 'staff': a kitchen employee with the username and password their kitchen gave them.
+  const [mode, setMode] = useState('code');
 
   useEffect(() => {
     if (resendCooldown <= 0) return undefined;
@@ -185,6 +188,14 @@ export default function UnifiedLoginPage() {
           </p>
         </div>
 
+        {mode === 'staff' ? (
+          <StaffLoginForm
+            onSignedIn={(result) => {
+              acceptVendorSession(result);
+              navigate('/vendor-dashboard', { replace: true });
+            }}
+          />
+        ) : (
         <form
           onSubmit={step === 'identifier' ? submitIdentifier : step === 'password' ? submitPassword : submitCode}
           className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 sm:p-8 space-y-4"
@@ -335,6 +346,20 @@ export default function UnifiedLoginPage() {
             {step === 'otp' ? <Check className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
+        )}
+
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setMode((m) => (m === 'staff' ? 'code' : 'staff'));
+              setError('');
+            }}
+            className="text-xs font-bold text-[#542813] hover:text-[#2b1206] underline underline-offset-2"
+          >
+            {mode === 'staff' ? 'Sign in with a phone number or email instead' : 'Kitchen team member? Sign in with your username'}
+          </button>
+        </div>
 
         <p className="mt-5 text-center text-xs text-stone-500">
           Don’t have an account?{' '}
@@ -344,5 +369,48 @@ export default function UnifiedLoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+/** A kitchen employee: the username and password their kitchen administrator gave them. */
+function StaffLoginForm({ onSignedIn }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (event) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      onSignedIn(await staffLogin(username.trim(), password));
+    } catch (err) {
+      setError(err.message || 'Could not sign in.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const input = 'w-full px-3 py-3 text-sm rounded-xl border border-stone-200 focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/10 outline-none';
+  return (
+    <form onSubmit={submit} className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 sm:p-8 space-y-4">
+      <p className="text-sm font-bold text-gray-800">Kitchen team sign-in</p>
+      <div>
+        <label htmlFor="staff-username" className="text-xs font-bold text-stone-500 block mb-1.5">Username</label>
+        <input id="staff-username" className={input} value={username} onChange={(e) => setUsername(e.target.value)} autoCapitalize="none" spellCheck={false} autoComplete="username" required autoFocus placeholder="e.g. aline.barista" />
+      </div>
+      <div>
+        <label htmlFor="staff-password" className="text-xs font-bold text-stone-500 block mb-1.5">Password</label>
+        <div className="relative">
+          <input id="staff-password" className={`${input} pr-16`} type={show ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-500">{show ? 'Hide' : 'Show'}</button>
+        </div>
+      </div>
+      {error && <p role="alert" className="text-sm font-semibold text-red-600">{error}</p>}
+      <button type="submit" disabled={busy} className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] text-white font-bold text-sm shadow-md disabled:opacity-60">
+        {busy ? 'Please wait…' : 'Sign in'}
+      </button>
+      <p className="text-[11px] text-stone-400 text-center">Your kitchen administrator gives you these. Forgot them? Ask them to set a new password.</p>
+    </form>
   );
 }

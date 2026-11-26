@@ -43,6 +43,17 @@ const VendorNotificationsPage = lazy(() => import('./pages/vendor/VendorNotifica
 const VendorProfilePage = lazy(() => import('./pages/vendor/VendorProfilePage'));
 const VendorSupportPage = lazy(() => import('./pages/vendor/VendorSupportPage'));
 const VendorRegisterPage = lazy(() => import('./pages/vendor/VendorRegisterPage'));
+const VendorKitchenQueuePage = lazy(() => import('./pages/vendor/VendorKitchenQueuePage'));
+const VendorServicePage = lazy(() => import('./pages/vendor/VendorServicePage'));
+const VendorTablesPage = lazy(() => import('./pages/vendor/VendorTablesPage'));
+const VendorInvoicesPage = lazy(() => import('./pages/vendor/VendorInvoicesPage'));
+const VendorDepartmentsPage = lazy(() => import('./pages/vendor/VendorDepartmentsPage'));
+const VendorStaffPage = lazy(() => import('./pages/vendor/VendorStaffPage'));
+const VendorInventoryPage = lazy(() => import('./pages/vendor/VendorInventoryPage'));
+const VendorReportsPage = lazy(() => import('./pages/vendor/VendorReportsPage'));
+const VendorActivityPage = lazy(() => import('./pages/vendor/VendorActivityPage'));
+const VendorOperationsPage = lazy(() => import('./pages/vendor/VendorOperationsPage'));
+const TableMenuPage = lazy(() => import('./pages/TableMenuPage'));
 
 // Driver app (separate shell without the customer chrome).
 const DriverLayout = lazy(() => import('./components/driver-dashboard/DriverLayout'));
@@ -116,6 +127,8 @@ export default function App() {
               <Route path="/vendors/map" element={<VendorsMapPage />} />
               <Route path="/vendor/:vendorId" element={<VendorPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              {/* A table's QR code: the kitchen's whole menu, ordering for that table. */}
+              <Route path="/menu/:token" element={<TableMenuPage />} />
               <Route path="/event-order/:vendorId" element={<EventOrderPage />} />
               <Route path="/track" element={<OrderTrackingPage />} />
               <Route path="/track/:orderId" element={<OrderTrackingPage />} />
@@ -181,6 +194,16 @@ export default function App() {
                 <Route path="messages" element={<VendorMessagesPage />} />
                 <Route path="special-deliveries" element={<VendorSpecialDeliveriesPage />} />
                 <Route path="delivery-coverage" element={<VendorDeliveryCoveragePage />} />
+                <Route path="kitchen" element={<VendorKitchenQueuePage />} />
+                <Route path="service" element={<VendorServicePage />} />
+                <Route path="tables" element={<VendorTablesPage />} />
+                <Route path="invoices" element={<VendorInvoicesPage />} />
+                <Route path="departments" element={<VendorDepartmentsPage />} />
+                <Route path="staff" element={<VendorStaffPage />} />
+                <Route path="inventory" element={<VendorInventoryPage />} />
+                <Route path="reports" element={<VendorReportsPage />} />
+                <Route path="activity" element={<VendorActivityPage />} />
+                <Route path="operations" element={<VendorOperationsPage />} />
               </Route>
 
               <Route path="*" element={<HomePage />} />

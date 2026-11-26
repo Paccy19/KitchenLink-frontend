@@ -21,6 +21,16 @@ import {
   ChevronDown,
   Truck,
   MapPinned,
+  ChefHat,
+  ConciergeBell,
+  QrCode,
+  Receipt,
+  Layers,
+  Users,
+  Boxes,
+  BarChart3,
+  History,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { vendorApi } from '../../api/vendorApi';
@@ -31,19 +41,31 @@ import ThemeToggle from '../common/ThemeToggle';
 import VendorNotificationBell from './VendorNotificationBell';
 import { VENDOR_SETTINGS_BASE, VENDOR_SETTINGS_SECTIONS } from '../../data/vendorSettings';
 
+// `perm`: shown when the signed-in person holds any of these (the kitchen
+// owner and kitchen administrators hold all). The server enforces the same.
 const NAV = [
   { to: '/vendor-dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: '/vendor-dashboard/orders', label: 'Orders', icon: ClipboardList, badgeKey: 'pendingOrders' },
-  { to: '/vendor-dashboard/menu', label: 'Menu', icon: UtensilsCrossed, badgeKey: 'menuCount' },
-  { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet },
-  { to: '/vendor-dashboard/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'chats' },
+  { to: '/vendor-dashboard/orders', label: 'Orders', icon: ClipboardList, badgeKey: 'pendingOrders', perm: ['orders.view'] },
+  { to: '/vendor-dashboard/kitchen', label: 'Preparation', icon: ChefHat, badgeKey: 'queue', perm: ['kitchen.view_queue'] },
+  { to: '/vendor-dashboard/service', label: 'Service & pickup', icon: ConciergeBell, badgeKey: 'ready', perm: ['service.view_ready'] },
+  { to: '/vendor-dashboard/tables', label: 'Tables & QR', icon: QrCode, perm: ['tables.view'] },
+  { to: '/vendor-dashboard/invoices', label: 'Invoices & payments', icon: Receipt, badgeKey: 'invoices', perm: ['invoices.view'] },
+  { to: '/vendor-dashboard/menu', label: 'Menu', icon: UtensilsCrossed, badgeKey: 'menuCount', perm: ['menu.view'] },
+  { to: '/vendor-dashboard/departments', label: 'Services & departments', icon: Layers, perm: ['departments.view'] },
+  { to: '/vendor-dashboard/staff', label: 'Staff & roles', icon: Users, perm: ['staff.view', 'staff.manage_permissions'] },
+  { to: '/vendor-dashboard/inventory', label: 'Inventory', icon: Boxes, perm: ['inventory.view'] },
+  { to: '/vendor-dashboard/reports', label: 'Reports', icon: BarChart3, perm: ['reports.sales', 'reports.departments'] },
+  { to: '/vendor-dashboard/activity', label: 'Activity log', icon: History, perm: ['reports.activity'] },
+  { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet, perm: ['account.wallet'] },
+  { to: '/vendor-dashboard/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'chats', perm: ['account.messages'] },
   // Big-event delivery: negotiations with customers, and where the kitchen delivers.
-  { to: '/vendor-dashboard/special-deliveries', label: 'Special deliveries', icon: Truck },
-  { to: '/vendor-dashboard/delivery-coverage', label: 'Delivery Coverage', icon: MapPinned },
-  { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications' },
+  { to: '/vendor-dashboard/special-deliveries', label: 'Special deliveries', icon: Truck, perm: ['account.messages'] },
+  { to: '/vendor-dashboard/delivery-coverage', label: 'Delivery Coverage', icon: MapPinned, perm: ['account.settings'] },
+  { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications', perm: ['account.notifications'] },
+  { to: '/vendor-dashboard/operations', label: 'Operations settings', icon: SlidersHorizontal, perm: ['account.settings'] },
   // A group: opens to list the settings pages.
-  { to: VENDOR_SETTINGS_BASE, label: 'Settings', icon: Settings, children: VENDOR_SETTINGS_SECTIONS },
-  { to: '/vendor-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support' },
+  { to: VENDOR_SETTINGS_BASE, label: 'Settings', icon: Settings, children: VENDOR_SETTINGS_SECTIONS, perm: ['account.settings'] },
+  { to: '/vendor-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support', perm: ['account.messages'] },
 ];
 
 export default function VendorLayout() {
@@ -58,11 +80,17 @@ export default function VendorLayout() {
     hasToken,
     isAuthenticated,
     logout,
+    workspace,
+    can,
+    isKitchenAdmin,
   } = useVendor();
   const { connected } = useVendorRealtime({ enabled: true });
-  const supportUnread = useSupportUnread(vendorApi.support, { enabled: Boolean(hasToken && isAuthenticated) });
+  const canMessages = Boolean(workspace) && can('account.messages');
+  const supportUnread = useSupportUnread(vendorApi.support, { enabled: Boolean(hasToken && isAuthenticated && canMessages) });
   // Unread customer messages.
-  const chatUnread = useSupportUnread(vendorApi.chats, { enabled: Boolean(hasToken && isAuthenticated) });
+  const chatUnread = useSupportUnread(vendorApi.chats, { enabled: Boolean(hasToken && isAuthenticated && canMessages) });
+  const visibleNav = NAV.filter((item) => !item.perm || item.perm.some((permission) => can(permission)));
+  const staffName = workspace?.actor?.type === 'staff' ? workspace.actor.name : '';
   const [drawerOpen, setDrawerOpen] = useState(false);
   // The Settings group stays open while one of its pages is showing.
   const { pathname } = useLocation();
@@ -102,6 +130,9 @@ export default function VendorLayout() {
     if (item.badgeKey === 'notifications') return unreadNotifications;
     if (item.badgeKey === 'support') return supportUnread;
     if (item.badgeKey === 'chats') return chatUnread;
+    if (item.badgeKey === 'queue') return workspace?.counts?.queue || 0;
+    if (item.badgeKey === 'ready') return workspace?.counts?.ready_orders || 0;
+    if (item.badgeKey === 'invoices') return workspace?.counts?.open_invoices || 0;
     return 0;
   };
 
@@ -122,10 +153,13 @@ export default function VendorLayout() {
         </div>
         <div className="min-w-0">
           <p className="font-extrabold text-sm text-gray-900 truncate">{vendor.name}</p>
-          <p className="text-[11px] text-[#8a5332] font-bold">{vendor.type}</p>
+          <p className="text-[11px] text-[#8a5332] font-bold truncate">
+            {staffName ? `${staffName}${isKitchenAdmin ? ' · Administrator' : ''}` : vendor.type}
+          </p>
         </div>
       </div>
 
+      {isKitchenAdmin && (
       <div className="rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-3 mb-4">
         <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
           <BadgeCheck className="w-3.5 h-3.5" />
@@ -138,9 +172,10 @@ export default function VendorLayout() {
           onToggle={isPending ? () => setReviewPopupOpen(true) : toggleStoreOpen}
         />
       </div>
+      )}
 
       <nav className="space-y-1.5 flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon;
           const count = badgeValue(item);
           if (item.children) {
@@ -256,9 +291,9 @@ export default function VendorLayout() {
                   <MenuIcon className="w-5 h-5" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="font-black text-base sm:text-lg text-gray-900 truncate">Vendor Dashboard</h1>
+                  <h1 className="font-black text-base sm:text-lg text-gray-900 truncate">{staffName ? vendor.name : 'Vendor Dashboard'}</h1>
                   <p className="text-[11px] text-stone-400 font-medium hidden sm:block">
-                    Manage your kitchen, orders and earnings
+                    {staffName ? `Signed in as ${staffName}` : 'Manage your kitchen, orders and earnings'}
                   </p>
                 </div>
               </div>
@@ -275,7 +310,7 @@ export default function VendorLayout() {
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
                 <ThemeToggle />
-                <VendorNotificationBell />
+                {can('account.notifications') && <VendorNotificationBell />}
                 <RoleAccountMenu role="vendor" />
               </div>
             </div>

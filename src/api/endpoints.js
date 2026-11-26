@@ -222,6 +222,9 @@ export const cancelRemoteOrder = (orderId, reason = '') =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/cancel`, { reason });
 export const payRemoteOrder = (orderId, payload = {}) =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/pay`, payload);
+// Mobile money: how the prompt the customer approves on their phone is going.
+export const checkOrderPayment = (orderId) =>
+  apiJson('POST', `/orders/${encodeURIComponent(orderId)}/payment/check`);
 export const fetchPaymentMethods = () => apiJson('GET', '/orders/payment-methods');
 // A pickup order the customer now wants delivered: price it, then pay the fee and switch.
 export const quoteSwitchToDelivery = (orderId, deliveryLocation) =>

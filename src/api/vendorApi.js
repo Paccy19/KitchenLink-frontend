@@ -24,7 +24,7 @@ export const clearVendorToken = () => localStorage.removeItem(VENDOR_TOKEN_KEY);
 
 export const BLOCKED_VENDOR_CODES = ['VENDOR_SUSPENDED', 'VENDOR_REJECTED'];
 
-async function vendorRequest(path, { method = 'GET', body, form } = {}) {
+export async function vendorRequest(path, { method = 'GET', body, form } = {}) {
   const url = buildUrl(path);
   const headers = { Accept: 'application/json' };
   const token = getVendorToken();
@@ -77,6 +77,47 @@ async function vendorRequest(path, { method = 'GET', body, form } = {}) {
   }
   notifyDataChanged(method, path);
   return data;
+}
+
+/**
+ * POST /vendor/auth/staff-login — a kitchen employee's username (or phone /
+ * email) and the password their administrator gave them. A plain fetch: a
+ * wrong password must not sign anyone else out (vendorRequest would on 401).
+ */
+export async function staffLogin(username, password) {
+  let response;
+  try {
+    response = await fetch(buildUrl('/vendor/auth/staff-login'), {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+  } catch (error) {
+    throw new ApiError('Cannot reach the KitchenLink API.', { path: '/vendor/auth/staff-login', cause: error });
+  }
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new ApiError(data?.error?.message || `Sign-in failed (${response.status}).`, {
+      status: response.status,
+      code: data?.error?.code || '',
+      details: data?.error?.details || null,
+    });
+  }
+  return data;
+}
+
+/**
+ * A signed-in file (QR image, CSV report): fetched with the kitchen token and
+ * returned as a Blob, since a plain link can't carry the token.
+ */
+export async function vendorDownload(path) {
+  const token = getVendorToken();
+  const response = await fetch(buildUrl(path), { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new ApiError(data?.error?.message || `Download failed (${response.status}).`, { status: response.status, path, code: data?.error?.code || '' });
+  }
+  return response.blob();
 }
 
 /* ------------------------------ normalisers ------------------------------ */
@@ -211,6 +252,9 @@ export function mapMenuItem(raw = {}) {
     isPreorder: Boolean(raw.is_preorder),
     preorderCutoff: raw.preorder_cutoff || '',
     popular: Boolean(raw.is_popular),
+    departmentId: raw.department_id || '',
+    preparationNotes: raw.preparation_notes || '',
+    recipe: raw.recipe || [],
     options: [...optionsByGroup.entries()].map(([name, choices]) => ({ name, choices })),
   };
 }
@@ -568,6 +612,9 @@ export function buildMenuItemPayload(data = {}, categoriesByName = {}) {
     preorder_cutoff: data.isPreorder ? data.preorderCutoff || '' : '',
     is_popular: Boolean(data.popular),
   };
+  // '' = the whole kitchen; left out when the form didn't offer departments.
+  if (data.departmentId !== undefined) payload.department_id = data.departmentId;
+  if (data.preparationNotes !== undefined) payload.preparation_notes = data.preparationNotes;
 
   const categoryId = data.categoryId || categoriesByName[data.category];
   payload.category_id = categoryId || null;

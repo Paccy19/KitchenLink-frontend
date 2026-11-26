@@ -17,6 +17,8 @@ const EMPTY = {
   preorderCutoff: '',
   popular: false,
   options: [],
+  departmentId: '',
+  preparationNotes: '',
 };
 
 // Keep in sync with backend/src/middleware/upload.js (imageUpload fileFilter).
@@ -85,6 +87,8 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
       setCategoryBusy(false);
     }
   };
+  const { workspace, can } = useVendor();
+  const departments = (workspace?.departments || []).filter((d) => can(item ? 'menu.edit' : 'menu.create', d.id));
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
@@ -187,6 +191,9 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
       isPreorder: form.isPreorder,
       preorderCutoff: form.isPreorder ? form.preorderCutoff.trim() : '',
       popular: form.popular,
+      // Only when the picker was shown (kitchens with departments).
+      departmentId: departments.length ? form.departmentId || '' : undefined,
+      preparationNotes: form.preparationNotes.trim(),
       options: form.options
         .filter((option) => option.name.trim() && option.choicesText.trim())
         .map((option) => ({
@@ -416,6 +423,34 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
                 <Clock className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
               </div>
               {errors.prepTime && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.prepTime}</p>}
+            </div>
+
+            {departments.length > 0 && (
+              <div className="sm:col-span-2">
+                <label className="text-xs font-bold text-stone-500 block mb-1.5">Department (who prepares it)</label>
+                <select
+                  value={form.departmentId || ''}
+                  onChange={(event) => update({ departmentId: event.target.value })}
+                  className={inputClass('departmentId')}
+                >
+                  <option value="">Whole kitchen</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-stone-400 mt-1">Orders for this dish go to that department's preparation queue.</p>
+              </div>
+            )}
+
+            <div className="sm:col-span-2">
+              <label className="text-xs font-bold text-stone-500 block mb-1.5">Preparation notes (staff only)</label>
+              <input
+                value={form.preparationNotes || ''}
+                onChange={(event) => update({ preparationNotes: event.target.value })}
+                placeholder="e.g. Serve with chilli on the side"
+                maxLength={300}
+                className={inputClass('preparationNotes')}
+              />
             </div>
 
             <div className="sm:col-span-2">

@@ -25,6 +25,7 @@ import {
 } from '../api/vendorApi';
 import { clearAllSessions } from '../api/session';
 import useAutoRefresh from '../hooks/useAutoRefresh';
+import { kitchenApi, canDo } from '../api/kitchenApi';
 
 const VendorContext = createContext(null);
 
@@ -51,6 +52,9 @@ export function VendorProvider({ children }) {
   const [special, setSpecial] = useState(null);
   const [wallet, setWallet] = useState({ withdrawn: 0, baseSales: 0, withdrawalHistory: [] });
   const [dashboard, setDashboard] = useState(null);
+  // Who is signed in (owner or an employee), their permissions and badge counts.
+  const [workspace, setWorkspace] = useState(null);
+  const workspaceRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   // True once notifications have loaded, so only later arrivals pop up.
@@ -157,36 +161,54 @@ export function VendorProvider({ children }) {
     await vendorApi.markAllNotificationsRead().catch(() => null);
   }, []);
 
+  const refreshWorkspace = useCallback(async () => {
+    const data = await kitchenApi.workspace();
+    workspaceRef.current = data;
+    if (mounted.current) setWorkspace(data);
+    return data;
+  }, []);
+
+  /** Only what this person may see: an employee's dashboard never asks for the wallet etc. */
+  const loadAllowed = useCallback(
+    (ws, { quiet = false } = {}) => {
+      const ok = (permission) => canDo(ws, permission);
+      const jobs = [];
+      if (ok('reports.sales')) jobs.push(refreshDashboard());
+      if (ok('menu.view')) jobs.push(refreshMenu());
+      if (ok('orders.view')) jobs.push(refreshOrders());
+      if (ok('account.wallet')) jobs.push(refreshWallet());
+      if (ok('account.settings')) jobs.push(refreshSpecial());
+      if (ok('account.notifications')) jobs.push(quiet ? refreshNotifications() : refreshNotifications().catch(() => null));
+      return Promise.all(jobs);
+    },
+    [refreshDashboard, refreshMenu, refreshOrders, refreshWallet, refreshSpecial, refreshNotifications],
+  );
+
   const refreshAll = useCallback(async () => {
     if (!getVendorToken()) return;
     setLoading(true);
     setError('');
     try {
       await refreshProfile();
-      await Promise.all([refreshDashboard(), refreshMenu(), refreshOrders(), refreshWallet(), refreshSpecial(), refreshNotifications().catch(() => null)]);
+      const ws = await refreshWorkspace();
+      await loadAllowed(ws);
       markSynced();
     } catch (err) {
       if (mounted.current) setError(err.message || 'Failed to load your dashboard.');
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [refreshProfile, refreshDashboard, refreshMenu, refreshOrders, refreshWallet, refreshSpecial, refreshNotifications, markSynced]);
+  }, [refreshProfile, refreshWorkspace, loadAllowed, markSynced]);
 
   // Quiet refresh (no loading spinner) for automatic updates: orders a
   // delivery worker completed, new orders, wallet changes, notifications...
   const refreshQuietly = useCallback(async () => {
     if (!getVendorToken()) return;
-    await Promise.all([
-      refreshProfile(),
-      refreshDashboard(),
-      refreshOrders(),
-      refreshWallet(),
-      refreshMenu(),
-      refreshSpecial(),
-      refreshNotifications(),
-    ]);
+    await refreshProfile();
+    const ws = await refreshWorkspace();
+    await loadAllowed(ws, { quiet: true });
     markSynced();
-  }, [refreshProfile, refreshDashboard, refreshOrders, refreshWallet, refreshMenu, refreshSpecial, refreshNotifications, markSynced]);
+  }, [refreshProfile, refreshWorkspace, loadAllowed, markSynced]);
   useAutoRefresh(refreshQuietly, { enabled: Boolean(authToken), intervalMs: 10000 });
 
   /** Adds a food category from the menu form; returns its name. */
@@ -321,6 +343,8 @@ export function VendorProvider({ children }) {
     clearAllSessions();
     setAuthToken('');
     setVendor(null);
+    setWorkspace(null);
+    workspaceRef.current = null;
     setMarketplaceMode(false);
     setError('');
   }, []);
@@ -588,8 +612,14 @@ export function VendorProvider({ children }) {
   const isAuthenticated = Boolean(authToken && vendor);
   const hasToken = Boolean(authToken);
 
+  const can = useCallback((permission, departmentId) => canDo(workspace, permission, departmentId), [workspace]);
+
   const value = useMemo(
     () => ({
+      workspace,
+      can,
+      refreshWorkspace,
+      isKitchenAdmin: Boolean(workspace?.is_admin),
       vendor,
       rawVendor: vendor,
       menuItems,
@@ -649,6 +679,9 @@ export function VendorProvider({ children }) {
       clearStoreError,
     }),
     [
+      workspace,
+      can,
+      refreshWorkspace,
       vendor,
       menuItems,
       orders,

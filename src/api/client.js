@@ -128,6 +128,11 @@ export function apiRequest(path, params = {}) {
   return http(path, params);
 }
 
+/** GET with extra headers (e.g. a guest's order key, kept out of the URL). */
+export function apiGet(path, params = {}, headers = {}) {
+  return http(path, params, { headers });
+}
+
 /** Make an authenticated JSON request. */
 export function apiJson(method, path, body) {
   return http(path, {}, { method, body });

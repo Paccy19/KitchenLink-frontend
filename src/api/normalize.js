@@ -209,6 +209,8 @@ export function normalizeDish(raw = {}, vendorRef = null) {
     preorderCutoff: toText(raw.preorder_cutoff ?? raw.preorderCutoff),
     popular: toBool(raw.popular ?? raw.is_popular, false),
     categoryId: toText(raw.category_id),
+    // The kitchen department that prepares it (Food, Coffee …), if any.
+    departmentId: toText(raw.department_id),
     // Lists may leave the options out and only say whether there are any.
     hasOptions: toBool(raw.has_options, Array.isArray(raw.options) && raw.options.length > 0),
     options: normalizeDishOptions(raw.options),
@@ -241,6 +243,17 @@ export function normalizeVendorDetail(raw = {}) {
   return {
     ...vendor,
     menu,
+    // Photos of the kitchen's printed menu (to read; orders use the dishes).
+    menuPhotos: (Array.isArray(raw.menu_photos) ? raw.menu_photos : [])
+      .filter((p) => p && p.url)
+      .map((p) => ({ id: toText(p.id), url: toText(p.url), caption: toText(p.caption) })),
+    // The kitchen's services (departments), when it has any.
+    departments: (Array.isArray(raw.departments) ? raw.departments : []).map((d) => ({
+      id: toText(d.id),
+      name: toText(d.name, 'Service'),
+      categoryLabel: toText(d.category_label),
+      description: toText(d.description),
+    })),
     menuCategories: categories,
     tags: vendor.tags.length ? vendor.tags : categories,
   };
@@ -308,6 +321,8 @@ export function normalizeOrder(raw = {}) {
       method: toText(payment.method_label, paymentMethod, 'Payment'),
       methodCode: toText(payment.method, raw.payment_method),
       status: toText(raw.payment_status, payment.status, 'pending'),
+      // The latest attempt: processing while a mobile money prompt is out, failed if declined.
+      attempt: toText(payment.status),
       reference: toText(payment.reference),
       details: raw.payment_details ?? payment.details ?? {},
     },
