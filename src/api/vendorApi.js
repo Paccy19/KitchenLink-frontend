@@ -296,9 +296,10 @@ export function mapOrder(raw = {}) {
     subtotal: Number(raw.subtotal_rwf ?? 0),
     deliveryFee: Number(raw.delivery_fee_rwf ?? 0),
     total: Number(raw.total_amount_rwf ?? raw.total_rwf ?? 0),
-    commissionPercent: Number(raw.commission_percent ?? 0),
-    commission: Number(raw.commission_rwf ?? 0),
-    payout: Number(raw.vendor_payout_rwf ?? 0),
+    // Missing for staff who may not see the kitchen's money: the screen then hides them.
+    commissionPercent: raw.commission_percent == null ? null : Number(raw.commission_percent),
+    commission: raw.commission_rwf == null ? null : Number(raw.commission_rwf),
+    payout: raw.vendor_payout_rwf == null ? null : Number(raw.vendor_payout_rwf),
     riderPayout: Number(raw.rider_payout_rwf ?? 0),
     settlementStatus: raw.settlement_status || 'unpaid',
     orderType: raw.order_type_label || titleCase(raw.order_type) || 'Immediate',
@@ -314,6 +315,9 @@ export function mapOrder(raw = {}) {
       PAYMENT_METHOD_LABELS[raw.payment_method] || raw.payment_method || 'Payment',
     notes: raw.cancel_reason || delivery.note || '',
     eta: raw.eta_minutes ? `${raw.eta_minutes} min` : '—',
+    prepMinutes: raw.prep_minutes ?? null,
+    // Whether this person may enter the customer's code (owner: always).
+    canHandOver: raw.can_hand_over !== false,
     // A scheduled order can be marked ready from this time (null = now / n/a).
     readyAvailableAt: raw.ready_available_at || null,
     // From the server: what the kitchen can do right now (null = not sent).

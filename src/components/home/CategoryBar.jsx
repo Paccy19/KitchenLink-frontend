@@ -31,7 +31,7 @@ const PHOTO_RULES = [
   [/drink|juice|smoothie|beverage/, 'juice'],
   [/local|rwanda|african|traditional|signature|restaurant|catering|general/, 'plate'],
 ];
-const photoFor = (name = '') => {
+export const photoFor = (name = "") => {
   const lower = name.toLowerCase();
   const rule = PHOTO_RULES.find(([pattern]) => pattern.test(lower));
   return PHOTO(rule ? rule[1] : 'plate');

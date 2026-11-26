@@ -93,6 +93,50 @@
   transform: translateY(0) scale(0.98);
 }
 
+/* ── KitchenLink look: cream canvas, serif headlines, quiet motion ──────────
+   kl-rise    elements arriving (lists, cards), staggered with animation-delay
+   kl-reveal  sections fading up as they scroll into view (useReveal adds .kl-in)
+   kl-float   a slow drift for hero badges
+   kl-sheet   bottom sheets / dialogs sliding up                                 */
+.font-display { font-optical-sizing: auto; letter-spacing: -0.015em; }
+.kl-canvas { background-color: #fbf6ee; }
+@keyframes klRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes klSheet {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes klFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes klSpinSlow { to { transform: rotate(360deg); } }
+.kl-rise { animation: klRise 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.kl-sheet { animation: klSheet 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.kl-float { animation: klFloat 6s ease-in-out infinite; }
+.kl-spin-slow { animation: klSpinSlow 40s linear infinite; }
+.kl-reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+.kl-reveal.kl-in { opacity: 1; transform: none; }
+.kl-reveal-delay-1 { transition-delay: 0.08s; }
+.kl-reveal-delay-2 { transition-delay: 0.16s; }
+.kl-reveal-delay-3 { transition-delay: 0.24s; }
+/* An underline that draws itself under a word in a headline. */
+.kl-swash { background-image: linear-gradient(transparent 62%, rgba(232, 133, 50, 0.28) 62%, rgba(232, 133, 50, 0.28) 88%, transparent 88%); }
+.kl-img-zoom img { transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
+.kl-img-zoom:hover img { transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) {
+  .kl-reveal { opacity: 1; transform: none; }
+  .kl-float, .kl-spin-slow { animation: none !important; }
+}
+.dark .app-theme .kl-canvas,
+.dark .app-theme .bg-\[\#fbf6ee\],
+.dark .app-theme .bg-\[\#fdfaf6\] { background-color: var(--bg-main); }
+.dark .app-theme .text-\[\#2b1206\],
+.dark .app-theme .text-\[\#3b2416\] { color: var(--text-primary); }
+.dark .app-theme .border-\[\#ecdcc8\] { border-color: var(--border); }
+
 /* ── Reduce motion: honour the device's accessibility setting ──
    Things still appear and change colour, just without zooming, sliding,
    lifting or looping. Spinners keep turning so loading never looks frozen. */

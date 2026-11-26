@@ -183,7 +183,7 @@ export default function OrderTrackingPage() {
             <span className="text-xs font-black uppercase tracking-wider text-[#542813]">
               {isDeliveredOrDone ? 'Order complete' : isCancelled ? 'Order cancelled' : 'Order status'}
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-1">
+            <h1 className="font-display text-3xl sm:text-4xl text-[#2b1206] mt-1">
               {statuses[currentStatusIndex]?.label || order.status.replaceAll('_', ' ')}
             </h1>
             <p className="text-xs sm:text-sm text-stone-600 mt-1 font-medium">
@@ -218,6 +218,9 @@ export default function OrderTrackingPage() {
               <Clock className="w-4 h-4 text-[#8a5332]" />
               <span>{order.estimatedDeliveryTime || 'Not available'}</span>
             </div>
+            {order.prepMinutes > 0 && !isDeliveredOrDone && (
+              <span className="text-[11px] text-stone-500 font-semibold block">About {order.prepMinutes} min to prepare</span>
+            )}
             <span className="text-xs text-stone-500 font-medium">
               {order.vendorName}
               {order.vendorLocation ? ` (${order.vendorLocation})` : ''}
@@ -365,6 +368,11 @@ export default function OrderTrackingPage() {
           {/* Live map of the delivery worker, from the moment one accepts */}
           {!isPickup && !kitchenDelivers && !isCancelled && !isDeliveredOrDone && (
             <LiveDeliveryTracker orderId={order.id} enabled={apiEnabled} />
+          )}
+
+          {/* The kitchen's own courier: who brings it and where they are in the trip. */}
+          {kitchenDelivers && (order.kitchenCourier || order.packingStatus) && !isCancelled && (
+            <KitchenCourierCard courier={order.kitchenCourier} packing={order.packingStatus} />
           )}
 
           {/* Driver Card (after delivery) */}
@@ -528,6 +536,45 @@ export default function OrderTrackingPage() {
 
       </div>
 
+    </div>
+  );
+}
+
+const COURIER_STEPS = [
+  ['packed', 'Packed'],
+  ['collected', 'Left the kitchen'],
+  ['in_transit', 'On the way'],
+  ['delivered', 'Delivered'],
+];
+const COURIER_NOTE = {
+  assigned: 'A courier from the kitchen will bring your order.',
+  acknowledged: 'Your courier accepted the delivery.',
+  failed: 'Your courier could not deliver yet. The kitchen will contact you.',
+  customer_unavailable: "Your courier couldn't reach you. Keep your phone close; they'll try again.",
+  returned: 'Your order went back to the kitchen. The kitchen will contact you.',
+};
+
+/** Progress of a delivery the kitchen makes itself (its own courier). */
+function KitchenCourierCard({ courier, packing }) {
+  const status = courier?.status || '';
+  const reached = (step) => {
+    if (step === 'packed') return ['packed', 'handed_over'].includes(packing) || ['collected', 'in_transit', 'delivered'].includes(status);
+    const order = ['collected', 'in_transit', 'delivered'];
+    return order.indexOf(status) >= order.indexOf(step) && order.includes(status);
+  };
+  return (
+    <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-sm kl-rise">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#b5652b]">Delivered by the kitchen</p>
+      <p className="font-display text-2xl text-[#2b1206] mt-1">{courier?.name ? `${courier.name} is your courier` : 'Getting your order ready'}</p>
+      {COURIER_NOTE[status] && <p className="text-sm text-stone-600 mt-1">{COURIER_NOTE[status]}</p>}
+      <ol className="mt-5 grid grid-cols-4 gap-2">
+        {COURIER_STEPS.map(([id, label]) => (
+          <li key={id} className="text-center">
+            <span className={`block h-1.5 rounded-full transition-colors duration-700 ${reached(id) ? 'bg-[#e88532]' : 'bg-stone-200'}`} />
+            <span className={`block mt-2 text-[11px] font-bold ${reached(id) ? 'text-[#2b1206]' : 'text-stone-400'}`}>{label}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

@@ -1,21 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import MenuPhotos from '../components/common/MenuPhotos';
+import BookTable from '../components/common/BookTable';
+import { fetchBookingSlots } from '../api/bookingApi';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Bike,
-  CalendarClock,
-  Clock,
-  Heart,
-  Info,
-  MapPin,
-  MessageCircle,
-  Minus,
-  Plus,
-  ShoppingBag,
-  Star,
-  UtensilsCrossed,
-} from 'lucide-react';
+import { ArrowLeft, Bike, CalendarClock, CalendarDays, Clock, Heart, Info, MapPin, Minus, Plus, ShoppingBag, Star, UtensilsCrossed } from 'lucide-react';
 import useVendorStorefront from '../hooks/useVendorStorefront';
 import { StorefrontSkeleton } from '../components/common/Skeleton';
 import EmptyState, { ErrorState } from '../components/common/EmptyState';
@@ -30,7 +18,7 @@ import DishHoverPreview from '../components/common/DishHoverPreview';
 import VendorTypeBadge from '../components/common/VendorTypeBadge';
 import ContactKitchen, { useOrderWithKitchen } from '../components/orders/ContactKitchen';
 import FadeImage from '../components/common/FadeImage';
-import { getVendorType, orderingRuleLines } from '../data/vendorTypes';
+import { orderingRuleLines } from '../data/vendorTypes';
 import { buildPreorderSpecial, formatScheduledFor } from '../utils/schedule';
 
 /**
@@ -52,6 +40,19 @@ export default function VendorPage() {
     useVendorStorefront(vendorId);
 
   const [activeCategory, setActiveCategory] = useState('All');
+  // Table bookings: offered only when the kitchen takes them online (the server says).
+  const [bookable, setBookable] = useState(false);
+  const [booking, setBooking] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const today = new Date(Date.now() + 2 * 3600000).toISOString().slice(0, 10);
+    fetchBookingSlots(vendorId, { date: today, party_size: 2 })
+      .then(() => alive && setBookable(true))
+      .catch(() => alive && setBookable(false));
+    return () => {
+      alive = false;
+    };
+  }, [vendorId]);
   const [modalDish, setModalDish] = useState(null);
 
   // Deep link: /vendor/:id?dish=dish-101 opens the dish modal.
@@ -231,12 +232,6 @@ export default function VendorPage() {
             </div>
 
             <div className="flex items-center gap-1.5 text-sm font-bold text-stone-700">
-              <Clock className="w-4 h-4 text-[#8a5332]" aria-hidden="true" />
-              {vendor.prepTime}
-              <span className="text-xs text-stone-400 font-medium">prep</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-sm font-bold text-stone-700">
               <MapPin className="w-4 h-4 text-[#8a5332]" aria-hidden="true" />
               {vendor.neighborhood}
             </div>
@@ -255,25 +250,18 @@ export default function VendorPage() {
               </div>
             )}
 
-            {/* Only customers who have ordered here can message or call the kitchen. */}
-            {orderHere ? (
-              <ContactKitchen order={orderHere} className="sm:ml-auto" />
-            ) : (
-              <p className="sm:ml-auto text-[11px] font-semibold text-stone-400 flex items-center gap-1.5">
-                <MessageCircle className="w-3.5 h-3.5" aria-hidden="true" />
-                Place an order to message or call this kitchen
-              </p>
+            {bookable && (
+              <button type="button" onClick={() => setBooking(true)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#2b1206] text-white text-xs font-bold hover:bg-[#4a2210] transition shadow-md">
+                <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" /> Book a table
+              </button>
             )}
+
+            {/* Only customers who have ordered here can message or call the kitchen. */}
+            {orderHere && <ContactKitchen order={orderHere} className="sm:ml-auto" />}
           </div>
 
-          {/* What this kind of kitchen is like (from its vendor type). */}
-          <p className="mt-3 text-xs text-stone-500 flex items-center gap-1.5 flex-wrap">
-            <span className="font-bold text-stone-700">{getVendorType(vendor.typeCode || vendor.type).label}:</span>
-            {getVendorType(vendor.typeCode || vendor.type).note}
-          </p>
-
           {/* How this kitchen type takes orders (enforced at checkout). */}
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {orderingRuleLines(vendor.ordering).map((line) => (
               <span
                 key={line}
@@ -336,6 +324,7 @@ export default function VendorPage() {
         {/* The order panel only takes space once something from this kitchen is in the basket. */}
         <div className={cartVendorItems.length > 0 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start' : ''}>
         <div className="min-w-0">
+        {booking && <BookTable vendorId={vendorId} kitchenName={vendor.name} onClose={() => setBooking(false)} />}
         <MenuPhotos photos={vendor?.menuPhotos || []} />
         {(vendor?.reviews || []).length > 0 && (
           <section className="mb-5" aria-label="Reviews">

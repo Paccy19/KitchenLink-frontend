@@ -30,7 +30,7 @@ export default function VendorActivityPage() {
   const items = data?.items || [];
   return (
     <div className="space-y-5">
-      <PageHeader title="Activity log" subtitle="Every important action, with who did it and when." />
+      <PageHeader title="Activity log" />
       <div className="flex gap-2 overflow-x-auto pb-1">
         {AREAS.map((a) => (
           <button key={a.id || 'all'} type="button" onClick={() => setArea(a.id)} className={`flex-shrink-0 px-3.5 py-2 rounded-full text-xs font-bold border ${area === a.id ? 'bg-[#2b1206] text-white border-[#2b1206]' : 'bg-white text-stone-600 border-stone-200'}`}>

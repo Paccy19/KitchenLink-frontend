@@ -25,7 +25,7 @@ import {
 } from '../api/vendorApi';
 import { clearAllSessions } from '../api/session';
 import useAutoRefresh from '../hooks/useAutoRefresh';
-import { kitchenApi, canDo } from '../api/kitchenApi';
+import { kitchenApi, canDo, canRoute } from '../api/kitchenApi';
 
 const VendorContext = createContext(null);
 
@@ -54,7 +54,10 @@ export function VendorProvider({ children }) {
   const [dashboard, setDashboard] = useState(null);
   // Who is signed in (owner or an employee), their permissions and badge counts.
   const [workspace, setWorkspace] = useState(null);
+  // What each kitchen route accepts (from the server), loaded once per sign-in.
+  const [routeAccess, setRouteAccess] = useState(null);
   const workspaceRef = useRef(null);
+  const routeAccessRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   // True once notifications have loaded, so only later arrivals pop up.
@@ -162,7 +165,10 @@ export function VendorProvider({ children }) {
   }, []);
 
   const refreshWorkspace = useCallback(async () => {
-    const data = await kitchenApi.workspace();
+    const [data] = await Promise.all([
+      kitchenApi.workspace(),
+      routeAccessRef.current ? null : kitchenApi.permissions().then((c) => { const routes = c.routes && Object.keys(c.routes).length ? c.routes : null; routeAccessRef.current = routes; if (mounted.current) setRouteAccess(routes); }).catch(() => null),
+    ]);
     workspaceRef.current = data;
     if (mounted.current) setWorkspace(data);
     return data;
@@ -174,7 +180,7 @@ export function VendorProvider({ children }) {
       const ok = (permission) => canDo(ws, permission);
       const jobs = [];
       if (ok('overview.dashboard')) jobs.push(refreshDashboard());
-      if (ok('menu.view')) jobs.push(refreshMenu());
+      if (canRoute(ws, routeAccessRef.current, 'GET /vendor/menu') || ok('menu.view')) jobs.push(refreshMenu());
       if (['orders.view', 'orders.receive', 'orders.history', 'delivery.view_orders', 'delivery.history'].some(ok)) jobs.push(refreshOrders());
       if (ok('account.wallet')) jobs.push(refreshWallet());
       if (ok('promotions.view')) jobs.push(refreshSpecial());
@@ -344,6 +350,8 @@ export function VendorProvider({ children }) {
     setAuthToken('');
     setVendor(null);
     setWorkspace(null);
+    routeAccessRef.current = null;
+    setRouteAccess(null);
     workspaceRef.current = null;
     setMarketplaceMode(false);
     setError('');
@@ -613,11 +621,15 @@ export function VendorProvider({ children }) {
   const hasToken = Boolean(authToken);
 
   const can = useCallback((permission, departmentId) => canDo(workspace, permission, departmentId), [workspace]);
+  // allowed('POST /vendor/inventory/:item_id/adjust', departmentId): the server's own rule for that request.
+  const allowed = useCallback((route, departmentId) => canRoute(workspace, routeAccess, route, departmentId), [workspace, routeAccess]);
 
   const value = useMemo(
     () => ({
       workspace,
       can,
+      allowed,
+      routeAccess,
       refreshWorkspace,
       isKitchenAdmin: Boolean(workspace?.is_admin),
       vendor,
@@ -681,6 +693,8 @@ export function VendorProvider({ children }) {
     [
       workspace,
       can,
+      allowed,
+      routeAccess,
       refreshWorkspace,
       vendor,
       menuItems,

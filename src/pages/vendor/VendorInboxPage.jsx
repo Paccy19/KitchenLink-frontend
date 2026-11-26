@@ -18,7 +18,6 @@ export default function VendorInboxPage() {
     <div className="space-y-5">
       <PageHeader
         title="Team inbox"
-        subtitle="Messages for you and automatic alerts from the kitchen."
         actions={
           <>
             {workspace?.actor?.type === 'staff' && can('notifications.preferences') && <Button variant="secondary" onClick={() => setPrefs(true)}><BellOff className="w-4 h-4" /> Alerts I get</Button>}

@@ -285,6 +285,15 @@ export function normalizeOrder(raw = {}) {
     // 'vendor_delivery': the kitchen brings it (too far for delivery workers)
     // and the customer gives it the same `pickup.code`.
     fulfillment: toText(raw.fulfillment, 'delivery'),
+    // The kitchen's own courier (orders it delivers itself): assigned,
+    // acknowledged, collected, in_transit, delivered, failed, customer_unavailable, returned.
+    // How long this order takes to prepare (its slowest dish), from the server.
+    prepMinutes: raw.prep_minutes ?? null,
+    kitchenCourier: raw.kitchen_courier
+      ? { name: toText(raw.kitchen_courier.name), status: toText(raw.kitchen_courier.status), updatedAt: raw.kitchen_courier.updated_at ?? null }
+      : null,
+    // Packing before it leaves (when the kitchen packs orders): requested, packed, handed_over.
+    packingStatus: toText(raw.packing?.status),
     pickup: raw.pickup
       ? {
           address: toText(raw.pickup.address),

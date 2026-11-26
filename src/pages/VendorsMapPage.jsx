@@ -331,7 +331,7 @@ export default function VendorsMapPage() {
           title, full width, on phones). */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+        <h1 className="font-display text-3xl sm:text-4xl text-[#2b1206]">
           {eventsOnly ? 'Big Event Kitchens · Map' : 'Open Kitchens · Map'}
         </h1>
         <p className="text-xs text-stone-500 mt-1 flex items-center gap-1.5 flex-wrap">

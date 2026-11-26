@@ -219,7 +219,7 @@ export default function CheckoutPage() {
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl text-[#2b1206]">
             Checkout & Confirmation
           </h1>
           <p className="text-xs text-stone-500 font-medium">

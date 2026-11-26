@@ -147,13 +147,7 @@ export default function VendorsPage() {
         </Link>
 
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-            Tomorrow's Specials
-          </h1>
-          <p className="text-xs text-stone-500 mt-1">
-            Pre-order home cooks' specials before their order-before time runs out, and see which
-            kitchens have an offer coming up.
-          </p>
+          <h1 className="font-display text-3xl sm:text-4xl text-[#2b1206]">Tomorrow's specials</h1>
         </div>
 
         {specials.isPending || offers.isPending ? (
@@ -243,7 +237,7 @@ export default function VendorsPage() {
         }`}
       >
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl text-[#2b1206]">
             {activeCategory
               ? activeCategory.name
               : eventsOnly

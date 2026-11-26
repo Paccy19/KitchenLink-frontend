@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChefHat, Clock, Lock, UtensilsCrossed, Bike, ShoppingBag, Pause, Play, XCircle, UserPlus } from 'lucide-react';
+import { ChefHat, Clock, Lock, UtensilsCrossed, Bike, ShoppingBag, Pause, Play, XCircle, UserPlus, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, DepartmentTabs, useLoad, useAction, minutesAgo, when } from '../../components/vendor-dashboard/ops/ui';
@@ -46,6 +46,13 @@ export default function VendorKitchenQueuePage() {
       if (reason) action.run(`${ticket.id}:cancel`, () => kitchenApi.cancelTicket(ticket.order.id, ticket.id, reason));
     },
     assign: (ticket, staffId) => action.run(`${ticket.id}:assign`, () => kitchenApi.assignTicket(ticket.order.id, ticket.id, staffId)),
+    // A problem for the server and the floor: late, an item we can't make, or we need help.
+    flag: (ticket, kind) => {
+      const note = window.prompt({ delayed: 'Running late: by how long / why? (optional)', unavailable: 'Which item can you not make, and is there an alternative?', assistance: 'What do you need?' }[kind], '');
+      if (note === null) return;
+      action.run(`${ticket.id}:flag`, () => kitchenApi.flagTicket(ticket.order.id, ticket.id, { kind, note }));
+    },
+    resolve: (ticket, index) => action.run(`${ticket.id}:resolve`, () => kitchenApi.resolveTicketFlag(ticket.order.id, ticket.id, index)),
     staff: staffData?.staff || [],
   };
 
@@ -53,7 +60,6 @@ export default function VendorKitchenQueuePage() {
     <div className="space-y-5">
       <PageHeader
         title="Preparation"
-        subtitle="Tickets for your departments. Each department prepares only its own items."
         actions={
           <div className="flex rounded-xl bg-stone-100 p-1">
             {['live', 'history'].map((v) => (
@@ -114,6 +120,17 @@ function TicketCard({ ticket, onMove, busy, tools, can = () => false }) {
           {ticket.order.priority && ticket.order.priority !== 'normal' && <Badge tone={ticket.order.priority === 'urgent' ? 'red' : 'amber'}>{ticket.order.priority}</Badge>}
         </div>
       </div>
+      {(ticket.flags || []).filter((f) => !f.resolved_at).map((f) => (
+        <p key={f.index} className="flex items-center justify-between gap-2 text-[11px] font-bold text-red-800 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
+          <span className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> {{ delayed: 'Running late', unavailable: "Can't make an item", assistance: 'Needs help' }[f.kind]}{f.note ? `: ${f.note}` : ''}</span>
+          {tools && <button type="button" aria-label="Sorted out" className="text-red-700" onClick={() => tools.resolve(ticket, f.index)}><CheckCircle2 className="w-4 h-4" /></button>}
+        </p>
+      ))}
+      {ticket.items.some((i) => i.takeaway) && (
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#6d391d] bg-[#faf6f2] border border-[#ebd7c5] rounded-lg px-2 py-1.5">
+          <ShoppingBag className="w-3.5 h-3.5" /> To take away: {ticket.items.filter((i) => i.takeaway).map((i) => i.name).join(', ')}
+        </p>
+      )}
       {ticket.paused && (
         <p className="flex items-center gap-1.5 text-[11px] font-bold text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-2 py-1.5">
           <Pause className="w-3.5 h-3.5" /> Paused{ticket.pause_reason ? `: ${ticket.pause_reason}` : ''}
@@ -164,6 +181,14 @@ function TicketCard({ ticket, onMove, busy, tools, can = () => false }) {
             <button type="button" className="text-[11px] font-bold text-stone-600 inline-flex items-center gap-1" onClick={() => tools.pause(ticket)}>
               {ticket.paused ? <><Play className="w-3.5 h-3.5" /> Resume</> : <><Pause className="w-3.5 h-3.5" /> Pause</>}
             </button>
+          )}
+          {can('kitchen.flag_issues', ticket.department_id) && (
+            <select aria-label="Report a problem" className="bg-transparent text-[11px] font-bold text-red-700" value="" onChange={(e) => e.target.value && tools.flag(ticket, e.target.value)}>
+              <option value="">Problem…</option>
+              <option value="delayed">Running late</option>
+              <option value="unavailable">Can't make an item</option>
+              <option value="assistance">Need help</option>
+            </select>
           )}
           {can('kitchen.cancel_tasks', ticket.department_id) && (
             <button type="button" className="text-[11px] font-bold text-red-600 inline-flex items-center gap-1" onClick={() => tools.cancel(ticket)}><XCircle className="w-3.5 h-3.5" /> Cancel part</button>

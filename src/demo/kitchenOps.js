@@ -578,6 +578,25 @@ export function kitchenOpsRoutes({ getState, me, fail, nextId, nowIso, findVendo
       ['/vendor/service/requests', () => ({ requests: [] })],
       ['/vendor/orders/:id/history', () => ({ timeline: [] })],
       ['/tables/:token/requests', () => ({ requests: [] })],
+      // The floor, packing and deliveries: the demo shows the kitchen's tables, nobody seated yet.
+      ['/vendor/floor', (r) => {
+        const tables = mine(r).tables.filter((t) => !t.deleted_at).map((t) => ({ id: t.id, label: t.label, area: t.area || '', capacity: t.capacity ?? null, state: t.is_active === false ? 'unavailable' : 'available', session: null, next_reservation: null }));
+        const counts = { available: 0, occupied: 0, reserved: 0, unavailable: 0 };
+        tables.forEach((t) => { counts[t.state] += 1; });
+        return { tables, counts, waitlist: [], arrivals: [], servers: mine(r).staff.filter((x) => x.is_active !== false).map((x) => ({ id: x.id, name: x.name })) };
+      }],
+      ['/vendor/table-sessions', () => ({ sessions: [] })],
+      ['/vendor/table-sessions/:id', () => fail(404, 'That table visit was not found.', 'SESSION_NOT_FOUND')],
+      ['/vendor/table-sessions/:id/menu', () => ({ kitchen: { name: '' }, menu: [], departments: [] })],
+      ['/vendor/waitlist', () => ({ waitlist: [] })],
+      ['/vendor/packing', () => ({ tasks: [], counts: { requested: 0, packed: 0 } })],
+      ['/vendor/orders/:id/packing', () => ({ tasks: [] })],
+      ['/vendor/deliveries', (r) => ({ deliveries: [], coordinator: r.query?.get?.('mine') !== 'true', couriers: mine(r).staff.map((x) => ({ id: x.id, name: x.name, active_deliveries: 0 })), counts: { unassigned: 0, to_pack: 0, on_the_road: 0, problems: 0 } })],
+      ['/vendor/reservations/:id', () => fail(404, 'Reservation not found.', 'RESERVATION_NOT_FOUND')],
+      // Public bookings: the demo kitchens don't take them online.
+      ['/bookings/kitchens/:id/slots', () => fail(409, 'This kitchen doesn\'t take table bookings online.', 'RESERVATIONS_OFF')],
+      ['/bookings/manage', () => fail(404, 'Booking not found.', 'RESERVATION_NOT_FOUND')],
+      ['/bookings/mine', () => ({ reservations: [] })],
     ].map(([path, handler]) => ['GET', path, handler]),
     ...[
       ['POST', '/vendor/inbox'], ['POST', '/vendor/inbox/read-all'], ['POST', '/vendor/inbox/:id/read'], ['PUT', '/vendor/inbox/preferences'],
@@ -600,6 +619,15 @@ export function kitchenOpsRoutes({ getState, me, fail, nextId, nowIso, findVendo
       ['POST', '/vendor/invoices/:id/apply-code'], ['PUT', '/vendor/invoices/:id/customer'], ['POST', '/vendor/invoices/:id/redeem-points'],
       ['PATCH', '/vendor/service/requests/:id'], ['POST', '/tables/:token/requests'], ['POST', '/tables/:token/orders/:id/feedback'],
       ['PATCH', '/vendor/menu/categories/:id'], ['DELETE', '/vendor/menu/categories/:id'],
+      ['POST', '/vendor/table-sessions'], ['PATCH', '/vendor/table-sessions/:id'], ['PUT', '/vendor/table-sessions/:id/server'],
+      ['POST', '/vendor/table-sessions/:id/transfer'], ['POST', '/vendor/table-sessions/:id/orders'], ['POST', '/vendor/table-sessions/:id/close'],
+      ['POST', '/vendor/waitlist'], ['PATCH', '/vendor/waitlist/:id'],
+      ['POST', '/vendor/packing/:id/pack'], ['POST', '/vendor/packing/:id/handover'], ['POST', '/vendor/packing/:id/issue'],
+      ['POST', '/vendor/orders/:id/leftovers'], ['POST', '/vendor/orders/:id/takeaway'],
+      ['POST', '/vendor/kitchen/orders/:o/tickets/:t/flags'], ['POST', '/vendor/kitchen/orders/:o/tickets/:t/flags/:i/resolve'],
+      ['POST', '/vendor/reservations/:id/confirm'], ['POST', '/vendor/reservations/:id/reject'], ['POST', '/vendor/reservations/:id/arrive'],
+      ['POST', '/vendor/reservations/:id/seat'], ['POST', '/vendor/reservations/:id/cancel'], ['POST', '/vendor/reservations/:id/no-show'], ['POST', '/vendor/reservations/:id/deposit'],
+      ['POST', '/bookings/kitchens/:id'], ['POST', '/bookings/manage/cancel'],
     ].map(([method, path]) => [method, path, () => fail(400, 'This works with the real KitchenLink backend; demo mode only shows the screen.', 'DEMO_READ_ONLY')]),
     ['PUT', '/vendor/menu/:id/recipe', (r, p) => ({ menu_item_id: p.id, recipe: r.body.recipe || [] })],
 

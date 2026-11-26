@@ -21,6 +21,7 @@ export const kitchenApi = {
   // Who is signed in, their permissions and badge counts.
   workspace: () => vendorRequest('/vendor/workspace'),
   permissions: () => vendorRequest('/vendor/permissions'),
+  invoiceDocumentUrl: (invoiceId, kind = 'invoice') => `/vendor/invoices/${id(invoiceId)}/document?kind=${kind}`,
   operations: () => vendorRequest('/vendor/operations'),
   saveOperations: (body) => vendorRequest('/vendor/operations', { method: 'PUT', body }),
   activity: (params) => vendorRequest(`/vendor/activity${qs(params)}`),
@@ -95,7 +96,9 @@ export const kitchenApi = {
   claimOrder: (orderId) => vendorRequest(`/vendor/orders/${id(orderId)}/claim`, { method: 'POST' }),
   setCourier: (orderId, staffId) => vendorRequest(`/vendor/orders/${id(orderId)}/courier`, { method: 'PUT', body: { staff_id: staffId } }),
   cancelCourier: (orderId) => vendorRequest(`/vendor/orders/${id(orderId)}/courier`, { method: 'DELETE' }),
-  courierOnTheWay: (orderId) => vendorRequest(`/vendor/orders/${id(orderId)}/courier/status`, { method: 'PATCH', body: { status: 'on_the_way' } }),
+  courierOnTheWay: (orderId) => vendorRequest(`/vendor/orders/${id(orderId)}/courier/status`, { method: 'PATCH', body: { status: 'in_transit' } }),
+  // assigned → acknowledged → collected → in_transit; failed / customer_unavailable → in_transit or returned (with a note).
+  courierStatus: (orderId, status, note) => vendorRequest(`/vendor/orders/${id(orderId)}/courier/status`, { method: 'PATCH', body: { status, note } }),
 
   pauseTicket: (orderId, ticketId, paused, reason) =>
     vendorRequest(`/vendor/kitchen/orders/${id(orderId)}/tickets/${id(ticketId)}/pause`, { method: 'PATCH', body: { paused, reason } }),
@@ -146,6 +149,42 @@ export const kitchenApi = {
   updateReservation: (reservationId, body) => vendorRequest(`/vendor/reservations/${id(reservationId)}`, { method: 'PATCH', body }),
   tableAvailability: (params) => vendorRequest(`/vendor/reservations/availability${qs(params)}`),
   diningSessions: () => vendorRequest('/vendor/sessions'),
+  reservation: (reservationId) => vendorRequest(`/vendor/reservations/${id(reservationId)}`),
+  // Each step of a booking (the server decides which are allowed: allowed_next_statuses).
+  reservationStep: (reservationId, step, body = {}) => vendorRequest(`/vendor/reservations/${id(reservationId)}/${step}`, { method: 'POST', body }),
+  recordDeposit: (reservationId, body) => vendorRequest(`/vendor/reservations/${id(reservationId)}/deposit`, { method: 'POST', body }),
+
+  // The floor: table visits, seating and the waiting list.
+  floor: () => vendorRequest('/vendor/floor'),
+  tableSessions: (params) => vendorRequest(`/vendor/table-sessions${qs(params)}`),
+  tableSession: (sessionId) => vendorRequest(`/vendor/table-sessions/${id(sessionId)}`),
+  seatGuests: (body) => vendorRequest('/vendor/table-sessions', { method: 'POST', body }),
+  updateTableSession: (sessionId, body) => vendorRequest(`/vendor/table-sessions/${id(sessionId)}`, { method: 'PATCH', body }),
+  setSessionServer: (sessionId, serverId) => vendorRequest(`/vendor/table-sessions/${id(sessionId)}/server`, { method: 'PUT', body: { server_id: serverId || null } }),
+  moveGuests: (sessionId, tableId) => vendorRequest(`/vendor/table-sessions/${id(sessionId)}/transfer`, { method: 'POST', body: { table_id: tableId } }),
+  tableSessionMenu: (sessionId) => vendorRequest(`/vendor/table-sessions/${id(sessionId)}/menu`),
+  orderForTable: (sessionId, body) => vendorRequest(`/vendor/table-sessions/${id(sessionId)}/orders`, { method: 'POST', body }),
+  closeTableSession: (sessionId, body = {}) => vendorRequest(`/vendor/table-sessions/${id(sessionId)}/close`, { method: 'POST', body }),
+  waitlist: () => vendorRequest('/vendor/waitlist'),
+  addToWaitlist: (body) => vendorRequest('/vendor/waitlist', { method: 'POST', body }),
+  updateWaitlist: (entryId, body) => vendorRequest(`/vendor/waitlist/${id(entryId)}`, { method: 'PATCH', body }),
+
+  // Packing: leftovers (free), takeaway from a dine-in order, delivery and pickup orders.
+  packing: (params) => vendorRequest(`/vendor/packing${qs(params)}`),
+  packTask: (taskId) => vendorRequest(`/vendor/packing/${id(taskId)}/pack`, { method: 'POST' }),
+  handOverTask: (taskId) => vendorRequest(`/vendor/packing/${id(taskId)}/handover`, { method: 'POST' }),
+  packingIssue: (taskId, body) => vendorRequest(`/vendor/packing/${id(taskId)}/issue`, { method: 'POST', body }),
+  packLeftovers: (orderId, body = {}) => vendorRequest(`/vendor/orders/${id(orderId)}/leftovers`, { method: 'POST', body }),
+  toTakeaway: (orderId, body = {}) => vendorRequest(`/vendor/orders/${id(orderId)}/takeaway`, { method: 'POST', body }),
+  orderPacking: (orderId) => vendorRequest(`/vendor/orders/${id(orderId)}/packing`),
+
+  // Deliveries: the coordinator's board, or a kitchen driver's own.
+  deliveries: (params) => vendorRequest(`/vendor/deliveries${qs(params)}`),
+  confirmDeliveryCode: (orderId, code) => vendorRequest(`/vendor/orders/${id(orderId)}/collect`, { method: 'POST', body: { pickup_code: code } }),
+
+  // A department raises a problem on its ticket (late, can't make an item, needs help).
+  flagTicket: (orderId, ticketId, body) => vendorRequest(`/vendor/kitchen/orders/${id(orderId)}/tickets/${id(ticketId)}/flags`, { method: 'POST', body }),
+  resolveTicketFlag: (orderId, ticketId, index) => vendorRequest(`/vendor/kitchen/orders/${id(orderId)}/tickets/${id(ticketId)}/flags/${id(index)}/resolve`, { method: 'POST' }),
 
   promotions: () => vendorRequest('/vendor/promotions'),
   createPromotion: (body) => vendorRequest('/vendor/promotions', { method: 'POST', body }),
@@ -189,6 +228,23 @@ export function canDo(workspace, permission, departmentId) {
   if (!grant) return false;
   if (grant === 'all' || departmentId === undefined) return true;
   return departmentId !== null && grant.includes(departmentId);
+}
+
+/**
+ * May this person make this request? `routes` is the server's own list of
+ * what each route accepts (GET /vendor/permissions → routes), so a button
+ * shows exactly when the server would allow it. key: 'POST /vendor/inventory/:item_id/adjust'.
+ */
+export function canRoute(workspace, routes, key, departmentId) {
+  if (!workspace) return false;
+  if (workspace.is_admin) return true;
+  // Rules not loaded (or a server without them, like demo mode): the server still checks.
+  if (!routes) return true;
+  const list = routes[key];
+  if (!list) return false;
+  if (list.includes('admin')) return false;
+  if (!list.length) return true;
+  return list.some((permission) => canDo(workspace, permission, departmentId));
 }
 
 /** Saves a Blob as a file. */

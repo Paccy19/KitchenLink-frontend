@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Bike, Clock, MapPin, Star } from 'lucide-react';
+import { Bike, MapPin, Star } from 'lucide-react';
 import LazyImage from '../common/LazyImage';
 import usePrefetchVendor from '../../hooks/usePrefetchVendor';
 import { VendorAvatar } from './VendorCard';
@@ -74,12 +74,6 @@ function KitchenCard({ vendor }) {
             <MapPin className="w-3.5 h-3.5 text-[#f28c18] flex-shrink-0" aria-hidden="true" />
             <span className="line-clamp-1">{vendor.neighborhood || vendor.address || 'Kigali'}</span>
           </span>
-          {vendor.prepTime && (
-            <span className="inline-flex items-center gap-1 flex-shrink-0" title="Estimated preparation time">
-              <Clock className="w-3.5 h-3.5 text-stone-400" aria-hidden="true" />
-              {vendor.prepTime}
-            </span>
-          )}
         </div>
       </div>
     </Link>

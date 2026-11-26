@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-import { Bike, Clock, Globe2, MapPin, Navigation, Star } from 'lucide-react';
+import { Bike, Globe2, MapPin, Navigation, Star } from 'lucide-react';
 import FadeImage from '../common/FadeImage';
 import LazyImage from '../common/LazyImage';
 import usePrefetchVendor from '../../hooks/usePrefetchVendor';
@@ -131,10 +131,6 @@ export default function VendorCard({ vendor, variant = 'grid', showDescription =
               {vendor.distanceKm} km
             </span>
           )}
-          <span className="inline-flex items-center gap-1" title="Estimated preparation time">
-            <Clock className="w-3.5 h-3.5 text-stone-400" aria-hidden="true" />
-            {vendor.prepTime}
-          </span>
           {vendor.deliveryFee > 0 && (
             <span className="inline-flex items-center gap-1 text-stone-800 ml-auto font-bold">
               <Bike className="w-3.5 h-3.5 text-[#8a5332]" aria-hidden="true" />

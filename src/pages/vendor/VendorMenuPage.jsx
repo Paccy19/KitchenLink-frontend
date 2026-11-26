@@ -10,7 +10,13 @@ import MenuPhotosCard from '../../components/vendor-dashboard/MenuPhotosCard';
 import MyCategoriesCard from '../../components/vendor-dashboard/MyCategoriesCard';
 
 export default function VendorMenuPage() {
-  const { vendor, menuItems, categoryNames, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability } = useVendor();
+  const { vendor, menuItems, categoryNames, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability, allowed } = useVendor();
+  // The server's own rules for each request (a dish's department counts for department roles).
+  const dept = (item) => item.departmentId || undefined;
+  const mayAdd = allowed('POST /vendor/menu');
+  const mayEdit = (item) => allowed('PUT /vendor/menu/:item_id', dept(item));
+  const mayToggle = (item) => allowed('PATCH /vendor/menu/:item_id/availability', dept(item));
+  const mayDelete = (item) => allowed('DELETE /vendor/menu/:item_id', dept(item));
   // Pending kitchens can build their menu; customers see it once approved.
   const isPending = vendor?.verificationStatus === 'Pending';
   const { success, error } = useToast();
@@ -85,14 +91,14 @@ export default function VendorMenuPage() {
             {menuItems.length} dishes · {availableCount} available
           </p>
         </div>
-        <button
+        {mayAdd && <button
           type="button"
           onClick={openAdd}
           className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md shadow-[#2b1206]/20 transition active:scale-95"
         >
           <Plus className="w-4 h-4 text-[#d9bda6]" />
           Add Dish
-        </button>
+        </button>}
       </div>
 
       <MenuPhotosCard />
@@ -217,8 +223,9 @@ export default function VendorMenuPage() {
                     type="button"
                     role="switch"
                     aria-checked={item.isAvailable}
+                    disabled={!mayToggle(item)}
                     onClick={() => handleToggle(item)}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 disabled:opacity-60"
                   >
                     <span
                       className={`relative w-10 h-[22px] rounded-full transition-colors ${
@@ -237,28 +244,29 @@ export default function VendorMenuPage() {
                   </button>
 
                   <div className="flex items-center gap-1">
-                    <button
+                    {mayEdit(item) && <button
                       type="button"
                       onClick={() => openEdit(item)}
                       aria-label={`Edit ${item.name}`}
                       className="p-2 rounded-xl text-stone-500 hover:text-[#542813] hover:bg-[#faf6f2] transition"
                     >
                       <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
+                    </button>}
+                    {mayDelete(item) && <button
                       type="button"
                       onClick={() => setPendingDelete(item)}
                       aria-label={`Delete ${item.name}`}
                       className="p-2 rounded-xl text-stone-500 hover:text-red-600 hover:bg-red-50 transition"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </button>}
                   </div>
                 </div>
               </div>
             </div>
           ))}
 
+          {mayAdd && (
           <button
             type="button"
             onClick={openAdd}
@@ -269,6 +277,7 @@ export default function VendorMenuPage() {
             </span>
             <span className="text-sm font-bold">Add another dish</span>
           </button>
+          )}
         </div>
       )}
 

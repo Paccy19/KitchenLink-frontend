@@ -10,7 +10,7 @@ import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Fiel
  * dishes, staff, preparation stages and queue, all under this one kitchen.
  */
 export default function VendorDepartmentsPage() {
-  const { can } = useVendor();
+  const { can, allowed } = useVendor();
   const { data, error, loading, reload } = useLoad(() => kitchenApi.departments(), []);
   const [editing, setEditing] = useState(null);
   const action = useAction();
@@ -20,7 +20,6 @@ export default function VendorDepartmentsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Services & departments"
-        subtitle="Split your kitchen into the services you offer. Orders are sent to each department automatically."
         actions={can('departments.create') && <Button onClick={() => setEditing('new')}><Plus className="w-4 h-4" /> Create department</Button>}
       />
       <ErrorNote message={error || action.error} />
@@ -54,7 +53,7 @@ export default function VendorDepartmentsPage() {
               </div>
               <p className="text-[11px] text-stone-500 mt-3">Stages: {d.workflow.stages.map((s) => s.label).join(' → ')}</p>
               <div className="flex gap-2 mt-4">
-                {can('departments.edit', d.id) && (
+                {allowed('PATCH /vendor/departments/:department_id', d.id) && (
                   <Button variant="secondary" className="flex-1 !py-2 !text-xs" onClick={() => setEditing(d)}><Pencil className="w-4 h-4" /> Manage</Button>
                 )}
                 {can('departments.delete') && (
@@ -97,7 +96,7 @@ const Mini = ({ icon: Icon, label, value }) => (
 );
 
 function DepartmentForm({ department, categories, onClose, onSaved }) {
-  const { can } = useVendor();
+  const { can, allowed } = useVendor();
   const isNew = !department;
   const [form, setForm] = useState({
     name: department?.name || '',
@@ -151,7 +150,7 @@ function DepartmentForm({ department, categories, onClose, onSaved }) {
             </select>
           </Field>
           {form.category === 'custom' && <Field label="Your category name"><input className={inputClass} value={form.custom_category} onChange={set('custom_category')} placeholder="Ice cream" /></Field>}
-          <Field label="Ticket letters" hint="Shown on tickets, e.g. C → C4F2A1."><input className={inputClass} value={form.code_prefix} onChange={set('code_prefix')} maxLength={3} placeholder="Auto" /></Field>
+          <Field label="Ticket letters"><input className={inputClass} value={form.code_prefix} onChange={set('code_prefix')} maxLength={3} placeholder="Auto" /></Field>
         </div>
         <Field label="Description"><textarea className={inputClass} rows={2} value={form.description} onChange={set('description')} /></Field>
         <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={form.is_active} onChange={set('is_active')} /> Active (its dishes show on the menu)</label>

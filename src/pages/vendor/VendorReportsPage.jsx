@@ -30,7 +30,7 @@ function shift(date, period, step) {
  * is live. Department managers see only their departments.
  */
 export default function VendorReportsPage() {
-  const { can, workspace } = useVendor();
+  const { can, allowed, workspace } = useVendor();
   const [params, setParams] = useSearchParams();
   const period = params.get('period') || 'daily';
   const date = params.get('date') || today();
@@ -48,8 +48,7 @@ export default function VendorReportsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Reports"
-        subtitle="Everything that happened, in plain words. Each finished day, week, month and year is saved automatically."
-        actions={<Button variant="secondary" busy={action.busy === 'csv'} onClick={exportCsv}><Download className="w-4 h-4" /> Export CSV</Button>}
+        actions={allowed('GET /vendor/reports/export') ? <Button variant="secondary" busy={action.busy === 'csv'} onClick={exportCsv}><Download className="w-4 h-4" /> Export CSV</Button> : null}
       />
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
         <div className="flex rounded-xl bg-stone-100 p-1 w-fit">
@@ -73,7 +72,7 @@ export default function VendorReportsPage() {
       ) : !report ? null : (
         <ReportBody report={report} />
       )}
-      {financial && <SavedReports period={period} onOpen={(d) => set({ date: d })} />}
+      {allowed('GET /vendor/reports/history') && <SavedReports period={period} onOpen={(d) => set({ date: d })} />}
     </div>
   );
 }

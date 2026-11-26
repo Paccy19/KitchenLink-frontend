@@ -60,7 +60,7 @@ export function PageHeader({ title, subtitle, actions }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
       <div>
-        <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{title}</h2>
+        <h2 className="font-display text-2xl sm:text-3xl text-[#2b1206]">{title}</h2>
         {subtitle && <p className="text-xs text-stone-500 font-medium mt-0.5">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -69,7 +69,7 @@ export function PageHeader({ title, subtitle, actions }) {
 }
 
 export function Card({ children, className = '' }) {
-  return <div className={`rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 ${className}`}>{children}</div>;
+  return <div className={`kl-rise rounded-3xl bg-white border border-stone-200/80 shadow-sm p-5 ${className}`}>{children}</div>;
 }
 
 export function Button({ children, variant = 'primary', busy = false, className = '', ...props }) {

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Receipt, Printer, Search, Wallet, Undo2, Lock } from 'lucide-react';
-import { kitchenApi } from '../../api/kitchenApi';
+import { kitchenApi, saveBlob } from '../../api/kitchenApi';
+import { vendorDownload } from '../../api/vendorApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Field, Stat, inputClass, useLoad, useAction, money, when } from '../../components/vendor-dashboard/ops/ui';
 
@@ -18,6 +19,8 @@ const METHODS = [
   { id: 'card', label: 'Card' },
   { id: 'other', label: 'Other' },
 ];
+// Who may take which payment (the server's rule): "all payments", or cash / digital on their own.
+const mayTake = (can, methodId) => can('invoices.process_payment') || can(methodId === 'cash' ? 'invoices.cash' : 'invoices.digital');
 
 /**
  * Bills. A table's bill gathers everything ordered at the table (every
@@ -34,7 +37,7 @@ export default function VendorInvoicesPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Invoices & payments" subtitle="One bill per table, all departments together. Invoices are created automatically." />
+      <PageHeader title="Invoices & payments" />
       <div className="grid grid-cols-2 gap-3 max-w-md">
         <Stat label="Open bills" value={data?.summary?.open_count ?? 0} />
         <Stat label="Still to collect" value={money(data?.summary?.open_balance_rwf)} tone={data?.summary?.open_balance_rwf ? 'warn' : undefined} />
@@ -86,11 +89,18 @@ export default function VendorInvoicesPage() {
 }
 
 function InvoiceModal({ invoiceId, onClose }) {
-  const { can, vendor } = useVendor();
+  const { can, allowed, vendor } = useVendor();
   const { data: invoice, error, loading, setData } = useLoad(() => kitchenApi.invoice(invoiceId), [invoiceId], { intervalMs: 15000 });
+  const methods = METHODS.filter((m) => mayTake(can, m.id));
+  const partialOk = can('invoices.process_payment') || can('invoices.partial');
+  const download = (kind) =>
+    action.run(`doc-${kind}`, async () => {
+      const blob = await vendorDownload(`${kitchenApi.invoiceDocumentUrl(invoice.id, kind)}&download=true`);
+      saveBlob(blob, `${kind}-${invoice.invoice_number}.html`);
+    });
   const action = useAction();
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('cash');
+  const [method, setMethod] = useState(() => (can('invoices.process_payment') || can('invoices.cash') ? 'cash' : 'mobile_money'));
   const [reference, setReference] = useState('');
   const [refund, setRefund] = useState(null);
   useEffect(() => {
@@ -140,19 +150,20 @@ function InvoiceModal({ invoiceId, onClose }) {
             </div>
           )}
 
-          {invoice.accepts_payments && (can('invoices.process_payment') ? (
+          {invoice.accepts_payments && (methods.length ? (
             <div className="rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-4 space-y-3">
               <h4 className="font-black text-sm flex items-center gap-1.5"><Wallet className="w-4 h-4" /> Take a payment · {money(invoice.balance_due_rwf)} due</h4>
               <div className="grid sm:grid-cols-3 gap-3">
                 <Field label="Amount (RWF)"><input className={inputClass} type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
                 <Field label="How they paid">
                   <select className={inputClass} value={method} onChange={(e) => setMethod(e.target.value)}>
-                    {METHODS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                    {methods.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
                   </select>
                 </Field>
                 <Field label="Reference (optional)"><input className={inputClass} value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Mobile money ID…" /></Field>
               </div>
-              <Button className="w-full" variant="success" busy={action.busy === 'pay'} disabled={!Number(amount)} onClick={pay}>
+              {!partialOk && Number(amount) < invoice.balance_due_rwf && <p className="text-[11px] font-semibold text-amber-700">Part payments need a cashier who may take them.</p>}
+              <Button className="w-full" variant="success" busy={action.busy === 'pay'} disabled={!Number(amount) || (!partialOk && Number(amount) < invoice.balance_due_rwf)} onClick={pay}>
                 Record {money(amount)} {Number(amount) < invoice.balance_due_rwf ? '(part payment)' : ''}
               </Button>
             </div>
@@ -162,13 +173,19 @@ function InvoiceModal({ invoiceId, onClose }) {
 
           <ErrorNote message={action.error} />
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => printReceipt(invoice, vendor?.name)}><Printer className="w-4 h-4" /> Print receipt</Button>
+            {allowed('GET /vendor/invoices/:invoice_id/document') && (
+              <>
+                <Button variant="secondary" onClick={() => printReceipt(invoice, vendor?.name)}><Printer className="w-4 h-4" /> Print</Button>
+                <Button variant="secondary" busy={action.busy === 'doc-invoice'} onClick={() => download('invoice')}>Download invoice</Button>
+                {invoice.amount_paid_rwf > 0 && <Button variant="secondary" busy={action.busy === 'doc-receipt'} onClick={() => download('receipt')}>Receipt</Button>}
+              </>
+            )}
             {invoice.is_open && invoice.kind === 'table' && (can('invoices.edit') || can('tables.close_sessions') || can('reservations.manage_sessions')) && (
               <Button variant="secondary" busy={action.busy === 'close'} onClick={() => action.run('close', async () => setData(await kitchenApi.closeInvoice(invoice.id)))}>
                 End table session
               </Button>
             )}
-            {can('invoices.edit') && invoice.accepts_payments && (
+            {(can('invoices.edit') || can('invoices.discounts') || can('promotions.manual_discounts')) && invoice.accepts_payments && (
               <Button
                 variant="secondary"
                 busy={action.busy === 'disc'}
@@ -181,7 +198,7 @@ function InvoiceModal({ invoiceId, onClose }) {
               </Button>
             )}
             {invoice.accepts_payments && <BillExtras invoice={invoice} onChanged={setData} />}
-            {can('invoices.refund') && invoice.refundable_rwf > 0 && (
+            {allowed('POST /vendor/invoices/:invoice_id/refunds') && invoice.refundable_rwf > 0 && (
               <Button variant="danger" onClick={() => setRefund({ amount: String(invoice.refundable_rwf), reason: '', method: 'cash' })}><Undo2 className="w-4 h-4" /> Refund</Button>
             )}
           </div>

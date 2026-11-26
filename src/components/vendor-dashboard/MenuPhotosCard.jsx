@@ -19,13 +19,13 @@ const dataUriToFile = (dataUri) => {
  * page and at the table. Customers order from the dishes added one by one.
  */
 export default function MenuPhotosCard() {
-  const { can } = useVendor();
+  const { allowed } = useVendor();
   const { data, error, reload } = useLoad(() => vendorRequest('/vendor/menu/photos'), [], { intervalMs: 60000 });
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
   const fileRef = useRef(null);
   const photos = data?.photos || [];
-  const canAdd = can('menu.create') || can('menu.edit');
+  const canAdd = allowed('POST /vendor/menu/photos');
 
   const upload = async (files) => {
     setMessage('');
@@ -109,7 +109,7 @@ export default function MenuPhotosCard() {
                 <button type="button" className="truncate text-left hover:underline" onClick={() => canAdd && caption(photo)} disabled={!canAdd}>
                   {photo.caption || (canAdd ? 'Add caption' : '')}
                 </button>
-                {(can('menu.delete') || can('menu.edit')) && (
+                {allowed('DELETE /vendor/menu/photos/:photo_id') && (
                   <button type="button" aria-label="Remove photo" onClick={() => remove(photo)} disabled={busy === photo.id} className="text-red-600 flex-shrink-0">
                     {busy === photo.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                   </button>

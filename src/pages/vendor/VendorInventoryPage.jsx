@@ -4,13 +4,15 @@ import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Field, Stat, inputClass, useLoad, useAction, money, when, DepartmentTabs } from '../../components/vendor-dashboard/ops/ui';
 
+// Each reason and who may record it (the same rule the server applies).
 const REASONS = [
-  { id: 'purchase', label: 'Bought / received', sign: 1 },
-  { id: 'return', label: 'Returned to stock', sign: 1 },
-  { id: 'usage', label: 'Used', sign: -1 },
-  { id: 'waste', label: 'Wasted / spoiled', sign: -1 },
-  { id: 'adjustment', label: 'Count correction (+ or −)', sign: 0 },
+  { id: 'purchase', label: 'Bought / received', sign: 1, needs: ['inventory.receive_deliveries', 'inventory.add', 'inventory.adjust'] },
+  { id: 'return', label: 'Returned to stock', sign: 1, needs: ['inventory.add', 'inventory.adjust'] },
+  { id: 'usage', label: 'Used', sign: -1, needs: ['inventory.remove', 'inventory.adjust'] },
+  { id: 'waste', label: 'Wasted / spoiled', sign: -1, needs: ['inventory.waste', 'inventory.remove', 'inventory.adjust'] },
+  { id: 'adjustment', label: 'Count correction (+ or −)', sign: 0, needs: ['inventory.adjust', 'inventory.update'] },
 ];
+const KIND_PERMISSION = { ingredient: 'inventory.ingredients', raw_material: 'inventory.raw_materials' };
 
 /** Stock per department (or kitchen-wide), every change recorded, low-stock warnings. */
 export default function VendorInventoryPage() {
@@ -18,7 +20,7 @@ export default function VendorInventoryPage() {
   const [tab, setTab] = useState('stock');
   return (
     <div className="space-y-5">
-      <PageHeader title="Inventory" subtitle="Stock levels, every change, and your suppliers." />
+      <PageHeader title="Inventory" />
       <div className="flex rounded-xl bg-stone-100 p-1 w-fit">
         {[['stock', 'Stock'], ['movements', 'History'], ...(can('inventory.purchase_orders') || can('inventory.receive_deliveries') ? [['orders', 'Purchase orders']] : []), ...(can('inventory.suppliers') ? [['suppliers', 'Suppliers']] : [])].map(([id, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} className={`px-4 py-2 rounded-lg text-xs font-bold ${tab === id ? 'bg-white shadow text-gray-900' : 'text-stone-500'}`}>{label}</button>
@@ -56,7 +58,7 @@ function StockTab({ departments }) {
         <DepartmentTabs departments={departments} value={department} onChange={setDepartment} includeNone />
         <div className="flex gap-2 items-center">
           <label className="flex items-center gap-2 text-xs font-bold text-stone-600"><input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} /> Low only</label>
-          {can('inventory.add') && <Button onClick={() => setEditing('new')}><Plus className="w-4 h-4" /> Add item</Button>}
+          {(can('inventory.add') || can('inventory.ingredients') || can('inventory.raw_materials')) && <Button onClick={() => setEditing('new')}><Plus className="w-4 h-4" /> Add item</Button>}
         </div>
       </div>
       {(data?.categories || []).length > 0 && (
@@ -102,14 +104,14 @@ function StockTab({ departments }) {
                   <td className="px-4 py-2.5 text-right text-stone-500 hidden md:table-cell">{item.low_stock_threshold || '—'}</td>
                   <td className="px-4 py-2.5">
                     <div className="flex justify-end gap-1.5">
-                      {(can('inventory.update', item.department_id) || can('inventory.remove', item.department_id)) && (
+                      {REASONS.some((r) => r.needs.some((p) => can(p, item.department_id || undefined))) && (
                         <Button variant="soft" className="!py-1.5 !px-2.5 !text-xs" onClick={() => setAdjusting(item)}><ArrowDownUp className="w-3.5 h-3.5" /> Change</Button>
                       )}
-                      {can('inventory.transfers', item.department_id) && departments.length > 0 && (
+                      {can('inventory.transfers', item.department_id || undefined) && departments.length > 0 && (
                         <Button variant="secondary" className="!py-1.5 !px-2.5" aria-label={`Move ${item.name}`} title="Move to another department" onClick={() => setMoving(item)}><ArrowRightLeft className="w-3.5 h-3.5" /></Button>
                       )}
-                      {can('inventory.update', item.department_id) && <Button variant="secondary" className="!py-1.5 !px-2.5" aria-label={`Edit ${item.name}`} onClick={() => setEditing(item)}><Pencil className="w-3.5 h-3.5" /></Button>}
-                      {can('inventory.remove', item.department_id) && (
+                      {(can('inventory.update', item.department_id || undefined) || (KIND_PERMISSION[item.kind] && can(KIND_PERMISSION[item.kind], item.department_id || undefined)) || can('inventory.low_stock_alerts', item.department_id || undefined)) && <Button variant="secondary" className="!py-1.5 !px-2.5" aria-label={`Edit ${item.name}`} onClick={() => setEditing(item)}><Pencil className="w-3.5 h-3.5" /></Button>}
+                      {can('inventory.remove', item.department_id || undefined) && (
                         <Button variant="danger" className="!py-1.5 !px-2.5" aria-label={`Remove ${item.name}`} onClick={() => window.confirm(`Remove ${item.name}?`) && action.run('del', async () => { await kitchenApi.deleteStockItem(item.id); reload(); })}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -130,6 +132,7 @@ function StockTab({ departments }) {
 }
 
 function ItemForm({ item, categories = [], departments, suppliers, onClose, onSaved }) {
+  const { can } = useVendor();
   const [form, setForm] = useState({
     name: item?.name || '',
     unit: item?.unit || 'pcs',
@@ -169,9 +172,9 @@ function ItemForm({ item, categories = [], departments, suppliers, onClose, onSa
           </Field>
           <Field label="Type">
             <select className={inputClass} value={form.kind} onChange={set('kind')}>
-              <option value="ingredient">Ingredient</option>
-              <option value="raw_material">Raw material</option>
-              <option value="supply">Supply (cups, packaging…)</option>
+              {[['ingredient', 'Ingredient'], ['raw_material', 'Raw material'], ['supply', 'Supply (cups, packaging…)']]
+                .filter(([k]) => can('inventory.add') || can('inventory.update') || (KIND_PERMISSION[k] && can(KIND_PERMISSION[k])) || k === form.kind)
+                .map(([k, label]) => <option key={k} value={k}>{label}</option>)}
             </select>
           </Field>
         </div>
@@ -195,7 +198,10 @@ function ItemForm({ item, categories = [], departments, suppliers, onClose, onSa
 }
 
 function AdjustForm({ item, suppliers, onClose, onSaved }) {
-  const [form, setForm] = useState({ reason: 'purchase', delta: '', note: '', supplier_id: '' });
+  const { can } = useVendor();
+  const dept = item.department_id || undefined;
+  const reasons = REASONS.filter((r) => r.needs.some((p) => can(p, dept)));
+  const [form, setForm] = useState({ reason: reasons[0]?.id || 'purchase', delta: '', note: '', supplier_id: '' });
   const action = useAction();
   const reason = REASONS.find((r) => r.id === form.reason);
   const save = () => action.run('save', async () => { await kitchenApi.adjustStock(item.id, { ...form, delta: Number(form.delta), supplier_id: form.supplier_id || undefined }); onSaved(); });
@@ -205,7 +211,7 @@ function AdjustForm({ item, suppliers, onClose, onSaved }) {
         <p className="text-sm text-stone-600">Now: <b>{item.quantity} {item.unit}</b></p>
         <Field label="What happened">
           <select className={inputClass} value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })}>
-            {REASONS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+            {reasons.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
           </select>
         </Field>
         <Field label={`Quantity (${item.unit})`} hint={reason.sign === 0 ? 'Use a minus sign to lower the count.' : reason.sign > 0 ? 'Added to stock.' : 'Taken from stock.'}>

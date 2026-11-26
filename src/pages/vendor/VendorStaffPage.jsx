@@ -13,7 +13,7 @@ export default function VendorStaffPage() {
   const [tab, setTab] = useState(can('staff.view') ? 'staff' : can('roles.view') ? 'roles' : can('staff.schedules') ? 'shifts' : 'attendance');
   return (
     <div className="space-y-5">
-      <PageHeader title="Staff & roles" subtitle="Create accounts for your team, make any role you need, and tick exactly what each role can do." />
+      <PageHeader title="Staff & roles" />
       <div className="flex rounded-xl bg-stone-100 p-1 w-fit">
         {can('staff.view') && <TabButton active={tab === 'staff'} onClick={() => setTab('staff')}>Employees</TabButton>}
         {(can('roles.view') || can('staff.view')) && <TabButton active={tab === 'roles'} onClick={() => setTab('roles')}>Roles & permissions</TabButton>}
@@ -164,7 +164,7 @@ function StaffForm({ member, roles, onClose, onSaved }) {
         <div className="rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-4 space-y-3">
           <p className="font-black text-sm">Sign-in details you give them</p>
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Username" hint="Letters, numbers, dots or dashes. Unique on KitchenLink.">
+            <Field label="Username">
               <div className="flex gap-2">
                 <input className={inputClass} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s+/g, '.') })} placeholder="aline.barista" autoCapitalize="none" spellCheck={false} />
                 {!form.username && form.name.trim().length > 1 && (
@@ -177,7 +177,7 @@ function StaffForm({ member, roles, onClose, onSaved }) {
             </Field>
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Phone (optional)" hint="They can also sign in with a code sent here."><input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="078…" /></Field>
+            <Field label="Phone (optional)"><input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="078…" /></Field>
             <Field label="Email (optional)"><input className={inputClass} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
           </div>
         </div>

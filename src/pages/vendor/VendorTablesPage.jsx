@@ -21,7 +21,6 @@ export default function VendorTablesPage() {
     <div className="space-y-5">
       <PageHeader
         title="Tables & QR codes"
-        subtitle="Each table has its own QR code. Guests scan it to order from your whole menu."
         actions={
           can('tables.create') && (
             <>
@@ -136,7 +135,7 @@ function TableForm({ table, onClose, onSaved }) {
             <Field label="To"><input className={inputClass} type="number" min="0" value={form.to} onChange={set('to')} /></Field>
           </div>
         ) : (
-          <Field label="Table name or number" hint="Unique in your kitchen, e.g. Table 5 or Terrace 2.">
+          <Field label="Table name or number">
             <input className={inputClass} value={form.label} onChange={set('label')} maxLength={30} autoFocus />
           </Field>
         )}

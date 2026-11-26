@@ -16,7 +16,7 @@ export default function VendorCashierPage() {
   const mine = data?.mine;
   return (
     <div className="space-y-5">
-      <PageHeader title="Cashier till" subtitle="Open your till, take payments in Invoices, then close it by counting the cash." />
+      <PageHeader title="Cashier till" />
       <ErrorNote message={error || action.error} />
       {canSessions && (
         <Card>

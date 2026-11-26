@@ -17,7 +17,7 @@ export default function VendorFinancePage() {
   const [tab, setTab] = useState(tabs[0]?.[0] || 'expenses');
   return (
     <div className="space-y-5">
-      <PageHeader title="Finance" subtitle="What came in, what went out, and what is left." />
+      <PageHeader title="Finance" />
       <div className="flex rounded-xl bg-stone-100 p-1 w-fit">
         {tabs.map(([id, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} className={`px-4 py-2 rounded-lg text-xs font-bold ${tab === id ? 'bg-white shadow text-gray-900' : 'text-stone-500'}`}>{label}</button>

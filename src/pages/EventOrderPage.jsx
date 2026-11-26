@@ -270,7 +270,7 @@ export default function EventOrderPage() {
       <div className="flex items-center gap-3 mb-6 sm:mb-8">
         <img src="/icons/party-popper.png" alt="" aria-hidden="true" className="w-10 h-10" />
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">Order for your event</h1>
+          <h1 className="font-display text-3xl sm:text-4xl text-[#2b1206]">Order for your event</h1>
           <p className="text-xs text-stone-500 font-medium">
             {vendor.name}
             {vendor.neighborhood ? ` · ${vendor.neighborhood}` : ''}

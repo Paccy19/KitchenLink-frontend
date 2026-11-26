@@ -38,6 +38,8 @@ export default {
       },
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        // Headlines: a warm serif (falls back to the system's book serif).
+        display: ['Fraunces', 'Iowan Old Style', 'Palatino Linotype', 'Palatino', 'Georgia', 'serif'],
       },
       keyframes: {
         fadeInUp: {

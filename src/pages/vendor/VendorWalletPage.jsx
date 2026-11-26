@@ -92,10 +92,10 @@ export default function VendorWalletPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard icon={TrendingUp} label="Total Sales" value={money(stats.totalSales)} hint="Lifetime gross" tone="brown" />
+        <StatCard icon={TrendingUp} label="Total Sales" value={money(stats.totalSales)} tone="brown" />
         <StatCard icon={Percent} label="Commission" value={money(stats.commission)} hint={`${Math.round(vendor.commissionRate * 100)}% platform fee`} tone="amber" />
-        <StatCard icon={Clock} label="Pending Balance" value={money(stats.pendingBalance)} hint="From active orders" tone="cream" />
-        <StatCard icon={WalletIcon} label="Available Balance" value={money(stats.availableBalance)} hint="Ready to withdraw" tone="emerald" />
+        <StatCard icon={Clock} label="Pending Balance" value={money(stats.pendingBalance)} tone="cream" />
+        <StatCard icon={WalletIcon} label="Available Balance" value={money(stats.availableBalance)} tone="emerald" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

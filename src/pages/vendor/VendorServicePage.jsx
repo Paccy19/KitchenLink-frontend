@@ -22,7 +22,7 @@ const FILTERS = [
  * and buttons to collect and serve — partly, when the kitchen allows it.
  */
 export default function VendorServicePage() {
-  const { can, workspace } = useVendor();
+  const { can, allowed, workspace } = useVendor();
   const [filter, setFilter] = useState(can('service.view_ready') ? 'ready' : 'mine');
   const query = filter === 'ready' ? { only: 'ready' } : filter === 'mine' ? { mine: 'true' } : filter ? { fulfillment: filter } : {};
   const { data, error, loading } = useLoad(() => kitchenApi.serviceBoard(query), [filter], { intervalMs: 8000 });
@@ -31,7 +31,7 @@ export default function VendorServicePage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Service & pickup" subtitle="Ready items, where they go, and what's still being prepared." />
+      <PageHeader title="Service & pickup" />
       <div className="grid grid-cols-3 gap-3">
         <SummaryTile label="Items waiting" value={data?.summary?.waiting_items ?? 0} tone="amber" />
         <SummaryTile label="Collected" value={data?.summary?.collected_items ?? 0} />
@@ -60,7 +60,7 @@ export default function VendorServicePage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orders.map((order) => (
-            <ServiceCard key={order.id} order={order} action={action} can={can} me={workspace?.actor?.id} />
+            <ServiceCard key={order.id} order={order} action={action} can={can} allowed={allowed} me={workspace?.actor?.id} />
           ))}
         </div>
       )}
@@ -99,7 +99,7 @@ function GuestRequests() {
   );
 }
 
-function ServiceCard({ order, action, can, me }) {
+function ServiceCard({ order, action, can, allowed, me }) {
   const Icon = KIND_ICON[order.destination.kind] || UtensilsCrossed;
   const waiting = order.items.filter((i) => i.service_status === 'waiting_collection');
   const collected = order.items.filter((i) => i.service_status === 'collected');
@@ -178,14 +178,14 @@ function ServiceCard({ order, action, can, me }) {
         {order.kitchen_courier && order.kitchen_courier.staff_id === me && order.kitchen_courier.status === 'assigned' && (
           <Button variant="secondary" className="!py-2 !text-xs" busy={action.busy === `ow:${order.id}`} onClick={() => action.run(`ow:${order.id}`, () => kitchenApi.courierOnTheWay(order.id))}><Bike className="w-4 h-4" /> On the way</Button>
         )}
-        {waiting.length > 0 && can('service.collect') && !dineIn && (
+        {waiting.length > 0 && allowed('POST /vendor/service/orders/:order_id/collect') && !dineIn && (
           <Button className="flex-1 !py-2 !text-xs" busy={action.busy === `c:${order.id}`} onClick={() => collect()}>
             Collect {waiting.length} item{waiting.length === 1 ? '' : 's'}
           </Button>
         )}
-        {dineIn && (waiting.length > 0 || collected.length > 0) && can('service.serve') && (
+        {dineIn && (waiting.length > 0 || collected.length > 0) && allowed('POST /vendor/service/orders/:order_id/serve') && (
           <>
-            {waiting.length > 0 && can('service.collect') && (
+            {waiting.length > 0 && allowed('POST /vendor/service/orders/:order_id/collect') && (
               <Button variant="secondary" className="flex-1 !py-2 !text-xs" busy={action.busy === `c:${order.id}`} onClick={() => collect()}>
                 Collect
               </Button>

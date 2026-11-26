@@ -57,6 +57,11 @@ const TableMenuPage = lazy(() => import('./pages/TableMenuPage'));
 const VendorInboxPage = lazy(() => import('./pages/vendor/VendorInboxPage'));
 const VendorCustomersPage = lazy(() => import('./pages/vendor/VendorCustomersPage'));
 const VendorReservationsPage = lazy(() => import('./pages/vendor/VendorReservationsPage'));
+const VendorFloorPage = lazy(() => import('./pages/vendor/VendorFloorPage'));
+const VendorMyTablesPage = lazy(() => import('./pages/vendor/VendorMyTablesPage'));
+const VendorPackingPage = lazy(() => import('./pages/vendor/VendorPackingPage'));
+const VendorDeliveriesPage = lazy(() => import('./pages/vendor/VendorDeliveriesPage'));
+const BookingPage = lazy(() => import('./pages/BookingPage'));
 const VendorPromotionsPage = lazy(() => import('./pages/vendor/VendorPromotionsPage'));
 const VendorFinancePage = lazy(() => import('./pages/vendor/VendorFinancePage'));
 const VendorCashierPage = lazy(() => import('./pages/vendor/VendorCashierPage'));
@@ -114,7 +119,7 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className={`min-h-screen flex flex-col bg-gray-50/50 ${themeScope}`}>
+    <div className={`min-h-screen flex flex-col ${isDriverArea || isAdminArea ? 'bg-gray-50/50' : 'kl-canvas'} ${themeScope}`}>
       <ScrollManager />
       {!isVendorArea && <Navbar />}
 
@@ -135,6 +140,7 @@ export default function App() {
               <Route path="/checkout" element={<CheckoutPage />} />
               {/* A table's QR code: the kitchen's whole menu, ordering for that table. */}
               <Route path="/menu/:token" element={<TableMenuPage />} />
+              <Route path="/booking/:token" element={<BookingPage />} />
               <Route path="/event-order/:vendorId" element={<EventOrderPage />} />
               <Route path="/track" element={<OrderTrackingPage />} />
               <Route path="/track/:orderId" element={<OrderTrackingPage />} />
@@ -213,6 +219,10 @@ export default function App() {
                 <Route path="inbox" element={<VendorInboxPage />} />
                 <Route path="customers" element={<VendorCustomersPage />} />
                 <Route path="reservations" element={<VendorReservationsPage />} />
+                <Route path="floor" element={<VendorFloorPage />} />
+                <Route path="my-tables" element={<VendorMyTablesPage />} />
+                <Route path="packing" element={<VendorPackingPage />} />
+                <Route path="deliveries" element={<VendorDeliveriesPage />} />
                 <Route path="promotions" element={<VendorPromotionsPage />} />
                 <Route path="finance" element={<VendorFinancePage />} />
                 <Route path="cashier" element={<VendorCashierPage />} />

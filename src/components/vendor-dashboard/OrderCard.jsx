@@ -119,7 +119,7 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
           {READY_ORDER_NOTE}
         </p>
       )}
-      {order.status === 'Ready' && order.usesCode && <ConfirmPickupForm order={order} />}
+      {order.status === 'Ready' && order.usesCode && order.canHandOver && <ConfirmPickupForm order={order} />}
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <button

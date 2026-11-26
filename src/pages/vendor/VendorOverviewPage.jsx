@@ -2,28 +2,12 @@ import React, { useCallback, useRef, useState } from 'react';
 import { shrinkAvatar } from '../../utils/shrinkImage';
 import { Link } from 'react-router-dom';
 import { vendorRequest } from '../../api/vendorApi';
-import {
-  ShoppingBag,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-  BarChart3,
-  Wallet,
-  RefreshCw,
-  ArrowUpRight,
-  AlertTriangle,
-  MapPin,
-  ChefHat,
-  Camera,
-} from 'lucide-react';
+import { ShoppingBag, Clock, TrendingUp, RefreshCw, ArrowUpRight, AlertTriangle, MapPin, Camera } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
 import StatCard from '../../components/vendor-dashboard/StatCard';
 import OrderStatusBadge from '../../components/vendor-dashboard/OrderStatusBadge';
-import SpecialComposer from '../../components/vendor-dashboard/SpecialComposer';
-import OfferDayComposer from '../../components/vendor-dashboard/OfferDayComposer';
-import TypeTipsCard from '../../components/vendor-dashboard/TypeTipsCard';
-import OrderingRulesCard from '../../components/vendor-dashboard/OrderingRulesCard';
+
 import FadeImage from '../../components/common/FadeImage';
 
 const money = (value) => `${value.toLocaleString()} RWF`;
@@ -165,23 +149,17 @@ function OwnerOverview() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard icon={ShoppingBag} label="Today's Orders" value={stats.todayOrdersCount} hint="Received today" tone="cream" />
-        <StatCard icon={Clock} label="Pending Orders" value={stats.pendingOrders} hint="Awaiting acceptance" tone="amber" />
-        <StatCard icon={CheckCircle2} label="Completed Orders" value={stats.completedOrders} hint="All time" tone="emerald" />
-        <StatCard icon={TrendingUp} label="Today's Sales" value={money(stats.todaySales)} hint="Gross today" tone="brown" />
-        <StatCard icon={BarChart3} label="Total Sales" value={money(stats.totalSales)} hint="Lifetime gross" tone="cream" />
-        <StatCard icon={Wallet} label="Available Balance" value={money(stats.availableBalance)} hint="Ready to withdraw" tone="brown" />
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <StatCard icon={ShoppingBag} label="Today's orders" value={stats.todayOrdersCount} tone="cream" />
+        <StatCard icon={Clock} label="Waiting" value={stats.pendingOrders} tone="amber" />
+        <StatCard icon={TrendingUp} label="Today's sales" value={money(stats.todaySales)} tone="brown" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Recent orders */}
-        <div className="xl:col-span-2 bg-white rounded-3xl border border-stone-200/80 shadow-sm p-5">
+        <div className="xl:col-span-3 bg-white rounded-3xl border border-stone-200/80 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-black text-base text-gray-900">Recent Orders</h3>
-              <p className="text-[11px] text-stone-400 font-medium">Latest activity in your kitchen</p>
-            </div>
+            <h3 className="font-black text-base text-gray-900">Recent orders</h3>
             <Link
               to="/vendor-dashboard/orders"
               className="inline-flex items-center gap-1 text-xs font-bold text-[#542813] hover:text-[#2b1206]"
@@ -214,73 +192,6 @@ function OwnerOverview() {
           )}
         </div>
 
-        {/* Quick insights */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-5">
-            <h3 className="font-black text-base text-gray-900 mb-3">Menu Snapshot</h3>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] flex items-center justify-center">
-                <ChefHat className="w-6 h-6 text-[#6d391d]" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-gray-900">{menuItems.length}</p>
-                <p className="text-[11px] text-stone-400 font-medium">Dishes on your menu</p>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center justify-between rounded-2xl bg-stone-50 border border-stone-100 px-3 py-2.5">
-              <span className="text-xs font-bold text-stone-600">Unavailable dishes</span>
-              <span className={`text-sm font-black ${unavailableCount ? 'text-amber-600' : 'text-emerald-600'}`}>
-                {unavailableCount}
-              </span>
-            </div>
-            <Link
-              to="/vendor-dashboard/menu"
-              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#faf6f2] hover:bg-[#f5ebe1] text-[#3d1b0c] border border-[#ebd7c5] font-bold text-xs transition active:scale-95"
-            >
-              Manage menu <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <TypeTipsCard />
-
-          <OrderingRulesCard compact />
-
-          <div id="special" className="scroll-mt-24">
-            <SpecialComposer />
-          </div>
-
-          <div id="offer-days" className="scroll-mt-24">
-            <OfferDayComposer />
-          </div>
-
-          <div className="rounded-3xl bg-gradient-to-br from-[#faf6f2] to-[#f5ebe1] border border-[#ebd7c5] p-5">
-            <h3 className="font-black text-sm text-[#3d1b0c] mb-2">Payout Summary</h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between text-stone-600">
-                <span>Net earned</span>
-                <span className="font-bold">{money(stats.netEarned)}</span>
-              </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Commission ({Math.round(vendor.commissionRate * 100)}%)</span>
-                <span className="font-bold text-rose-600">− {money(stats.commission)}</span>
-              </div>
-              <div className="flex justify-between text-stone-600">
-                <span>Withdrawn</span>
-                <span className="font-bold">{money(stats.withdrawn)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-[#d9bda6]/50">
-                <span className="font-black text-[#3d1b0c]">Available</span>
-                <span className="font-black text-[#4e2410]">{money(stats.availableBalance)}</span>
-              </div>
-            </div>
-            <Link
-              to="/vendor-dashboard/wallet"
-              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] to-[#542813] text-white font-bold text-xs transition active:scale-95"
-            >
-              Open wallet
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );

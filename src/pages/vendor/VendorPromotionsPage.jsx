@@ -25,7 +25,6 @@ export default function VendorPromotionsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Promotions"
-        subtitle="Discount codes and automatic campaigns on table bills."
         actions={canCreate && <Button onClick={() => setEditing({ kind: can('promotions.codes') ? 'code' : 'automatic' })}><Plus className="w-4 h-4" /> New promotion</Button>}
       />
       {(can('promotions.create') || can('promotions.edit')) && (

@@ -18,7 +18,6 @@ export default function VendorCustomersPage() {
     <div className="space-y-5">
       <PageHeader
         title="Customers"
-        subtitle="Regulars, loyalty points, personal discounts and feedback."
         actions={can('notifications.customer') && <Button variant="secondary" onClick={() => setNotify(true)}><Send className="w-4 h-4" /> Message customers</Button>}
       />
       <div className="flex rounded-xl bg-stone-100 p-1 w-fit">

@@ -289,7 +289,7 @@ export default function VendorRegisterPage() {
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 sm:p-8 space-y-6">
         {step === 1 && (
           <div className="space-y-4 animate-fade-in">
-            <StepHeader title="Business details" subtitle="Tell customers who you are" />
+            <StepHeader title="Business details" />
             <Field label="Business / vendor name" error={errors.name} icon={Store}>
               <input
                 type="text"
@@ -434,7 +434,7 @@ export default function VendorRegisterPage() {
 
         {step === 2 && (
           <div className="space-y-4 animate-fade-in">
-            <StepHeader title="Operations" subtitle="Where you cook and when you are open" />
+            <StepHeader title="Operations" />
             <div>
               <p className="text-xs font-bold text-stone-500 flex items-center gap-1.5 mb-1">
                 <MapPin className="w-3.5 h-3.5 text-[#8a5332]" /> Kitchen location
@@ -480,7 +480,7 @@ export default function VendorRegisterPage() {
 
         {step === 3 && (
           <div className="space-y-4 animate-fade-in">
-            <StepHeader title="Verification & payout" subtitle="Build trust and get paid" />
+            <StepHeader title="Verification & payout" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Payout method" icon={CreditCard}>

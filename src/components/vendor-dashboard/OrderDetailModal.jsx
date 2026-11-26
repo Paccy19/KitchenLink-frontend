@@ -14,10 +14,12 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
   // Only actions the server will accept right now.
   const { nextLabel, canAdvance, canCancel, readyHint } = orderActions(order);
   const currentIndex = FLOW.indexOf(order.status);
-  const commissionPercent = order.commissionPercent || 15;
-  const commission = order.commission || Math.round(order.subtotal * (commissionPercent / 100));
+  // Earnings come from the server, and only for people allowed to see the kitchen's money.
+  const showEarnings = order.payout != null;
+  const commissionPercent = order.commissionPercent;
+  const commission = order.commission;
   // Orders the kitchen brings itself: the travel fee is the kitchen's too.
-  const payout = order.payout || Math.max(0, order.subtotal - commission) + (order.kitchenDelivers ? order.deliveryFee : 0);
+  const payout = order.payout;
 
   return (
     <div
@@ -124,6 +126,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
               <p className="text-xs text-stone-600 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-[#8a5332]" />
                 {order.scheduledFor ? `Scheduled for ${order.scheduledFor}` : `ETA ${order.eta}`}
+                {order.prepMinutes > 0 ? ` · ${order.prepMinutes} min to prepare` : ''}
               </p>
               <p className="text-xs text-stone-600 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-[#8a5332]" />
@@ -168,25 +171,23 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
                 {order.isPickup ? 'None (customer pickup)' : `${order.deliveryFee.toLocaleString()} RWF`}
               </span>
             </div>
-            <div className="flex justify-between text-stone-600">
-              <span>Platform commission ({commissionPercent}% of subtotal)</span>
-              <span className="font-semibold text-rose-600">− {commission.toLocaleString()} RWF</span>
-            </div>
+            {showEarnings && (
+              <div className="flex justify-between text-stone-600">
+                <span>Platform commission ({commissionPercent}%)</span>
+                <span className="font-semibold text-rose-600">− {commission.toLocaleString()} RWF</span>
+              </div>
+            )}
             <div className="flex justify-between pt-2 border-t border-[#ebd7c5]">
               <span className="font-black text-[#3d1b0c]">Customer pays</span>
               <span className="font-black text-[#4e2410]">{order.total.toLocaleString()} RWF</span>
             </div>
-            <div className="flex justify-between text-[#3d1b0c]">
-              <span className="font-bold">Your payout</span>
-              <span className="font-black">{payout.toLocaleString()} RWF</span>
-            </div>
-            <p className="text-[10px] text-stone-400 font-medium pt-1">
-              {order.isPickup
-                ? 'The customer collects this order at your kitchen. Enter their pickup code to complete it.'
-                : order.kitchenDelivers
-                  ? `This address is ${order.distanceKm ? `about ${Math.round(order.distanceKm)} km` : 'too far'} from your kitchen for delivery workers, so you bring the food yourself. The ${order.deliveryFee.toLocaleString()} RWF travel fee is yours (included in your payout). Mark it ready when you set off, then enter the customer's code when you hand it over.`
-                  : `The ${order.deliveryFee.toLocaleString()} RWF delivery fee goes to the delivery worker.`}
-            </p>
+            {showEarnings && (
+              <div className="flex justify-between text-[#3d1b0c]">
+                <span className="font-bold">Your payout</span>
+                <span className="font-black">{payout.toLocaleString()} RWF</span>
+              </div>
+            )}
+
           </div>
         </div>
 
@@ -197,7 +198,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
             {READY_ORDER_NOTE}
           </p>
         )}
-        {order.status === 'Ready' && order.usesCode && (
+        {order.status === 'Ready' && order.usesCode && order.canHandOver && (
           <ConfirmPickupForm order={order} onDone={onClose} className="mx-5 sm:mx-6 mb-4" />
         )}
 

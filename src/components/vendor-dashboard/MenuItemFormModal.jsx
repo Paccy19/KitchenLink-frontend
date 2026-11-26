@@ -88,7 +88,7 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
     }
   };
   const { workspace, can } = useVendor();
-  const departments = (workspace?.departments || []).filter((d) => can(item ? 'menu.edit' : 'menu.create', d.id));
+  const departments = (workspace?.departments || []).filter((d) => (item ? ['menu.edit', 'menu.assign_departments'] : ['menu.create']).some((p) => can(p, d.id)));
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
