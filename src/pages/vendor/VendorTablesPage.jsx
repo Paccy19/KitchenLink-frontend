@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { QrCode, Plus, Download, Printer, RefreshCw, Trash2, Pencil, Users, Receipt } from 'lucide-react';
+import { QrCode, Plus, Download, Printer, RefreshCw, Trash2, Pencil, Users, Receipt, DoorClosed } from 'lucide-react';
 import { kitchenApi, saveBlob } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Field, inputClass, useLoad, useAction, money } from '../../components/vendor-dashboard/ops/ui';
 
 /**
- * Tables and their QR codes. Every new table gets its QR code at once; it
- * opens this kitchen's menu for that table, so guests order without picking
- * their table. Replacing a QR code makes the printed old one stop working.
+ * Tables and seat-specific QR codes. Every configured seat gets its own
+ * opaque code; guests can order independently without selecting a seat.
  */
 export default function VendorTablesPage() {
   const { can, vendor } = useVendor();
@@ -16,12 +15,19 @@ export default function VendorTablesPage() {
   const [editing, setEditing] = useState(null); // null | 'new' | 'batch' | table
   const [qrTable, setQrTable] = useState(null);
   const tables = data?.tables || [];
+  const closeVisit = (table) => {
+    if (!window.confirm(`Close the dining session at ${table.label}? Active seat sessions will end. Unserved or unpaid orders must be resolved first.`)) return;
+    action.run(`close:${table.id}`, async () => {
+      await kitchenApi.closeDiningSession(table.id);
+      reload();
+    });
+  };
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Tables & QR codes"
-        subtitle="Each table has its own QR code. Guests scan it to order from your whole menu."
+        subtitle="Each seat has its own QR code and private customer session. The table QR remains available for legacy table ordering."
         actions={
           can('tables.create') && (
             <>
@@ -54,6 +60,7 @@ export default function VendorTablesPage() {
                 {!table.is_active ? <Badge tone="red">Off</Badge> : table.occupied ? <Badge tone="amber">In use</Badge> : <Badge tone="emerald">Free</Badge>}
               </div>
               <div className="text-xs text-stone-600 space-y-1">
+                {table.active_customer_sessions > 0 && <p>{table.active_customer_sessions} active seat session{table.active_customer_sessions === 1 ? '' : 's'}</p>}
                 {table.active_orders > 0 && <p className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {table.active_orders} open order{table.active_orders === 1 ? '' : 's'}{table.ready_items ? ` · ${table.ready_items} ready` : ''}</p>}
                 {table.open_invoice && (
                   <p className="flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> {table.open_invoice.invoice_number}: {money(table.open_invoice.balance_due_rwf)} due</p>
@@ -68,6 +75,16 @@ export default function VendorTablesPage() {
                 {can('tables.edit') && (
                   <Button variant="secondary" className="!py-2 !px-3" aria-label={`Edit ${table.label}`} onClick={() => setEditing(table)}>
                     <Pencil className="w-4 h-4" />
+                  </Button>
+                )}
+                {table.active_table_session_id && can('tables.edit', 'tables.assign') && (
+                  <Button
+                    variant="secondary"
+                    className="!py-2 !text-xs"
+                    busy={action.busy === `close:${table.id}`}
+                    onClick={() => closeVisit(table)}
+                  >
+                    <DoorClosed className="w-4 h-4" /> Close visit
                   </Button>
                 )}
                 {can('tables.delete') && (
@@ -141,34 +158,40 @@ function TableForm({ table, onClose, onSaved }) {
 
 function QrModal({ table, kitchenName, canRotate, onClose, onRotated }) {
   const [src, setSrc] = useState('');
+  const [seatNumber, setSeatNumber] = useState(() => table.seats?.length ? String(table.seats[0].seat_number) : '');
   const action = useAction();
+  const selectedSeat = table.seats?.find((seat) => String(seat.seat_number) === seatNumber) || null;
+  const qrLabel = selectedSeat ? `${table.label} · Seat ${selectedSeat.seat_number}` : table.label;
   useEffect(() => {
     let url = '';
     kitchenApi
-      .tableQr(table.id, 'svg')
+      .tableQr(table.id, 'svg', seatNumber || null)
       .then((blob) => {
         url = URL.createObjectURL(blob);
         setSrc(url);
       })
       .catch((err) => action.setError(err.message));
     return () => url && URL.revokeObjectURL(url);
-  }, [table.id, table.token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [table.id, table.token, seatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const download = (format) =>
-    action.run(format, async () => saveBlob(await kitchenApi.tableQr(table.id, format), `${table.label.replace(/[^A-Za-z0-9]+/g, '-')}-qr.${format}`));
+    action.run(format, async () => saveBlob(
+      await kitchenApi.tableQr(table.id, format, seatNumber || null),
+      `${qrLabel.replace(/[^A-Za-z0-9]+/g, '-')}-qr.${format}`
+    ));
 
   const print = () => {
     const w = window.open('', '_blank', 'width=480,height=640');
     if (!w) return;
     const doc = w.document;
-    doc.title = `${table.label} QR code`;
+    doc.title = `${qrLabel} QR code`;
     const wrap = doc.createElement('div');
     wrap.style.cssText = 'font-family:system-ui,sans-serif;text-align:center;padding:32px';
     const heading = doc.createElement('h1');
     heading.textContent = kitchenName || '';
     heading.style.cssText = 'font-size:22px;margin:0 0 4px';
     const sub = doc.createElement('p');
-    sub.textContent = `${table.label} — scan to order`;
+    sub.textContent = `${qrLabel} — scan to order`;
     sub.style.cssText = 'font-size:16px;margin:0 0 16px;color:#555';
     const img = doc.createElement('img');
     img.src = src;
@@ -182,12 +205,19 @@ function QrModal({ table, kitchenName, canRotate, onClose, onRotated }) {
   };
 
   return (
-    <Modal title={`${table.label} QR code`} onClose={onClose}>
+    <Modal title={`${qrLabel} QR code`} onClose={onClose}>
       <div className="space-y-4 text-center">
+        <label className="block text-left text-xs font-bold text-stone-600">
+          QR code for
+          <select className={`${inputClass} mt-1`} value={seatNumber} onChange={(event) => setSeatNumber(event.target.value)}>
+            <option value="">Entire table (legacy)</option>
+            {(table.seats || []).map((seat) => <option key={seat.seat_number} value={seat.seat_number}>Seat {seat.seat_number}</option>)}
+          </select>
+        </label>
         <div className="mx-auto w-64 h-64 rounded-2xl border border-stone-200 bg-white flex items-center justify-center">
-          {src ? <img src={src} alt={`QR code for ${table.label}`} className="w-60 h-60" /> : <Loading />}
+          {src ? <img src={src} alt={`QR code for ${qrLabel}`} className="w-60 h-60" /> : <Loading />}
         </div>
-        <p className="text-[11px] text-stone-500 break-all">{table.menu_url}</p>
+        <p className="text-[11px] text-stone-500 break-all">{selectedSeat?.menu_url || table.menu_url}</p>
         <ErrorNote message={action.error} />
         <div className="grid grid-cols-3 gap-2">
           <Button variant="secondary" busy={action.busy === 'svg'} onClick={() => download('svg')}><Download className="w-4 h-4" /> SVG</Button>
@@ -199,11 +229,15 @@ function QrModal({ table, kitchenName, canRotate, onClose, onRotated }) {
             type="button"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:underline"
             onClick={() =>
-              window.confirm('Make a new QR code? The printed one will stop working.') &&
-              action.run('rotate', async () => onRotated(await kitchenApi.rotateTableQr(table.id)))
+              window.confirm('Make a new QR code? The printed code will stop working. Existing customer sessions will remain valid.') &&
+              action.run('rotate', async () => onRotated(
+                selectedSeat
+                  ? await kitchenApi.rotateSeatQr(table.id, selectedSeat.seat_number)
+                  : await kitchenApi.rotateTableQr(table.id)
+              ))
             }
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Replace this QR code
+            <RefreshCw className="w-3.5 h-3.5" /> Replace {selectedSeat ? 'seat' : 'table'} QR code
           </button>
         )}
       </div>
