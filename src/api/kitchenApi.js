@@ -51,9 +51,17 @@ export const kitchenApi = {
   createTables: (body) => vendorRequest('/vendor/tables/batch', { method: 'POST', body }),
   updateTable: (tableId, body) => vendorRequest(`/vendor/tables/${id(tableId)}`, { method: 'PATCH', body }),
   deleteTable: (tableId) => vendorRequest(`/vendor/tables/${id(tableId)}`, { method: 'DELETE' }),
+  closeDiningSession: (tableId) => vendorRequest(`/vendor/tables/${id(tableId)}/session/close`, { method: 'POST' }),
+  seatBalances: (tableId) => vendorRequest(`/vendor/tables/${id(tableId)}/seat-balances`),
+  recordSeatPayment: (tableId, body) => vendorRequest(`/vendor/tables/${id(tableId)}/seat-payments`, { method: 'POST', body }),
+  releaseSeat: (tableId, seatNumber, body = {}) =>
+    vendorRequest(`/vendor/tables/${id(tableId)}/seats/${id(seatNumber)}/release`, { method: 'POST', body }),
   rotateTableQr: (tableId) => vendorRequest(`/vendor/tables/${id(tableId)}/qr/rotate`, { method: 'POST' }),
   /** The QR image as a Blob ('svg' to print sharp at any size, 'png' for phones). */
-  tableQr: (tableId, format = 'svg') => vendorDownload(`/vendor/tables/${id(tableId)}/qr${qs({ format })}`),
+  tableQr: (tableId, format = 'svg', seatNumber = null) =>
+    vendorDownload(`/vendor/tables/${id(tableId)}/qr${qs({ format, seat: seatNumber })}`),
+  rotateSeatQr: (tableId, seatNumber) =>
+    vendorRequest(`/vendor/tables/${id(tableId)}/seats/${id(seatNumber)}/qr/rotate`, { method: 'POST' }),
 
   queue: (params) => vendorRequest(`/vendor/kitchen/queue${qs(params)}`),
   advanceTicket: (orderId, ticketId, status) =>

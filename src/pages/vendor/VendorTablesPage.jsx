@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { QrCode, Plus, Download, Printer, RefreshCw, Trash2, Pencil, Users, Receipt } from 'lucide-react';
+import { QrCode, Plus, Download, Printer, RefreshCw, Trash2, Pencil, Users, Receipt, DoorClosed } from 'lucide-react';
 import { kitchenApi, saveBlob } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Field, inputClass, useLoad, useAction, money } from '../../components/vendor-dashboard/ops/ui';
 
 /**
- * Tables and their QR codes. Every new table gets its QR code at once; it
- * opens this kitchen's menu for that table, so guests order without picking
- * their table. Replacing a QR code makes the printed old one stop working.
+ * Tables and seat-specific QR codes. Every configured seat gets its own
+ * opaque code; guests can order independently without selecting a seat.
  */
 export default function VendorTablesPage() {
   const { can, vendor } = useVendor();
@@ -16,6 +15,13 @@ export default function VendorTablesPage() {
   const [editing, setEditing] = useState(null); // null | 'new' | 'batch' | table
   const [qrTable, setQrTable] = useState(null);
   const tables = data?.tables || [];
+  const closeVisit = (table) => {
+    if (!window.confirm(`Close the dining session at ${table.label}? Active seat sessions will end. Unserved or unpaid orders must be resolved first.`)) return;
+    action.run(`close:${table.id}`, async () => {
+      await kitchenApi.closeDiningSession(table.id);
+      reload();
+    });
+  };
 
   return (
     <div className="space-y-5">
@@ -53,6 +59,7 @@ export default function VendorTablesPage() {
                 {!table.is_active ? <Badge tone="red">Off</Badge> : table.occupied ? <Badge tone="amber">In use</Badge> : <Badge tone="emerald">Free</Badge>}
               </div>
               <div className="text-xs text-stone-600 space-y-1">
+                {table.active_customer_sessions > 0 && <p>{table.active_customer_sessions} active seat session{table.active_customer_sessions === 1 ? '' : 's'}</p>}
                 {table.active_orders > 0 && <p className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> {table.active_orders} open order{table.active_orders === 1 ? '' : 's'}{table.ready_items ? ` · ${table.ready_items} ready` : ''}</p>}
                 {table.open_invoice && (
                   <p className="flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> {table.open_invoice.invoice_number}: {money(table.open_invoice.balance_due_rwf)} due</p>
@@ -86,6 +93,23 @@ export default function VendorTablesPage() {
                     <Pencil className="w-4 h-4" />
                   </Button>
                 )}
+                {table.active_table_session_id && can('tables.edit', 'tables.assign') && (
+                  <Button
+                    variant="secondary"
+                    className="!py-2 !text-xs"
+                    busy={action.busy === `close:${table.id}`}
+                    onClick={() => closeVisit(table)}
+                  >
+                    <DoorClosed className="w-4 h-4" /> Close visit
+                  </Button>
+                )}
+                {table.active_table_session_id && can('tables.view') && (
+                  <TableSeatBalances
+                    table={table}
+                    canRecordPayment={can('invoices.process_payment')}
+                    canReleaseSeat={can('tables.assign')}
+                  />
+                )}
                 {can('tables.delete') && (
                   <Button
                     variant="danger"
@@ -104,6 +128,133 @@ export default function VendorTablesPage() {
       )}
       {editing && <TableForm table={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
       {qrTable && <QrModal table={qrTable} kitchenName={vendor?.name} canRotate={can('tables.qr_regenerate')} onClose={() => setQrTable(null)} onRotated={(t) => { setQrTable(t); reload(); }} />}
+    </div>
+  );
+}
+
+function TableSeatBalances({ table, canRecordPayment, canReleaseSeat }) {
+  const [open, setOpen] = useState(false);
+  const [seats, setSeats] = useState([]);
+  const [selected, setSelected] = useState({});
+  const [method, setMethod] = useState('cash');
+  const [reference, setReference] = useState('');
+  const [error, setError] = useState('');
+  const action = useAction();
+  const load = async () => {
+    try {
+      const result = await kitchenApi.seatBalances(table.id);
+      setSeats(result.seats || []);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const toggle = (seat) => setSelected((current) => {
+    if (current[seat.customer_session_id]) {
+      const next = { ...current };
+      delete next[seat.customer_session_id];
+      return next;
+    }
+    return { ...current, [seat.customer_session_id]: seat.balance_rwf };
+  });
+  const total = seats.reduce((sum, seat) => (
+    selected[seat.customer_session_id] ? sum + (Number(selected[seat.customer_session_id]) || 0) : sum
+  ), 0);
+  const record = () => action.run('record', async () => {
+    const allocations = seats
+      .filter((seat) => selected[seat.customer_session_id])
+      .map((seat) => ({
+        customer_session_id: seat.customer_session_id,
+        amount_rwf: Number(selected[seat.customer_session_id]),
+        balance_version: seat.balance_version,
+      }));
+    const body = { seats: allocations, method, reference: reference.trim() || undefined };
+    const fingerprint = JSON.stringify(body);
+    const storageKey = `ofk_cashier_seat_payment_${table.id}`;
+    let saved = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+    } catch {
+      saved = null;
+    }
+    const idempotencyKey = saved?.fingerprint === fingerprint
+      ? saved.key
+      : (window.crypto?.randomUUID?.() || `cash-${Date.now()}-${Math.random().toString(36).slice(2, 18)}`);
+    sessionStorage.setItem(storageKey, JSON.stringify({ fingerprint, key: idempotencyKey }));
+    const result = await kitchenApi.recordSeatPayment(table.id, { ...body, idempotency_key: idempotencyKey });
+    if (result.status === 'successful') {
+      sessionStorage.removeItem(storageKey);
+      setSelected({});
+      setReference('');
+      await load();
+    }
+  });
+  const release = (seat) => {
+    if (!window.confirm(`Release paid seat ${seat.seat_number}? Its order history will remain in the table session.`)) return;
+    action.run(`release:${seat.seat_number}`, async () => {
+      await kitchenApi.releaseSeat(table.id, seat.seat_number);
+      await load();
+    });
+  };
+
+  return (
+    <div className="w-full">
+      <Button variant="soft" className="!py-2 !text-xs" onClick={async () => { setOpen((value) => !value); if (!open) await load(); }}>
+        <Receipt className="w-4 h-4" /> {open ? 'Hide seats' : 'Seat balances'}
+      </Button>
+      {open && (
+        <div className="mt-3 space-y-2 rounded-xl bg-stone-50 p-3">
+          {seats.map((seat) => (
+            <div key={seat.customer_session_id} className="rounded-lg border border-stone-200 bg-white p-2.5">
+              <div className="flex items-center gap-2">
+                {canRecordPayment && seat.payable && (
+                  <input type="checkbox" aria-label={`Select seat ${seat.seat_number} for payment`} checked={Boolean(selected[seat.customer_session_id])} onChange={() => toggle(seat)} />
+                )}
+                <div className="flex-1">
+                  <p className="text-xs font-black">Seat {seat.seat_number} · {seat.payment_status.replaceAll('_', ' ')}</p>
+                  <p className="text-[11px] text-stone-500">Paid {money(seat.paid_rwf)} · Due {money(seat.balance_rwf)}</p>
+                </div>
+                {canReleaseSeat && seat.payment_status === 'paid' && (
+                  <button type="button" className="text-[11px] font-bold text-red-700" disabled={action.busy === `release:${seat.seat_number}`} onClick={() => release(seat)}>Release</button>
+                )}
+              </div>
+              {selected[seat.customer_session_id] && (
+                <label className="mt-2 ml-6 flex items-center justify-between text-[11px] text-stone-600">
+                  Amount (RWF)
+                  <input type="number" min="1" max={seat.balance_rwf} step="1" value={selected[seat.customer_session_id]} onChange={(event) => setSelected((current) => ({ ...current, [seat.customer_session_id]: event.target.value }))} className="w-28 rounded border border-stone-200 px-2 py-1 text-right text-xs" />
+                </label>
+              )}
+              {(seat.payment_history || []).map((payment) => (
+                <p key={payment.reference} className="mt-1 text-[10px] text-stone-500">
+                  {money(payment.amount_rwf)} · {payment.reference} · paid by {payment.payer_seat_number ? `Seat ${payment.payer_seat_number}` : 'cashier'}
+                </p>
+              ))}
+            </div>
+          ))}
+          {seats.length === 0 && <p className="text-xs text-stone-500">No active seats.</p>}
+          {canRecordPayment && Object.keys(selected).length > 0 && (
+            <div className="space-y-2 border-t border-stone-200 pt-2">
+              <label className="block text-xs font-bold">Payment method
+                <select value={method} onChange={(event) => setMethod(event.target.value)} className={`${inputClass} mt-1`}>
+                  <option value="cash">Cash</option>
+                  <option value="mobile_money">Mobile money</option>
+                  <option value="card">Card</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label className="block text-xs font-bold">Receipt reference (optional)
+                <input value={reference} onChange={(event) => setReference(event.target.value)} maxLength={80} className={`${inputClass} mt-1`} />
+              </label>
+              <p className="text-xs font-black">Selected total: {money(total)}</p>
+              <Button className="w-full" busy={action.busy === 'record'} disabled={total <= 0 || seats.some((seat) => selected[seat.customer_session_id] && Number(selected[seat.customer_session_id]) > seat.balance_rwf)} onClick={record}>
+                Record payment for selected seats
+              </Button>
+            </div>
+          )}
+          <ErrorNote message={error || action.error} />
+          <button type="button" onClick={load} className="text-xs font-bold text-[#9a3412]">Refresh seat balances</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -157,34 +308,40 @@ function TableForm({ table, onClose, onSaved }) {
 
 function QrModal({ table, kitchenName, canRotate, onClose, onRotated }) {
   const [src, setSrc] = useState('');
+  const [seatNumber, setSeatNumber] = useState(() => table.seats?.length ? String(table.seats[0].seat_number) : '');
   const action = useAction();
+  const selectedSeat = table.seats?.find((seat) => String(seat.seat_number) === seatNumber) || null;
+  const qrLabel = selectedSeat ? `${table.label} · Seat ${selectedSeat.seat_number}` : table.label;
   useEffect(() => {
     let url = '';
     kitchenApi
-      .tableQr(table.id, 'svg')
+      .tableQr(table.id, 'svg', seatNumber || null)
       .then((blob) => {
         url = URL.createObjectURL(blob);
         setSrc(url);
       })
       .catch((err) => action.setError(err.message));
     return () => url && URL.revokeObjectURL(url);
-  }, [table.id, table.token]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [table.id, table.token, seatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const download = (format) =>
-    action.run(format, async () => saveBlob(await kitchenApi.tableQr(table.id, format), `${table.label.replace(/[^A-Za-z0-9]+/g, '-')}-qr.${format}`));
+    action.run(format, async () => saveBlob(
+      await kitchenApi.tableQr(table.id, format, seatNumber || null),
+      `${qrLabel.replace(/[^A-Za-z0-9]+/g, '-')}-qr.${format}`
+    ));
 
   const print = () => {
     const w = window.open('', '_blank', 'width=480,height=640');
     if (!w) return;
     const doc = w.document;
-    doc.title = `${table.label} QR code`;
+    doc.title = `${qrLabel} QR code`;
     const wrap = doc.createElement('div');
     wrap.style.cssText = 'font-family:system-ui,sans-serif;text-align:center;padding:32px';
     const heading = doc.createElement('h1');
     heading.textContent = kitchenName || '';
     heading.style.cssText = 'font-size:22px;margin:0 0 4px';
     const sub = doc.createElement('p');
-    sub.textContent = `${table.label} — scan to order`;
+    sub.textContent = `${qrLabel} — scan to order`;
     sub.style.cssText = 'font-size:16px;margin:0 0 16px;color:#555';
     const img = doc.createElement('img');
     img.src = src;
@@ -198,12 +355,19 @@ function QrModal({ table, kitchenName, canRotate, onClose, onRotated }) {
   };
 
   return (
-    <Modal title={`${table.label} QR code`} onClose={onClose}>
+    <Modal title={`${qrLabel} QR code`} onClose={onClose}>
       <div className="space-y-4 text-center">
+        <label className="block text-left text-xs font-bold text-stone-600">
+          QR code for
+          <select className={`${inputClass} mt-1`} value={seatNumber} onChange={(event) => setSeatNumber(event.target.value)}>
+            <option value="">Entire table (legacy)</option>
+            {(table.seats || []).map((seat) => <option key={seat.seat_number} value={seat.seat_number}>Seat {seat.seat_number}</option>)}
+          </select>
+        </label>
         <div className="mx-auto w-64 h-64 rounded-2xl border border-stone-200 bg-white flex items-center justify-center">
-          {src ? <img src={src} alt={`QR code for ${table.label}`} className="w-60 h-60" /> : <Loading />}
+          {src ? <img src={src} alt={`QR code for ${qrLabel}`} className="w-60 h-60" /> : <Loading />}
         </div>
-        <p className="text-[11px] text-stone-500 break-all">{table.menu_url}</p>
+        <p className="text-[11px] text-stone-500 break-all">{selectedSeat?.menu_url || table.menu_url}</p>
         <ErrorNote message={action.error} />
         <div className="grid grid-cols-3 gap-2">
           <Button variant="secondary" busy={action.busy === 'svg'} onClick={() => download('svg')}><Download className="w-4 h-4" /> SVG</Button>
@@ -215,11 +379,15 @@ function QrModal({ table, kitchenName, canRotate, onClose, onRotated }) {
             type="button"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 hover:underline"
             onClick={() =>
-              window.confirm('Make a new QR code? The printed one will stop working.') &&
-              action.run('rotate', async () => onRotated(await kitchenApi.rotateTableQr(table.id)))
+              window.confirm('Make a new QR code? The printed code will stop working. Existing customer sessions will remain valid.') &&
+              action.run('rotate', async () => onRotated(
+                selectedSeat
+                  ? await kitchenApi.rotateSeatQr(table.id, selectedSeat.seat_number)
+                  : await kitchenApi.rotateTableQr(table.id)
+              ))
             }
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Replace this QR code
+            <RefreshCw className="w-3.5 h-3.5" /> Replace {selectedSeat ? 'seat' : 'table'} QR code
           </button>
         )}
       </div>

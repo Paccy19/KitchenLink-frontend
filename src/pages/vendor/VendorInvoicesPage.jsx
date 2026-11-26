@@ -83,7 +83,7 @@ export default function VendorInvoicesPage() {
           </div>
         </Card>
       )}
-      {openId && <InvoiceModal invoiceId={openId} onClose={() => setParams({})} />}
+      {openId && <InvoiceModal key={openId} invoiceId={openId} onClose={() => setParams({})} />}
     </div>
   );
 }
@@ -99,19 +99,41 @@ function InvoiceModal({ invoiceId, onClose }) {
       saveBlob(blob, `${kind}-${invoice.invoice_number}.html`);
     });
   const action = useAction();
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState(() => (can('invoices.process_payment') || can('invoices.cash') ? 'cash' : 'mobile_money'));
-  const [reference, setReference] = useState('');
+  const attemptStorageKey = `ofk_invoice_payment_attempt_${invoiceId}`;
+  const [paymentAttempt, setPaymentAttempt] = useState(() => readPaymentAttempt(attemptStorageKey));
+  const [amount, setAmount] = useState(() => paymentAttempt ? String(paymentAttempt.amount_rwf) : '');
+  const [method, setMethod] = useState(() => paymentAttempt?.method || (can('invoices.process_payment') || can('invoices.cash') ? 'cash' : 'mobile_money'));
+  const [reference, setReference] = useState(() => paymentAttempt?.reference || '');
   const [refund, setRefund] = useState(null);
   useEffect(() => {
-    if (invoice) setAmount(String(invoice.balance_due_rwf || ''));
-  }, [invoice?.balance_due_rwf]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (invoice && !paymentAttempt) setAmount(String(invoice.balance_due_rwf || ''));
+  }, [invoice?.balance_due_rwf, paymentAttempt]);
 
-  const pay = () =>
-    action.run('pay', async () => {
-      setData(await kitchenApi.recordPayment(invoice.id, { amount_rwf: Number(amount), method, reference }));
+  const pay = () => action.run('pay', async () => {
+    const attempt = paymentAttempt || {
+      amount_rwf: Number(amount),
+      method,
+      reference,
+      idempotency_key: newPaymentAttemptKey(),
+    };
+    if (!paymentAttempt) {
+      sessionStorage.setItem(attemptStorageKey, JSON.stringify(attempt));
+      setPaymentAttempt(attempt);
+    }
+    try {
+      setData(await kitchenApi.recordPayment(invoice.id, attempt));
+      sessionStorage.removeItem(attemptStorageKey);
+      setPaymentAttempt(null);
       setReference('');
-    });
+    } catch (error) {
+      if (error.status && error.status < 500) {
+        sessionStorage.removeItem(attemptStorageKey);
+        setPaymentAttempt(null);
+        if (error.status === 409) setData(await kitchenApi.invoice(invoice.id));
+      }
+      throw error;
+    }
+  });
 
   return (
     <Modal title={invoice ? `Invoice ${invoice.invoice_number}` : 'Invoice'} onClose={onClose} wide>
@@ -129,6 +151,15 @@ function InvoiceModal({ invoiceId, onClose }) {
           </div>
 
           <Receipt_ invoice={invoice} />
+
+          {invoice.kind === 'table' && invoice.table && (
+            <InvoiceSeatPayments
+              key={invoice.table.id}
+              tableId={invoice.table.id}
+              canRecordPayment={can('invoices.process_payment')}
+              onRecorded={async () => setData(await kitchenApi.invoice(invoice.id))}
+            />
+          )}
 
           {invoice.payments?.length > 0 && (
             <div>
@@ -150,21 +181,28 @@ function InvoiceModal({ invoiceId, onClose }) {
             </div>
           )}
 
-          {invoice.accepts_payments && (methods.length ? (
+          {invoice.accepts_payments && invoice.kind === 'table' && invoice.lines.some((line) => line.customer_session_id) && (
+            <p className="rounded-xl bg-sky-50 border border-sky-200 px-3 py-2 text-xs font-semibold text-sky-800">
+              This table has independent seat accounts. Use the seat selection above to allocate payments; the shared invoice total cannot settle seats implicitly.
+            </p>
+          )}
+
+          {invoice.accepts_payments && !invoice.lines.some((line) => line.customer_session_id) && (methods.length ? (
             <div className="rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-4 space-y-3">
               <h4 className="font-black text-sm flex items-center gap-1.5"><Wallet className="w-4 h-4" /> Take a payment · {money(invoice.balance_due_rwf)} due</h4>
               <div className="grid sm:grid-cols-3 gap-3">
-                <Field label="Amount (RWF)"><input className={inputClass} type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
+                <Field label="Amount (RWF)"><input className={inputClass} type="number" min="1" value={amount} disabled={Boolean(paymentAttempt)} onChange={(e) => setAmount(e.target.value)} /></Field>
                 <Field label="How they paid">
-                  <select className={inputClass} value={method} onChange={(e) => setMethod(e.target.value)}>
+                  <select className={inputClass} value={method} disabled={Boolean(paymentAttempt)} onChange={(e) => setMethod(e.target.value)}>
                     {methods.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
                   </select>
                 </Field>
-                <Field label="Reference (optional)"><input className={inputClass} value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Mobile money ID…" /></Field>
+                <Field label="Reference (optional)"><input className={inputClass} value={reference} disabled={Boolean(paymentAttempt)} onChange={(e) => setReference(e.target.value)} placeholder="Mobile money ID…" /></Field>
               </div>
               {!partialOk && Number(amount) < invoice.balance_due_rwf && <p className="text-[11px] font-semibold text-amber-700">Part payments need a cashier who may take them.</p>}
-              <Button className="w-full" variant="success" busy={action.busy === 'pay'} disabled={!Number(amount) || (!partialOk && Number(amount) < invoice.balance_due_rwf)} onClick={pay}>
-                Record {money(amount)} {Number(amount) < invoice.balance_due_rwf ? '(part payment)' : ''}
+              {paymentAttempt && <p className="text-xs text-amber-800">Payment outcome is not confirmed. Retry this same attempt to avoid recording it twice.</p>}
+              <Button className="w-full" variant="success" busy={action.busy === 'pay'} disabled={!Number(amount) || (!paymentAttempt && !partialOk && Number(amount) < invoice.balance_due_rwf)} onClick={pay}>
+                {paymentAttempt ? `Retry ${money(paymentAttempt.amount_rwf)} payment` : `Record ${money(amount)} ${Number(amount) < invoice.balance_due_rwf ? '(part payment)' : ''}`}
               </Button>
             </div>
           ) : (
@@ -283,6 +321,157 @@ function BillExtras({ invoice, onChanged }) {
       )}
     </div>
   );
+}
+
+function InvoiceSeatPayments({ tableId, canRecordPayment, onRecorded }) {
+  const [seats, setSeats] = useState([]);
+  const [selected, setSelected] = useState({});
+  const [method, setMethod] = useState('cash');
+  const [reference, setReference] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [show, setShow] = useState(false);
+  const action = useAction();
+  const load = async () => {
+    try {
+      const result = await kitchenApi.seatBalances(tableId);
+      setSeats(result.seats || []);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { load(); }, [tableId]);
+
+  const total = seats.reduce((sum, seat) => (
+    selected[seat.customer_session_id] ? sum + (Number(selected[seat.customer_session_id]) || 0) : sum
+  ), 0);
+  const record = () => action.run('seat-payment', async () => {
+    const allocations = seats
+      .filter((seat) => selected[seat.customer_session_id])
+      .map((seat) => ({
+        customer_session_id: seat.customer_session_id,
+        amount_rwf: Number(selected[seat.customer_session_id]),
+        balance_version: seat.balance_version,
+      }));
+    const body = { seats: allocations, method, reference: reference.trim() || undefined };
+    const fingerprint = JSON.stringify(body);
+    const storageKey = `ofk_cashier_seat_payment_${tableId}`;
+    let saved = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+    } catch {
+      saved = null;
+    }
+    const key = saved?.fingerprint === fingerprint
+      ? saved.key
+      : (window.crypto?.randomUUID?.() || `cash-${Date.now()}-${Math.random().toString(36).slice(2, 18)}`);
+    sessionStorage.setItem(storageKey, JSON.stringify({ fingerprint, key }));
+    const result = await kitchenApi.recordSeatPayment(tableId, { ...body, idempotency_key: key });
+    if (result.status === 'successful') {
+      sessionStorage.removeItem(storageKey);
+      setSelected({});
+      setReference('');
+      await load();
+      await onRecorded();
+    }
+  });
+
+  return (
+    <div className="rounded-2xl border border-stone-200 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="text-sm font-black">Seat balances and allocations</h4>
+        <button type="button" className="text-xs font-bold text-[#9a3412]" onClick={() => { setShow((value) => !value); if (!show) load(); }}>
+          {show ? 'Hide seats' : 'View seats'}
+        </button>
+      </div>
+      {show && (
+        <div className="mt-3 space-y-2">
+          {loading && <p className="text-xs text-stone-500">Loading seat balances…</p>}
+          {seats.map((seat) => (
+            <div key={seat.customer_session_id} className="rounded-xl border border-stone-200 p-3">
+              <div className="flex items-center gap-2">
+                {canRecordPayment && seat.payable && (
+                  <input type="checkbox" aria-label={`Select seat ${seat.seat_number}`} checked={Boolean(selected[seat.customer_session_id])} onChange={() => setSelected((current) => {
+                    if (current[seat.customer_session_id]) {
+                      const next = { ...current };
+                      delete next[seat.customer_session_id];
+                      return next;
+                    }
+                    return { ...current, [seat.customer_session_id]: seat.balance_rwf };
+                  })} />
+                )}
+                <div className="flex-1">
+                  <p className="text-xs font-black">Seat {seat.seat_number} · {seat.payment_status.replaceAll('_', ' ')}</p>
+                  <p className="text-[11px] text-stone-500">Paid {money(seat.paid_rwf)} · Due {money(seat.balance_rwf)}</p>
+                  {(seat.orders || []).map((order) => <p key={order.order_number} className="text-[10px] text-stone-500">{order.order_number} · {order.status} · {order.payment_status}</p>)}
+                </div>
+              </div>
+              {selected[seat.customer_session_id] && (
+                <label className="mt-2 ml-6 flex items-center justify-between text-[11px] text-stone-600">
+                  Amount (RWF)
+                  <input type="number" min="1" max={seat.balance_rwf} step="1" value={selected[seat.customer_session_id]} onChange={(event) => setSelected((current) => ({ ...current, [seat.customer_session_id]: event.target.value }))} className="w-28 rounded border border-stone-200 px-2 py-1 text-right text-xs" />
+                </label>
+              )}
+              {(seat.payment_history || []).map((payment) => (
+                <p key={payment.reference} className="mt-1 text-[10px] text-stone-500">
+                  {money(payment.amount_rwf)} · {payment.reference} · paid by {payment.payer_seat_number ? `Seat ${payment.payer_seat_number}` : 'cashier'}
+                </p>
+              ))}
+            </div>
+          ))}
+          {!loading && seats.length === 0 && <p className="text-xs text-stone-500">No active seat balances.</p>}
+          {canRecordPayment && Object.keys(selected).length > 0 && (
+            <div className="border-t border-stone-100 pt-3 space-y-2">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <Field label="Payment method">
+                  <select className={inputClass} value={method} onChange={(event) => setMethod(event.target.value)}>
+                    {METHODS.map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Receipt reference (optional)">
+                  <input className={inputClass} value={reference} onChange={(event) => setReference(event.target.value)} maxLength={80} />
+                </Field>
+              </div>
+              <p className="text-xs font-black">Selected total: {money(total)}</p>
+              <Button className="w-full" variant="success" busy={action.busy === 'seat-payment'} disabled={total <= 0 || seats.some((seat) => selected[seat.customer_session_id] && Number(selected[seat.customer_session_id]) > seat.balance_rwf)} onClick={record}>
+                Record payment for selected seats
+              </Button>
+            </div>
+          )}
+          <ErrorNote message={error || action.error} />
+          <button type="button" onClick={load} className="text-xs font-bold text-[#9a3412]">Refresh</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function readPaymentAttempt(storageKey) {
+  const saved = sessionStorage.getItem(storageKey);
+  if (!saved) return null;
+  try {
+    const attempt = JSON.parse(saved);
+    if (
+      Number.isInteger(attempt?.amount_rwf) &&
+      typeof attempt.method === 'string' &&
+      typeof attempt.reference === 'string' &&
+      typeof attempt.idempotency_key === 'string'
+    ) return attempt;
+  } catch (error) {
+    console.error('Could not read the saved invoice payment attempt.', error);
+  }
+  sessionStorage.removeItem(storageKey);
+  return null;
+}
+
+function newPaymentAttemptKey() {
+  if (typeof window.crypto?.randomUUID === 'function') return window.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /** The bill: lines grouped by department, then totals. */

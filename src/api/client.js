@@ -134,6 +134,6 @@ export function apiGet(path, params = {}, headers = {}) {
 }
 
 /** Make an authenticated JSON request. */
-export function apiJson(method, path, body) {
-  return http(path, {}, { method, body });
+export function apiJson(method, path, body, headers = {}) {
+  return http(path, {}, { method, body, headers });
 }
