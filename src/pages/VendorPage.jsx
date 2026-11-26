@@ -337,6 +337,21 @@ export default function VendorPage() {
         <div className={cartVendorItems.length > 0 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start' : ''}>
         <div className="min-w-0">
         <MenuPhotos photos={vendor?.menuPhotos || []} />
+        {(vendor?.reviews || []).length > 0 && (
+          <section className="mb-5" aria-label="Reviews">
+            <h2 className="text-sm font-black text-gray-900 mb-2">What guests say</h2>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {vendor.reviews.slice(0, 10).map((r, i) => (
+                <div key={i} className="flex-shrink-0 w-64 rounded-2xl bg-white border border-stone-200 p-3">
+                  <p className="text-amber-500 text-sm">{'★'.repeat(r.rating)}<span className="text-stone-300">{'★'.repeat(5 - r.rating)}</span></p>
+                  {r.comment && <p className="text-xs text-stone-700 mt-1 line-clamp-3">{r.comment}</p>}
+                  <p className="text-[11px] text-stone-400 mt-1">{r.name}</p>
+                  {r.reply && <p className="text-[11px] text-[#6d391d] mt-1 line-clamp-2"><b>Kitchen:</b> {r.reply}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         {departments.length > 1 && (
           <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-3" aria-label="Services">
             {[{ id: '', name: 'All services' }, ...departments].map((d) => (

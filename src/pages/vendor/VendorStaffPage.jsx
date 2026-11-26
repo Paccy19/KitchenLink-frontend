@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, Pencil, Trash2, ShieldCheck, KeyRound, Power, Copy, Check } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, ShieldCheck, KeyRound, Power, Copy, Check, Send, LogOut, CalendarDays, Clock } from 'lucide-react';
 import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Field, inputClass, useLoad, useAction, when } from '../../components/vendor-dashboard/ops/ui';
@@ -10,15 +10,20 @@ import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Fiel
  */
 export default function VendorStaffPage() {
   const { can } = useVendor();
-  const [tab, setTab] = useState(can('staff.view') ? 'staff' : 'roles');
+  const [tab, setTab] = useState(can('staff.view') ? 'staff' : can('roles.view') ? 'roles' : can('staff.schedules') ? 'shifts' : 'attendance');
   return (
     <div className="space-y-5">
       <PageHeader title="Staff & roles" subtitle="Create accounts for your team, make any role you need, and tick exactly what each role can do." />
       <div className="flex rounded-xl bg-stone-100 p-1 w-fit">
         {can('staff.view') && <TabButton active={tab === 'staff'} onClick={() => setTab('staff')}>Employees</TabButton>}
-        <TabButton active={tab === 'roles'} onClick={() => setTab('roles')}>Roles & permissions</TabButton>
+        {(can('roles.view') || can('staff.view')) && <TabButton active={tab === 'roles'} onClick={() => setTab('roles')}>Roles & permissions</TabButton>}
+        {can('staff.schedules') && <TabButton active={tab === 'shifts'} onClick={() => setTab('shifts')}>Schedules</TabButton>}
+        {can('staff.attendance') && <TabButton active={tab === 'attendance'} onClick={() => setTab('attendance')}>Attendance</TabButton>}
       </div>
-      {tab === 'staff' ? <StaffTab /> : <RolesTab />}
+      {tab === 'staff' && <StaffTab />}
+      {tab === 'roles' && <RolesTab />}
+      {tab === 'shifts' && <ShiftsTab />}
+      {tab === 'attendance' && <AttendanceTab />}
     </div>
   );
 }
@@ -74,20 +79,30 @@ function StaffTab() {
                 {s.id !== me && (
                   <div className="flex gap-2">
                     {(can('staff.edit') || can('staff.assign_roles')) && <Button variant="secondary" className="!py-2 !px-3" aria-label={`Edit ${s.name}`} onClick={() => setEditing(s)}><Pencil className="w-4 h-4" /></Button>}
-                    {can('staff.edit') && (
+                    {can('staff.invite') && (s.phone || s.email) && (
+                      <Button variant="secondary" className="!py-2 !px-3" aria-label={`Invite ${s.name}`} title="Send sign-in details" busy={action.busy === `i:${s.id}`} onClick={() => window.confirm(`Send ${s.name} new sign-in details by ${s.phone ? 'SMS' : ''}${s.phone && s.email ? ' and ' : ''}${s.email ? 'email' : ''}?`) && action.run(`i:${s.id}`, async () => { const r = await kitchenApi.inviteStaff(s.id); setCredentials({ name: s.name, ...r.credentials }); reload(); })}>
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {can('audit.revoke_sessions') && (
+                      <Button variant="secondary" className="!py-2 !px-3" aria-label={`Sign ${s.name} out everywhere`} title="Sign out of every device" busy={action.busy === `o:${s.id}`} onClick={() => window.confirm(`Sign ${s.name} out of every device?`) && action.run(`o:${s.id}`, () => kitchenApi.signOutStaff(s.id))}>
+                        <LogOut className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {(can('staff.edit') || can('staff.reset_passwords')) && (
                       <Button variant="secondary" className="!py-2 !px-3" aria-label={`New password for ${s.name}`} title="New password" busy={action.busy === `p:${s.id}`} onClick={() => resetPassword(s)}>
                         <KeyRound className="w-4 h-4" />
                       </Button>
                     )}
                     {can('staff.deactivate') && (
-                      <>
                         <Button variant="secondary" className="!py-2 !px-3" aria-label={s.is_active ? 'Deactivate' : 'Reactivate'} busy={action.busy === `a:${s.id}`} onClick={() => action.run(`a:${s.id}`, async () => { await kitchenApi.setStaffActive(s.id, !s.is_active); reload(); })}>
                           <Power className="w-4 h-4" />
                         </Button>
+                    )}
+                    {can('staff.delete') && (
                         <Button variant="danger" className="!py-2 !px-3" aria-label={`Remove ${s.name}`} busy={action.busy === `d:${s.id}`} onClick={() => window.confirm(`Remove ${s.name} from your team? They are signed out at once.`) && action.run(`d:${s.id}`, async () => { await kitchenApi.deleteStaff(s.id); reload(); })}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                      </>
                     )}
                   </div>
                 )}
@@ -242,15 +257,127 @@ function CredentialsCard({ credentials, onClose }) {
   );
 }
 
+const localInput = (d) => new Date(new Date(d).getTime() + 2 * 3600000).toISOString().slice(0, 16);
+const fromLocal = (v) => new Date(`${v}:00+02:00`).toISOString();
+const hm = (d) => new Date(d).toLocaleTimeString('en-GB', { timeZone: 'Africa/Kigali', hour: '2-digit', minute: '2-digit' });
+
+/** "Manage employee schedules": who works when. */
+function ShiftsTab() {
+  const { workspace } = useVendor();
+  const { data, error, loading, reload } = useLoad(() => kitchenApi.shifts(), []);
+  const { data: staffData } = useLoad(() => kitchenApi.staff({ status: 'active' }), [], { intervalMs: 120000 });
+  const action = useAction();
+  const [form, setForm] = useState(null);
+  const rows = data?.shifts || [];
+  const byDay = rows.reduce((map, sh) => {
+    const day = new Date(sh.starts_at).toLocaleDateString('en-GB', { timeZone: 'Africa/Kigali', weekday: 'long', day: 'numeric', month: 'short' });
+    map.set(day, [...(map.get(day) || []), sh]);
+    return map;
+  }, new Map());
+  const startForm = () => {
+    const start = new Date();
+    start.setMinutes(0, 0, 0);
+    setForm({ staff_id: staffData?.staff?.[0]?.id || '', starts_at: localInput(start), ends_at: localInput(start.getTime() + 8 * 3600000), department_id: '', note: '' });
+  };
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end"><Button onClick={startForm}><Plus className="w-4 h-4" /> Add shift</Button></div>
+      <ErrorNote message={error || action.error} />
+      {loading && !data ? <Loading /> : rows.length === 0 ? <Card><Empty icon={CalendarDays} title="No shifts planned for the next two weeks" /></Card> : (
+        [...byDay.entries()].map(([day, list]) => (
+          <Card key={day}>
+            <p className="text-xs font-black uppercase text-stone-500 mb-2">{day}</p>
+            <ul className="divide-y divide-stone-100">
+              {list.map((sh) => (
+                <li key={sh.id} className="py-2 flex items-center gap-3 text-sm">
+                  <span className="font-bold w-32">{hm(sh.starts_at)}–{hm(sh.ends_at)}</span>
+                  <span className="flex-1">{sh.staff_name}{sh.department_name ? ` · ${sh.department_name}` : ''}{sh.note ? ` · ${sh.note}` : ''}</span>
+                  <button type="button" className="text-red-600" aria-label="Remove shift" onClick={() => action.run(sh.id, async () => { await kitchenApi.deleteShift(sh.id); reload(); })}><Trash2 className="w-4 h-4" /></button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ))
+      )}
+      {form && (
+        <Modal title="Add a shift" onClose={() => setForm(null)}>
+          <div className="space-y-3">
+            <Field label="Employee">
+              <select className={inputClass} value={form.staff_id} onChange={(e) => setForm({ ...form, staff_id: e.target.value })}>
+                {(staffData?.staff || []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Starts"><input className={inputClass} type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} /></Field>
+              <Field label="Ends"><input className={inputClass} type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></Field>
+            </div>
+            {(workspace?.departments || []).length > 0 && (
+              <Field label="Department (optional)">
+                <select className={inputClass} value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
+                  <option value="">Any</option>
+                  {workspace.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label="Note"><input className={inputClass} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></Field>
+            <ErrorNote message={action.error} />
+            <Button className="w-full" busy={action.busy === 'add'} onClick={() => action.run('add', async () => { await kitchenApi.createShift({ ...form, department_id: form.department_id || null, starts_at: fromLocal(form.starts_at), ends_at: fromLocal(form.ends_at) }); setForm(null); reload(); })}>Save shift</Button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/** "Manage employee attendance": the clock-in register and totals. */
+function AttendanceTab() {
+  const { data, error, loading, reload } = useLoad(() => kitchenApi.attendance(), []);
+  const action = useAction();
+  const fixOut = (entry) => {
+    const value = window.prompt(`When did ${entry.staff_name} clock out? (YYYY-MM-DD HH:MM, Kigali time)`, localInput(entry.clock_out_at || Date.now()).replace('T', ' '));
+    if (value) action.run(entry.id, async () => { await kitchenApi.editAttendance(entry.id, { clock_out_at: fromLocal(value.trim().replace(' ', 'T')) }); reload(); });
+  };
+  return (
+    <div className="space-y-4">
+      <ErrorNote message={error || action.error} />
+      {(data?.totals || []).length > 0 && (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {data.totals.map((t) => (
+            <Card key={t.staff_id} className="!p-4">
+              <p className="font-black text-sm">{t.staff_name}</p>
+              <p className="text-xs text-stone-500">{Math.round((t.minutes / 60) * 10) / 10} h · {t.days} day{t.days === 1 ? '' : 's'}{t.late ? ` · ${t.late} late` : ''}</p>
+            </Card>
+          ))}
+        </div>
+      )}
+      <Card className="!p-0 overflow-hidden">
+        {loading && !data ? <Loading /> : (data?.entries || []).length === 0 ? <Empty icon={Clock} title="Nobody clocked in this week" /> : (
+          <div className="divide-y divide-stone-100">
+            {data.entries.map((e) => (
+              <div key={e.id} className="px-4 py-2.5 flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-bold flex-1">{e.staff_name}</span>
+                <span className="text-stone-600">{when(e.clock_in_at)} → {e.clock_out_at ? hm(e.clock_out_at) : <b className="text-emerald-700">working</b>}</span>
+                {e.minutes != null && <span className="text-xs text-stone-500">{Math.round(e.minutes / 6) / 10} h</span>}
+                {e.late_minutes > 0 && <Badge tone="amber">{e.late_minutes} min late</Badge>}
+                <button type="button" className="text-xs font-bold text-[#6d391d] underline" onClick={() => fixOut(e)}>Correct</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 function RolesTab() {
-  const { can } = useVendor();
+  const { isKitchenAdmin } = useVendor();
   const { data, error, loading, reload } = useLoad(() => kitchenApi.roles(), []);
   const [editing, setEditing] = useState(null);
   const action = useAction();
   const roles = data?.roles || [];
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">{can('staff.manage_permissions') && <Button onClick={() => setEditing('new')}><Plus className="w-4 h-4" /> Create new role</Button>}</div>
+      <div className="flex justify-end">{isKitchenAdmin && <Button onClick={() => setEditing('new')}><Plus className="w-4 h-4" /> Create new role</Button>}</div>
       <ErrorNote message={error || action.error} />
       {loading && !data ? (
         <Loading />
@@ -264,7 +391,7 @@ function RolesTab() {
               </div>
               {r.description && <p className="text-xs text-stone-600 mt-2">{r.description}</p>}
               <p className="text-[11px] text-stone-500 mt-2">{r.permissions.length} permission{r.permissions.length === 1 ? '' : 's'}{r.department_ids.length ? ` · ${r.department_ids.length} department${r.department_ids.length === 1 ? '' : 's'} only` : ''}</p>
-              {can('staff.manage_permissions') && (
+              {isKitchenAdmin && (
                 <div className="flex gap-2 mt-3">
                   <Button variant="secondary" className="flex-1 !py-2 !text-xs" onClick={() => setEditing(r)}><Pencil className="w-4 h-4" /> Edit</Button>
                   <Button variant="danger" className="!py-2 !px-3" aria-label={`Delete ${r.name}`} busy={action.busy === r.id} onClick={() => window.confirm(`Delete the role ${r.name}?`) && action.run(r.id, async () => { await kitchenApi.deleteRole(r.id); reload(); })}>
@@ -313,18 +440,18 @@ function RoleForm({ role, catalogue, onClose, onSaved }) {
         <div className="grid md:grid-cols-2 gap-3">
           {catalogue.groups.map((group) => {
             const assignable = group.permissions.filter((p) => !p.admin_only);
-            if (!assignable.length) return null;
-            const all = assignable.every((p) => form.permissions.includes(p.key));
+            const all = assignable.length > 0 && assignable.every((p) => form.permissions.includes(p.key));
             return (
               <div key={group.id} className="rounded-2xl border border-stone-200 p-3">
                 <label className="flex items-center gap-2 font-black text-sm mb-2">
-                  <input type="checkbox" checked={all} onChange={(e) => setGroup(group, e.target.checked)} /> {group.label}
+                  <input type="checkbox" checked={all} disabled={!assignable.length} onChange={(e) => setGroup(group, e.target.checked)} /> {group.label}
                 </label>
                 <div className="space-y-1 pl-1">
-                  {assignable.map((p) => (
-                    <label key={p.key} className="flex items-center gap-2 text-[13px] text-stone-700">
-                      <input type="checkbox" checked={form.permissions.includes(p.key)} onChange={() => toggle('permissions', p.key)} /> {p.label}
-                      {p.scoped && <span className="text-[10px] text-sky-600 font-bold">per department</span>}
+                  {group.permissions.map((p) => (
+                    <label key={p.key} className={`flex items-center gap-2 text-[13px] ${p.admin_only ? 'text-stone-400' : 'text-stone-700'}`}>
+                      <input type="checkbox" disabled={p.admin_only} checked={p.admin_only || form.permissions.includes(p.key)} onChange={() => toggle('permissions', p.key)} /> {p.label}
+                      {p.scoped && !p.admin_only && <span className="text-[10px] text-sky-600 font-bold">per department</span>}
+                      {p.admin_only && <span className="text-[10px] text-[#8a5332] font-bold">administrators only</span>}
                     </label>
                   ))}
                 </div>
@@ -332,7 +459,7 @@ function RoleForm({ role, catalogue, onClose, onSaved }) {
             );
           })}
         </div>
-        <p className="text-[11px] text-stone-400">Wallet, payouts and kitchen settings always stay with kitchen administrators. Changes apply to everyone with this role at once.</p>
+        <p className="text-[11px] text-stone-400">Items marked "administrators only" (creating roles, giving permissions and roles, choosing managers and administrators, the wallet) stay with kitchen administrators. Changes apply to everyone with this role at once.</p>
         <ErrorNote message={action.error} />
         <Button className="w-full" busy={action.busy === 'save'} onClick={save}>{role ? 'Save role' : 'Create role'}</Button>
       </div>

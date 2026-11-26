@@ -163,7 +163,7 @@ function InvoiceModal({ invoiceId, onClose }) {
           <ErrorNote message={action.error} />
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => printReceipt(invoice, vendor?.name)}><Printer className="w-4 h-4" /> Print receipt</Button>
-            {invoice.is_open && invoice.kind === 'table' && (can('invoices.edit') || can('tables.assign')) && (
+            {invoice.is_open && invoice.kind === 'table' && (can('invoices.edit') || can('tables.close_sessions') || can('reservations.manage_sessions')) && (
               <Button variant="secondary" busy={action.busy === 'close'} onClick={() => action.run('close', async () => setData(await kitchenApi.closeInvoice(invoice.id)))}>
                 End table session
               </Button>
@@ -180,6 +180,7 @@ function InvoiceModal({ invoiceId, onClose }) {
                 Discount
               </Button>
             )}
+            {invoice.accepts_payments && <BillExtras invoice={invoice} onChanged={setData} />}
             {can('invoices.refund') && invoice.refundable_rwf > 0 && (
               <Button variant="danger" onClick={() => setRefund({ amount: String(invoice.refundable_rwf), reason: '', method: 'cash' })}><Undo2 className="w-4 h-4" /> Refund</Button>
             )}
@@ -216,6 +217,57 @@ function InvoiceModal({ invoiceId, onClose }) {
   );
 }
 
+/** On an unpaid table bill: a code, a customer (discount and points), spending points, split, cancel. */
+function BillExtras({ invoice, onChanged }) {
+  const { can } = useVendor();
+  const action = useAction();
+  const [open, setOpen] = useState('');
+  const [code, setCode] = useState('');
+  const [points, setPoints] = useState('');
+  const [picked, setPicked] = useState([]);
+  const canCustomer = can('customers.view') && ['invoices.edit', 'customers.loyalty', 'customers.discounts', 'invoices.process_payment'].some((p) => can(p));
+  const { data: customers } = useLoad(() => (open === 'customer' && canCustomer ? kitchenApi.customers({ limit: 100 }) : Promise.resolve(null)), [open], { intervalMs: 120000 });
+  const go = (key, fn) => action.run(key, async () => { const result = await fn(); if (result) onChanged(result.original || result); setOpen(''); });
+  const tableBill = invoice.kind === 'table';
+  if (!tableBill) return null;
+  const btn = (id, label, show) => show && <Button key={id} variant="secondary" onClick={() => setOpen(open === id ? '' : id)}>{label}</Button>;
+  return (
+    <div className="w-full space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {btn('code', 'Discount code', ['invoices.discounts', 'promotions.manual_discounts', 'invoices.process_payment', 'invoices.edit'].some((p) => can(p)))}
+        {btn('customer', invoice.kitchen_customer_id ? 'Change customer' : 'Add customer', canCustomer)}
+        {btn('points', 'Spend points', can('customers.loyalty') && Boolean(invoice.kitchen_customer_id))}
+        {btn('split', 'Split bill', (can('invoices.split') || can('tables.split_bills')) && invoice.lines.filter((l) => !l.voided).length > 1)}
+        {invoice.amount_paid_rwf === 0 && can('invoices.cancel') && (
+          <Button variant="danger" busy={action.busy === 'cancel'} onClick={() => { const reason = window.prompt('Why cancel this bill?', ''); if (reason) go('cancel', () => kitchenApi.cancelInvoice(invoice.id, reason)); }}>Cancel bill</Button>
+        )}
+      </div>
+      <ErrorNote message={action.error} />
+      {open === 'code' && (
+        <div className="flex gap-2"><input className={`${inputClass} uppercase`} value={code} onChange={(e) => setCode(e.target.value)} placeholder="CODE" /><Button busy={action.busy === 'code'} onClick={() => go('code', () => kitchenApi.applyCode(invoice.id, code))}>Apply</Button></div>
+      )}
+      {open === 'customer' && (
+        <select className={inputClass} defaultValue={invoice.kitchen_customer_id || ''} onChange={(e) => go('customer', () => kitchenApi.setInvoiceCustomer(invoice.id, e.target.value))}>
+          <option value="">No customer</option>
+          {(customers?.customers || []).map((c) => <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''} · {c.loyalty_points} pts{c.discount_percent ? ` · ${c.discount_percent}%` : ''}</option>)}
+        </select>
+      )}
+      {open === 'points' && (
+        <div className="flex gap-2"><input className={inputClass} type="number" min="1" value={points} onChange={(e) => setPoints(e.target.value)} placeholder="Points to spend" /><Button busy={action.busy === 'points'} onClick={() => go('points', () => kitchenApi.redeemPoints(invoice.id, Number(points)))}>Spend</Button></div>
+      )}
+      {open === 'split' && (
+        <div className="rounded-2xl border border-stone-200 p-3 space-y-2">
+          <p className="text-xs text-stone-500">Tick what goes on the new bill.</p>
+          {invoice.lines.filter((l) => !l.voided).map((l) => (
+            <label key={l.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={picked.includes(l.id)} onChange={() => setPicked(picked.includes(l.id) ? picked.filter((x) => x !== l.id) : [...picked, l.id])} /> {l.quantity}× {l.name} · {money(l.subtotal_rwf)}</label>
+          ))}
+          <Button busy={action.busy === 'split'} disabled={!picked.length} onClick={() => go('split', () => kitchenApi.splitInvoice(invoice.id, picked))}>Make a separate bill</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** The bill: lines grouped by department, then totals. */
 function Receipt_({ invoice }) {
   const groups = new Map();
@@ -240,6 +292,8 @@ function Receipt_({ invoice }) {
         <Row label="Subtotal" value={money(invoice.subtotal_rwf)} />
         {invoice.delivery_fee_rwf > 0 && <Row label="Delivery" value={money(invoice.delivery_fee_rwf)} />}
         {invoice.discount_rwf > 0 && <Row label="Discount" value={`−${money(invoice.discount_rwf)}`} />}
+        {(invoice.promotions || []).map((p) => <Row key={p.name} label={p.code ? `Code ${p.code}` : p.name} value={`−${money(p.amount_rwf)}`} />)}
+        {invoice.loyalty_discount_rwf > 0 && <Row label={`${invoice.loyalty_points_redeemed} points`} value={`−${money(invoice.loyalty_discount_rwf)}`} />}
         <Row label="Total" value={money(invoice.total_rwf)} bold />
         <Row label="Paid" value={money(invoice.amount_paid_rwf)} />
         {invoice.balance_due_rwf > 0 && <Row label="Still due" value={money(invoice.balance_due_rwf)} bold />}
@@ -291,6 +345,8 @@ function printReceipt(invoice, kitchenName) {
   pair('Subtotal', money(invoice.subtotal_rwf));
   if (invoice.delivery_fee_rwf) pair('Delivery', money(invoice.delivery_fee_rwf));
   if (invoice.discount_rwf) pair('Discount', `-${money(invoice.discount_rwf)}`);
+  for (const p of invoice.promotions || []) pair(p.code ? `Code ${p.code}` : p.name, `-${money(p.amount_rwf)}`);
+  if (invoice.loyalty_discount_rwf) pair(`${invoice.loyalty_points_redeemed} loyalty points`, `-${money(invoice.loyalty_discount_rwf)}`);
   pair('TOTAL', money(invoice.total_rwf), 'font-weight:bold;font-size:15px');
   pair('Paid', money(invoice.amount_paid_rwf));
   if (invoice.balance_due_rwf) pair('Due', money(invoice.balance_due_rwf), 'font-weight:bold');

@@ -54,6 +54,12 @@ const VendorReportsPage = lazy(() => import('./pages/vendor/VendorReportsPage'))
 const VendorActivityPage = lazy(() => import('./pages/vendor/VendorActivityPage'));
 const VendorOperationsPage = lazy(() => import('./pages/vendor/VendorOperationsPage'));
 const TableMenuPage = lazy(() => import('./pages/TableMenuPage'));
+const VendorInboxPage = lazy(() => import('./pages/vendor/VendorInboxPage'));
+const VendorCustomersPage = lazy(() => import('./pages/vendor/VendorCustomersPage'));
+const VendorReservationsPage = lazy(() => import('./pages/vendor/VendorReservationsPage'));
+const VendorPromotionsPage = lazy(() => import('./pages/vendor/VendorPromotionsPage'));
+const VendorFinancePage = lazy(() => import('./pages/vendor/VendorFinancePage'));
+const VendorCashierPage = lazy(() => import('./pages/vendor/VendorCashierPage'));
 
 // Driver app (separate shell without the customer chrome).
 const DriverLayout = lazy(() => import('./components/driver-dashboard/DriverLayout'));
@@ -204,6 +210,12 @@ export default function App() {
                 <Route path="reports" element={<VendorReportsPage />} />
                 <Route path="activity" element={<VendorActivityPage />} />
                 <Route path="operations" element={<VendorOperationsPage />} />
+                <Route path="inbox" element={<VendorInboxPage />} />
+                <Route path="customers" element={<VendorCustomersPage />} />
+                <Route path="reservations" element={<VendorReservationsPage />} />
+                <Route path="promotions" element={<VendorPromotionsPage />} />
+                <Route path="finance" element={<VendorFinancePage />} />
+                <Route path="cashier" element={<VendorCashierPage />} />
               </Route>
 
               <Route path="*" element={<HomePage />} />

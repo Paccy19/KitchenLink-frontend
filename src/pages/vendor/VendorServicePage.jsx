@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ConciergeBell, UtensilsCrossed, ShoppingBag, Bike, Lock, Receipt, CheckCircle2 } from 'lucide-react';
+import { ConciergeBell, UtensilsCrossed, ShoppingBag, Bike, Lock, Receipt, CheckCircle2, Hand, BellRing } from 'lucide-react';
 import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, useLoad, useAction, money, minutesAgo } from '../../components/vendor-dashboard/ops/ui';
@@ -8,6 +8,7 @@ import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, useLoad, us
 const KIND_ICON = { table: UtensilsCrossed, takeaway: ShoppingBag, delivery: Bike };
 const ITEM_TONE = { pending: 'stone', waiting_collection: 'amber', collected: 'blue', served: 'emerald', handed_over: 'emerald', cancelled: 'red' };
 const FILTERS = [
+  { id: 'mine', label: 'My orders' },
   { id: '', label: 'Everything' },
   { id: 'ready', label: 'Ready to collect' },
   { id: 'dine_in', label: 'Tables' },
@@ -21,9 +22,9 @@ const FILTERS = [
  * and buttons to collect and serve — partly, when the kitchen allows it.
  */
 export default function VendorServicePage() {
-  const { can } = useVendor();
-  const [filter, setFilter] = useState('ready');
-  const query = filter === 'ready' ? { only: 'ready' } : filter ? { fulfillment: filter } : {};
+  const { can, workspace } = useVendor();
+  const [filter, setFilter] = useState(can('service.view_ready') ? 'ready' : 'mine');
+  const query = filter === 'ready' ? { only: 'ready' } : filter === 'mine' ? { mine: 'true' } : filter ? { fulfillment: filter } : {};
   const { data, error, loading } = useLoad(() => kitchenApi.serviceBoard(query), [filter], { intervalMs: 8000 });
   const action = useAction();
   const orders = data?.orders || [];
@@ -37,7 +38,7 @@ export default function VendorServicePage() {
         <SummaryTile label="Tables served" value={data?.summary?.tables ?? 0} />
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {FILTERS.filter((f) => f.id !== 'delivery' || can('service.delivery_handover')).map((f) => (
+        {FILTERS.filter((f) => (f.id !== 'delivery' || can('delivery.view_orders')) && (f.id !== 'mine' || (can('service.view_assigned') && workspace?.actor?.type === 'staff'))).map((f) => (
           <button
             key={f.id || 'all'}
             type="button"
@@ -48,6 +49,7 @@ export default function VendorServicePage() {
           </button>
         ))}
       </div>
+      {can('service.customer_requests') && <GuestRequests />}
       <ErrorNote message={error || action.error} />
       {loading && !data ? (
         <Loading />
@@ -58,7 +60,7 @@ export default function VendorServicePage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orders.map((order) => (
-            <ServiceCard key={order.id} order={order} action={action} can={can} />
+            <ServiceCard key={order.id} order={order} action={action} can={can} me={workspace?.actor?.id} />
           ))}
         </div>
       )}
@@ -75,7 +77,29 @@ function SummaryTile({ label, value, tone }) {
   );
 }
 
-function ServiceCard({ order, action, can }) {
+/** Guests asking from their table: the waiter, the bill … */
+function GuestRequests() {
+  const { data, reload } = useLoad(() => kitchenApi.serviceRequests(), [], { intervalMs: 8000 });
+  const action = useAction();
+  const rows = data?.requests || [];
+  if (!rows.length) return null;
+  const set = (r, status) => action.run(r.id, async () => { await kitchenApi.updateServiceRequest(r.id, status); reload(); });
+  return (
+    <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+      <p className="text-xs font-black uppercase text-amber-800 flex items-center gap-1.5"><BellRing className="w-4 h-4" /> Guests asking</p>
+      {rows.map((r) => (
+        <div key={r.id} className="flex items-center gap-2 text-sm bg-white rounded-xl px-3 py-2">
+          <span className="font-black">{r.table.label}</span>
+          <span className="flex-1">{r.kind_label}{r.note ? ` · ${r.note}` : ''} <span className="text-[11px] text-stone-400">{minutesAgo(r.created_at)}</span></span>
+          {r.status === 'open' && <Button variant="secondary" className="!py-1 !px-2.5 !text-xs" busy={action.busy === r.id} onClick={() => set(r, 'acknowledged')}>On my way</Button>}
+          <Button variant="success" className="!py-1 !px-2.5 !text-xs" busy={action.busy === r.id} onClick={() => set(r, 'done')}>Done</Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ServiceCard({ order, action, can, me }) {
   const Icon = KIND_ICON[order.destination.kind] || UtensilsCrossed;
   const waiting = order.items.filter((i) => i.service_status === 'waiting_collection');
   const collected = order.items.filter((i) => i.service_status === 'collected');
@@ -98,8 +122,16 @@ function ServiceCard({ order, action, can }) {
             </p>
           </div>
         </div>
-        <Badge tone={order.counts.preparing ? 'stone' : 'emerald'}>{order.counts.preparing ? `${order.counts.preparing} preparing` : 'All prepared'}</Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge tone={order.counts.preparing ? 'stone' : 'emerald'}>{order.counts.preparing ? `${order.counts.preparing} preparing` : 'All prepared'}</Badge>
+          {order.priority !== 'normal' && <Badge tone={order.priority === 'urgent' ? 'red' : 'amber'}>{order.priority}</Badge>}
+        </div>
       </div>
+      {(order.assigned_staff || order.collector || order.kitchen_courier) && (
+        <p className="text-[11px] text-stone-500">
+          {[order.assigned_staff && `Looked after by ${order.assigned_staff.name}`, order.collector && `Collecting: ${order.collector.name}`, order.kitchen_courier && `Courier: ${order.kitchen_courier.name} (${order.kitchen_courier.status.replace(/_/g, ' ')})`].filter(Boolean).join(' · ')}
+        </p>
+      )}
 
       {/* Which departments are done. */}
       <div className="flex flex-wrap gap-1.5">
@@ -140,6 +172,12 @@ function ServiceCard({ order, action, can }) {
       )}
 
       <div className="flex flex-wrap gap-2">
+        {can('service.accept_collection') && !order.collector && (waiting.length > 0) && (
+          <Button variant="secondary" className="!py-2 !text-xs" busy={action.busy === `cl:${order.id}`} onClick={() => action.run(`cl:${order.id}`, () => kitchenApi.claimOrder(order.id))}><Hand className="w-4 h-4" /> I'll take it</Button>
+        )}
+        {order.kitchen_courier && order.kitchen_courier.staff_id === me && order.kitchen_courier.status === 'assigned' && (
+          <Button variant="secondary" className="!py-2 !text-xs" busy={action.busy === `ow:${order.id}`} onClick={() => action.run(`ow:${order.id}`, () => kitchenApi.courierOnTheWay(order.id))}><Bike className="w-4 h-4" /> On the way</Button>
+        )}
         {waiting.length > 0 && can('service.collect') && !dineIn && (
           <Button className="flex-1 !py-2 !text-xs" busy={action.busy === `c:${order.id}`} onClick={() => collect()}>
             Collect {waiting.length} item{waiting.length === 1 ? '' : 's'}

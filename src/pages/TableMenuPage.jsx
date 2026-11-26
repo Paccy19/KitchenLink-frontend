@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader2, Minus, Plus, ShoppingBag, UtensilsCrossed, CheckCircle2, Clock, X, Receipt } from 'lucide-react';
-import { fetchTableMenu, placeTableOrder, fetchTableOrder } from '../api/tableApi';
+import { Loader2, Minus, Plus, ShoppingBag, UtensilsCrossed, CheckCircle2, Clock, X, Receipt, BellRing, Star, Tag } from 'lucide-react';
+import { fetchTableMenu, placeTableOrder, fetchTableOrder, sendTableRequest, fetchTableRequests, sendTableFeedback } from '../api/tableApi';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import ModalPortal from '../components/common/ModalPortal';
 import MenuPhotos from '../components/common/MenuPhotos';
@@ -101,6 +101,21 @@ export default function TableMenuPage() {
           </p>
         )}
       </header>
+
+      {ordering.can_order && <TableRequests token={token} />}
+
+      {(menu.promotions || []).length > 0 && (
+        <div className="mb-4 rounded-2xl bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-900 space-y-1">
+          {menu.promotions.map((p) => (
+            <p key={p.name} className="flex items-center gap-2 font-bold">
+              <Tag className="w-4 h-4" /> {p.name}: {p.label}
+              {p.applies_to === 'departments' ? ` on ${p.department_ids.map((id) => deptName.get(id)).filter(Boolean).join(', ')}` : p.applies_to === 'products' ? ' on selected dishes' : ''}
+              {p.min_order_rwf ? ` (bills from ${money(p.min_order_rwf)})` : ''}
+            </p>
+          ))}
+          <p className="text-[11px] text-orange-700">Taken off your bill automatically.</p>
+        </div>
+      )}
 
       {myOrders.length > 0 && <MyOrders token={token} orders={myOrders} />}
 
@@ -261,6 +276,78 @@ function CartSheet({ token, table, cart, estimate, onChange, onClose, onPlaced }
   );
 }
 
+/** "Call the waiter" / "Bring the bill" from the table. */
+function TableRequests({ token }) {
+  const [open, setOpen] = useState([]);
+  const [busy, setBusy] = useState('');
+  const load = useCallback(() => fetchTableRequests(token).then((r) => setOpen(r.requests || [])).catch(() => null), [token]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  useAutoRefresh(load, { intervalMs: 15000 });
+  const ask = async (kind) => {
+    setBusy(kind);
+    try {
+      await sendTableRequest(token, { kind });
+      await load();
+    } catch {
+      /* the button simply stays available */
+    } finally {
+      setBusy('');
+    }
+  };
+  const pending = (kind) => open.find((r) => r.kind === kind);
+  return (
+    <div className="mb-4 grid grid-cols-2 gap-2">
+      {[['call_waiter', 'Call the waiter'], ['request_bill', 'Bring the bill']].map(([kind, label]) => {
+        const req = pending(kind);
+        return (
+          <button key={kind} type="button" disabled={Boolean(req) || busy === kind} onClick={() => ask(kind)} className={`flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-black border ${req ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-stone-200 text-gray-900'}`}>
+            {busy === kind ? <Loader2 className="w-4 h-4 animate-spin" /> : <BellRing className="w-4 h-4" />}
+            {req ? (req.status === 'acknowledged' ? 'On the way' : 'Asked') : label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Rating a served order (once). */
+function RateOrder({ token, order, guestKey }) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
+  const [state, setState] = useState('');
+  if (state === 'done') return <p className="mt-3 text-xs font-bold text-emerald-700">Thank you for your rating!</p>;
+  const send = async () => {
+    setState('busy');
+    try {
+      await sendTableFeedback(token, order.id, guestKey, { rating, comment, is_public: isPublic });
+      setState('done');
+    } catch (err) {
+      setState(err.code === 'FEEDBACK_EXISTS' ? 'done' : `error:${err.message}`);
+    }
+  };
+  return (
+    <div className="mt-3 rounded-xl bg-stone-50 p-3 space-y-2">
+      <p className="text-xs font-black">How was it?</p>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} type="button" aria-label={`${n} stars`} onClick={() => setRating(n)}><Star className={`w-6 h-6 ${n <= rating ? 'fill-amber-400 text-amber-400' : 'text-stone-300'}`} /></button>
+        ))}
+      </div>
+      {rating > 0 && (
+        <>
+          <input className="w-full px-3 py-2 rounded-xl border border-stone-200 text-sm" placeholder="Anything to tell us? (optional)" value={comment} maxLength={500} onChange={(e) => setComment(e.target.value)} />
+          <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} /> Show it on the kitchen's page</label>
+          {state.startsWith('error:') && <p className="text-xs text-red-600">{state.slice(6)}</p>}
+          <button type="button" disabled={state === 'busy'} onClick={send} className="px-4 py-2 rounded-xl bg-[#2b1206] text-white text-xs font-black">Send</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function MyOrders({ token, orders }) {
   const [views, setViews] = useState({});
   const load = useCallback(async () => {
@@ -295,6 +382,7 @@ function MyOrders({ token, orders }) {
               </div>
             ))}
           </div>
+          {order.status === 'delivered' && <RateOrder token={token} order={order} guestKey={orders.find((o) => o.id === order.id)?.key} />}
         </div>
       ))}
       {bill && (

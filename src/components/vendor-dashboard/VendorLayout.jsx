@@ -31,6 +31,12 @@ import {
   BarChart3,
   History,
   SlidersHorizontal,
+  Inbox,
+  CalendarClock,
+  Banknote,
+  BadgePercent,
+  HeartHandshake,
+  Landmark,
 } from 'lucide-react';
 import { useVendor } from '../../context/VendorContext';
 import { vendorApi } from '../../api/vendorApi';
@@ -45,27 +51,33 @@ import { VENDOR_SETTINGS_BASE, VENDOR_SETTINGS_SECTIONS } from '../../data/vendo
 // owner and kitchen administrators hold all). The server enforces the same.
 const NAV = [
   { to: '/vendor-dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: '/vendor-dashboard/orders', label: 'Orders', icon: ClipboardList, badgeKey: 'pendingOrders', perm: ['orders.view'] },
+  { to: '/vendor-dashboard/inbox', label: 'Team inbox', icon: Inbox, badgeKey: 'inbox' },
+  { to: '/vendor-dashboard/orders', label: 'Orders', icon: ClipboardList, badgeKey: 'pendingOrders', perm: ['orders.view', 'orders.receive', 'orders.history', 'delivery.view_orders', 'delivery.history'] },
   { to: '/vendor-dashboard/kitchen', label: 'Preparation', icon: ChefHat, badgeKey: 'queue', perm: ['kitchen.view_queue'] },
-  { to: '/vendor-dashboard/service', label: 'Service & pickup', icon: ConciergeBell, badgeKey: 'ready', perm: ['service.view_ready'] },
+  { to: '/vendor-dashboard/service', label: 'Service & pickup', icon: ConciergeBell, badgeKey: 'ready', perm: ['service.view_ready', 'service.takeaway', 'service.dine_in', 'delivery.view_orders', 'service.view_assigned', 'service.customer_requests'] },
   { to: '/vendor-dashboard/tables', label: 'Tables & QR', icon: QrCode, perm: ['tables.view'] },
-  { to: '/vendor-dashboard/invoices', label: 'Invoices & payments', icon: Receipt, badgeKey: 'invoices', perm: ['invoices.view'] },
+  { to: '/vendor-dashboard/reservations', label: 'Reservations', icon: CalendarClock, perm: ['reservations.view', 'reservations.active_sessions', 'reservations.table_availability'] },
+  { to: '/vendor-dashboard/invoices', label: 'Invoices & payments', icon: Receipt, badgeKey: 'invoices', perm: ['invoices.view', 'invoices.outstanding'] },
+  { to: '/vendor-dashboard/cashier', label: 'Cashier till', icon: Banknote, perm: ['invoices.cashier_sessions', 'invoices.cashier_reports', 'invoices.process_payment', 'invoices.cash'] },
   { to: '/vendor-dashboard/menu', label: 'Menu', icon: UtensilsCrossed, badgeKey: 'menuCount', perm: ['menu.view'] },
+  { to: '/vendor-dashboard/promotions', label: 'Promotions', icon: BadgePercent, perm: ['promotions.view'] },
   { to: '/vendor-dashboard/departments', label: 'Services & departments', icon: Layers, perm: ['departments.view'] },
-  { to: '/vendor-dashboard/staff', label: 'Staff & roles', icon: Users, perm: ['staff.view', 'staff.manage_permissions'] },
-  { to: '/vendor-dashboard/inventory', label: 'Inventory', icon: Boxes, perm: ['inventory.view'] },
-  { to: '/vendor-dashboard/reports', label: 'Reports', icon: BarChart3, perm: ['reports.sales', 'reports.departments'] },
-  { to: '/vendor-dashboard/activity', label: 'Activity log', icon: History, perm: ['reports.activity'] },
+  { to: '/vendor-dashboard/staff', label: 'Staff & roles', icon: Users, perm: ['staff.view', 'roles.view', 'staff.schedules', 'staff.attendance'] },
+  { to: '/vendor-dashboard/customers', label: 'Customers', icon: HeartHandshake, perm: ['customers.view', 'customers.feedback', 'customers.reviews'] },
+  { to: '/vendor-dashboard/inventory', label: 'Inventory', icon: Boxes, perm: ['inventory.view', 'inventory.view_alerts', 'inventory.purchase_orders', 'inventory.receive_deliveries'] },
+  { to: '/vendor-dashboard/finance', label: 'Finance', icon: Landmark, perm: ['finance.expenses_view', 'finance.profit_loss', 'finance.transactions'] },
+  { to: '/vendor-dashboard/reports', label: 'Reports', icon: BarChart3, perm: ['reports.sales', 'reports.orders', 'reports.products', 'reports.departments', 'reports.employees', 'reports.inventory', 'reports.financial', 'reports.payments', 'reports.customers', 'finance.revenue', 'overview.department_performance', 'overview.financial_summary'] },
+  { to: '/vendor-dashboard/activity', label: 'Activity & security', icon: History, perm: ['audit.kitchen_logs', 'audit.employee_logs', 'audit.financial_logs', 'audit.permission_changes', 'audit.login_history', 'audit.security_events', 'overview.activity_logs', 'staff.view_activity', 'roles.history'] },
   { to: '/vendor-dashboard/wallet', label: 'Wallet', icon: Wallet, perm: ['account.wallet'] },
-  { to: '/vendor-dashboard/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'chats', perm: ['account.messages'] },
+  { to: '/vendor-dashboard/messages', label: 'Customer messages', icon: MessageCircle, badgeKey: 'chats', perm: ['customers.complaints'] },
   // Big-event delivery: negotiations with customers, and where the kitchen delivers.
-  { to: '/vendor-dashboard/special-deliveries', label: 'Special deliveries', icon: Truck, perm: ['account.messages'] },
-  { to: '/vendor-dashboard/delivery-coverage', label: 'Delivery Coverage', icon: MapPinned, perm: ['account.settings'] },
-  { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications', perm: ['account.notifications'] },
-  { to: '/vendor-dashboard/operations', label: 'Operations settings', icon: SlidersHorizontal, perm: ['account.settings'] },
+  { to: '/vendor-dashboard/special-deliveries', label: 'Special deliveries', icon: Truck, perm: ['delivery.fees'] },
+  { to: '/vendor-dashboard/delivery-coverage', label: 'Delivery Coverage', icon: MapPinned, perm: ['delivery.settings'] },
+  { to: '/vendor-dashboard/notifications', label: 'Notifications', icon: Bell, badgeKey: 'notifications', perm: ['notifications.view', 'notifications.history'] },
+  { to: '/vendor-dashboard/operations', label: 'Operations settings', icon: SlidersHorizontal, perm: ['settings.operational_rules', 'settings.payment_preferences', 'settings.notifications', 'notifications.order_alerts', 'notifications.employee_alerts', 'finance.settings', 'customers.loyalty'] },
   // A group: opens to list the settings pages.
-  { to: VENDOR_SETTINGS_BASE, label: 'Settings', icon: Settings, children: VENDOR_SETTINGS_SECTIONS, perm: ['account.settings'] },
-  { to: '/vendor-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support', perm: ['account.messages'] },
+  { to: VENDOR_SETTINGS_BASE, label: 'Settings', icon: Settings, children: VENDOR_SETTINGS_SECTIONS, perm: ['settings.view_profile', 'settings.edit_profile', 'settings.images', 'settings.contact', 'settings.hours', 'settings.kitchen_settings'] },
+  { to: '/vendor-dashboard/support', label: 'Help & Support', icon: LifeBuoy, badgeKey: 'support', perm: ['settings.kitchen_settings'] },
 ];
 
 export default function VendorLayout() {
@@ -85,10 +97,11 @@ export default function VendorLayout() {
     isKitchenAdmin,
   } = useVendor();
   const { connected } = useVendorRealtime({ enabled: true });
-  const canMessages = Boolean(workspace) && can('account.messages');
-  const supportUnread = useSupportUnread(vendorApi.support, { enabled: Boolean(hasToken && isAuthenticated && canMessages) });
+  const canSupport = Boolean(workspace) && can('settings.kitchen_settings');
+  const canChats = Boolean(workspace) && can('customers.complaints');
+  const supportUnread = useSupportUnread(vendorApi.support, { enabled: Boolean(hasToken && isAuthenticated && canSupport) });
   // Unread customer messages.
-  const chatUnread = useSupportUnread(vendorApi.chats, { enabled: Boolean(hasToken && isAuthenticated && canMessages) });
+  const chatUnread = useSupportUnread(vendorApi.chats, { enabled: Boolean(hasToken && isAuthenticated && canChats) });
   const visibleNav = NAV.filter((item) => !item.perm || item.perm.some((permission) => can(permission)));
   const staffName = workspace?.actor?.type === 'staff' ? workspace.actor.name : '';
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -133,6 +146,7 @@ export default function VendorLayout() {
     if (item.badgeKey === 'queue') return workspace?.counts?.queue || 0;
     if (item.badgeKey === 'ready') return workspace?.counts?.ready_orders || 0;
     if (item.badgeKey === 'invoices') return workspace?.counts?.open_invoices || 0;
+    if (item.badgeKey === 'inbox') return workspace?.counts?.inbox || 0;
     return 0;
   };
 
@@ -159,7 +173,7 @@ export default function VendorLayout() {
         </div>
       </div>
 
-      {isKitchenAdmin && (
+      {can('settings.availability') && (
       <div className="rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-3 mb-4">
         <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700">
           <BadgeCheck className="w-3.5 h-3.5" />
@@ -310,7 +324,7 @@ export default function VendorLayout() {
                   {connected ? 'Live' : 'Connecting…'}
                 </span>
                 <ThemeToggle />
-                {can('account.notifications') && <VendorNotificationBell />}
+                {can('notifications.view') && <VendorNotificationBell />}
                 <RoleAccountMenu role="vendor" />
               </div>
             </div>

@@ -243,6 +243,14 @@ export function normalizeVendorDetail(raw = {}) {
   return {
     ...vendor,
     menu,
+    // Guests' public reviews, with the kitchen's replies.
+    reviews: (Array.isArray(raw.reviews) ? raw.reviews : []).map((r) => ({
+      name: toText(r.name, 'Guest'),
+      rating: toNumber(r.rating, 0),
+      comment: toText(r.comment),
+      reply: toText(r.reply),
+      createdAt: r.created_at || null,
+    })),
     // Photos of the kitchen's printed menu (to read; orders use the dishes).
     menuPhotos: (Array.isArray(raw.menu_photos) ? raw.menu_photos : [])
       .filter((p) => p && p.url)

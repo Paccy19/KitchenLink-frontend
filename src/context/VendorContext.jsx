@@ -173,12 +173,12 @@ export function VendorProvider({ children }) {
     (ws, { quiet = false } = {}) => {
       const ok = (permission) => canDo(ws, permission);
       const jobs = [];
-      if (ok('reports.sales')) jobs.push(refreshDashboard());
+      if (ok('overview.dashboard')) jobs.push(refreshDashboard());
       if (ok('menu.view')) jobs.push(refreshMenu());
-      if (ok('orders.view')) jobs.push(refreshOrders());
+      if (['orders.view', 'orders.receive', 'orders.history', 'delivery.view_orders', 'delivery.history'].some(ok)) jobs.push(refreshOrders());
       if (ok('account.wallet')) jobs.push(refreshWallet());
-      if (ok('account.settings')) jobs.push(refreshSpecial());
-      if (ok('account.notifications')) jobs.push(quiet ? refreshNotifications() : refreshNotifications().catch(() => null));
+      if (ok('promotions.view')) jobs.push(refreshSpecial());
+      if (ok('notifications.view')) jobs.push(quiet ? refreshNotifications() : refreshNotifications().catch(() => null));
       return Promise.all(jobs);
     },
     [refreshDashboard, refreshMenu, refreshOrders, refreshWallet, refreshSpecial, refreshNotifications],

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Boxes, Plus, Pencil, Trash2, ArrowDownUp, AlertTriangle, Truck } from 'lucide-react';
+import { Boxes, Plus, Pencil, Trash2, ArrowDownUp, AlertTriangle, Truck, ArrowRightLeft, ClipboardList, PackageCheck } from 'lucide-react';
 import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Field, Stat, inputClass, useLoad, useAction, money, when, DepartmentTabs } from '../../components/vendor-dashboard/ops/ui';
@@ -20,13 +20,14 @@ export default function VendorInventoryPage() {
     <div className="space-y-5">
       <PageHeader title="Inventory" subtitle="Stock levels, every change, and your suppliers." />
       <div className="flex rounded-xl bg-stone-100 p-1 w-fit">
-        {[['stock', 'Stock'], ['movements', 'History'], ...(can('inventory.suppliers') ? [['suppliers', 'Suppliers']] : [])].map(([id, label]) => (
+        {[['stock', 'Stock'], ['movements', 'History'], ...(can('inventory.purchase_orders') || can('inventory.receive_deliveries') ? [['orders', 'Purchase orders']] : []), ...(can('inventory.suppliers') ? [['suppliers', 'Suppliers']] : [])].map(([id, label]) => (
           <button key={id} type="button" onClick={() => setTab(id)} className={`px-4 py-2 rounded-lg text-xs font-bold ${tab === id ? 'bg-white shadow text-gray-900' : 'text-stone-500'}`}>{label}</button>
         ))}
       </div>
       {tab === 'stock' && <StockTab departments={workspace?.departments || []} />}
       {tab === 'movements' && <MovementsTab />}
       {tab === 'suppliers' && <SuppliersTab />}
+      {tab === 'orders' && <PurchaseOrdersTab />}
     </div>
   );
 }
@@ -35,7 +36,9 @@ function StockTab({ departments }) {
   const { can } = useVendor();
   const [department, setDepartment] = useState('');
   const [lowOnly, setLowOnly] = useState(false);
-  const { data, error, loading, reload } = useLoad(() => kitchenApi.inventory({ department_id: department === 'main' ? 'none' : department || undefined, low: lowOnly ? 'true' : undefined }), [department, lowOnly]);
+  const [category, setCategory] = useState('');
+  const { data, error, loading, reload } = useLoad(() => kitchenApi.inventory({ department_id: department === 'main' ? 'none' : department || undefined, low: lowOnly ? 'true' : undefined, category: category || undefined }), [department, lowOnly, category]);
+  const [moving, setMoving] = useState(null);
   const { data: supplierData } = useLoad(() => (can('inventory.suppliers') || can('inventory.view') ? kitchenApi.suppliers() : Promise.resolve({ suppliers: [] })), [], { intervalMs: 60000 });
   const [editing, setEditing] = useState(null);
   const [adjusting, setAdjusting] = useState(null);
@@ -56,6 +59,17 @@ function StockTab({ departments }) {
           {can('inventory.add') && <Button onClick={() => setEditing('new')}><Plus className="w-4 h-4" /> Add item</Button>}
         </div>
       </div>
+      {(data?.categories || []).length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-bold text-stone-500">Category:</span>
+          {['', ...data.categories].map((c) => (
+            <button key={c || 'all'} type="button" onClick={() => setCategory(c)} className={`px-3 py-1 rounded-full text-xs font-bold border ${category === c ? 'bg-[#2b1206] text-white border-[#2b1206]' : 'bg-white text-stone-600 border-stone-200'}`}>{c || 'All'}</button>
+          ))}
+          {can('inventory.categories') && category && (
+            <button type="button" className="text-xs font-bold text-[#6d391d] underline" onClick={() => { const to = window.prompt(`Rename "${category}" to (empty removes it):`, category); if (to !== null) action.run('cat', async () => { await kitchenApi.renameStockCategory(category, to); setCategory(to); reload(); }); }}>Rename</button>
+          )}
+        </div>
+      )}
       <ErrorNote message={error || action.error} />
       {loading && !data ? (
         <Loading />
@@ -78,7 +92,7 @@ function StockTab({ departments }) {
                 <tr key={item.id}>
                   <td className="px-4 py-2.5">
                     <p className="font-bold text-gray-900">{item.name}</p>
-                    {item.supplier_name && <p className="text-[11px] text-stone-400">{item.supplier_name}</p>}
+                    <p className="text-[11px] text-stone-400">{[item.category, item.kind === 'raw_material' ? 'Raw material' : item.kind === 'supply' ? 'Supply' : 'Ingredient', item.supplier_name].filter(Boolean).join(' · ')}</p>
                   </td>
                   <td className="px-4 py-2.5 text-stone-600">{item.department_name}</td>
                   <td className="px-4 py-2.5 text-right">
@@ -90,6 +104,9 @@ function StockTab({ departments }) {
                     <div className="flex justify-end gap-1.5">
                       {(can('inventory.update', item.department_id) || can('inventory.remove', item.department_id)) && (
                         <Button variant="soft" className="!py-1.5 !px-2.5 !text-xs" onClick={() => setAdjusting(item)}><ArrowDownUp className="w-3.5 h-3.5" /> Change</Button>
+                      )}
+                      {can('inventory.transfers', item.department_id) && departments.length > 0 && (
+                        <Button variant="secondary" className="!py-1.5 !px-2.5" aria-label={`Move ${item.name}`} title="Move to another department" onClick={() => setMoving(item)}><ArrowRightLeft className="w-3.5 h-3.5" /></Button>
                       )}
                       {can('inventory.update', item.department_id) && <Button variant="secondary" className="!py-1.5 !px-2.5" aria-label={`Edit ${item.name}`} onClick={() => setEditing(item)}><Pencil className="w-3.5 h-3.5" /></Button>}
                       {can('inventory.remove', item.department_id) && (
@@ -105,13 +122,14 @@ function StockTab({ departments }) {
           </table>
         </Card>
       )}
-      {editing && <ItemForm item={editing === 'new' ? null : editing} departments={departments} suppliers={supplierData?.suppliers || []} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
+      {editing && <ItemForm item={editing === 'new' ? null : editing} categories={data?.categories || []} departments={departments} suppliers={supplierData?.suppliers || []} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
+      {moving && <TransferForm item={moving} departments={departments} onClose={() => setMoving(null)} onSaved={() => { setMoving(null); reload(); }} />}
       {adjusting && <AdjustForm item={adjusting} suppliers={supplierData?.suppliers || []} onClose={() => setAdjusting(null)} onSaved={() => { setAdjusting(null); reload(); }} />}
     </div>
   );
 }
 
-function ItemForm({ item, departments, suppliers, onClose, onSaved }) {
+function ItemForm({ item, categories = [], departments, suppliers, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: item?.name || '',
     unit: item?.unit || 'pcs',
@@ -121,6 +139,8 @@ function ItemForm({ item, departments, suppliers, onClose, onSaved }) {
     department_id: item?.department_id || '',
     supplier_id: item?.supplier_id || '',
     sku: item?.sku || '',
+    category: item?.category || '',
+    kind: item?.kind || 'ingredient',
   });
   const action = useAction();
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
@@ -143,6 +163,17 @@ function ItemForm({ item, departments, suppliers, onClose, onSaved }) {
           <Field label="Warn me below"><input className={inputClass} type="number" step="any" value={form.low_stock_threshold} onChange={set('low_stock_threshold')} /></Field>
           <Field label="Cost per unit (RWF)"><input className={inputClass} type="number" value={form.cost_per_unit_rwf} onChange={set('cost_per_unit_rwf')} /></Field>
           <Field label="Code / SKU"><input className={inputClass} value={form.sku} onChange={set('sku')} /></Field>
+          <Field label="Category">
+            <input className={inputClass} list="stock-categories" value={form.category} onChange={set('category')} placeholder="Dairy, Dry goods…" />
+            <datalist id="stock-categories">{categories.map((c) => <option key={c} value={c} />)}</datalist>
+          </Field>
+          <Field label="Type">
+            <select className={inputClass} value={form.kind} onChange={set('kind')}>
+              <option value="ingredient">Ingredient</option>
+              <option value="raw_material">Raw material</option>
+              <option value="supply">Supply (cups, packaging…)</option>
+            </select>
+          </Field>
         </div>
         <Field label="Department">
           <select className={inputClass} value={form.department_id} onChange={set('department_id')}>
@@ -191,6 +222,121 @@ function AdjustForm({ item, suppliers, onClose, onSaved }) {
         <Field label="Note (optional)"><input className={inputClass} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></Field>
         <ErrorNote message={action.error} />
         <Button className="w-full" busy={action.busy === 'save'} disabled={!Number(form.delta)} onClick={save}>Save change</Button>
+      </div>
+    </Modal>
+  );
+}
+
+function TransferForm({ item, departments, onClose, onSaved }) {
+  const targets = [{ id: '', name: 'Whole kitchen' }, ...departments].filter((d) => (d.id || null) !== (item.department_id || null));
+  const [form, setForm] = useState({ to: targets[0]?.id ?? '', quantity: '', note: '' });
+  const action = useAction();
+  return (
+    <Modal title={`Move ${item.name}`} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-sm text-stone-600">In {item.department_name}: <b>{item.quantity} {item.unit}</b></p>
+        <Field label="To">
+          <select className={inputClass} value={form.to} onChange={(e) => setForm({ ...form, to: e.target.value })}>
+            {targets.map((d) => <option key={d.id || 'kitchen'} value={d.id}>{d.name}</option>)}
+          </select>
+        </Field>
+        <Field label={`Quantity (${item.unit})`}><input className={inputClass} type="number" step="any" min="0" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} autoFocus /></Field>
+        <Field label="Note (optional)"><input className={inputClass} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></Field>
+        <ErrorNote message={action.error} />
+        <Button className="w-full" busy={action.busy === 's'} disabled={!Number(form.quantity)} onClick={() => action.run('s', async () => { await kitchenApi.transferStock(item.id, { to_department_id: form.to || null, quantity: Number(form.quantity), note: form.note }); onSaved(); })}>Move stock</Button>
+      </div>
+    </Modal>
+  );
+}
+
+const PO_TONE = { draft: 'stone', sent: 'blue', partially_received: 'amber', received: 'emerald', cancelled: 'red' };
+const PO_LABEL = { draft: 'Draft', sent: 'Sent', partially_received: 'Part received', received: 'Received', cancelled: 'Cancelled' };
+
+/** Orders to suppliers: receiving one adds the stock and records the expense. */
+function PurchaseOrdersTab() {
+  const { can } = useVendor();
+  const { data, error, loading, reload } = useLoad(() => kitchenApi.purchaseOrders(), []);
+  const action = useAction();
+  const [creating, setCreating] = useState(false);
+  const rows = data?.purchase_orders || [];
+  const act = (po, fn) => action.run(po.id, async () => { await fn(); reload(); });
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">{can('inventory.purchase_orders') && <Button onClick={() => setCreating(true)}><Plus className="w-4 h-4" /> New purchase order</Button>}</div>
+      <ErrorNote message={error || action.error} />
+      {loading && !data ? <Loading /> : rows.length === 0 ? <Card><Empty icon={ClipboardList} title="No purchase orders yet" /></Card> : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {rows.map((po) => (
+            <Card key={po.id}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-black">{po.number}{po.supplier_name ? ` · ${po.supplier_name}` : ''}</p>
+                  <p className="text-[11px] text-stone-500">{when(po.created_at)}{po.created_by ? ` · ${po.created_by}` : ''}</p>
+                </div>
+                <Badge tone={PO_TONE[po.status]}>{PO_LABEL[po.status]}</Badge>
+              </div>
+              <ul className="text-sm mt-2 space-y-0.5">
+                {po.lines.map((l) => <li key={l.id} className="flex justify-between gap-2"><span>{l.name}: {l.received_quantity}/{l.quantity} {l.unit}</span><span className="text-stone-500">{money(l.unit_cost_rwf)}/{l.unit}</span></li>)}
+              </ul>
+              <p className="text-sm font-black mt-2">{money(po.total_rwf)}</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {po.status === 'draft' && can('inventory.purchase_orders') && <Button variant="secondary" className="!py-1.5 !text-xs" busy={action.busy === po.id} onClick={() => act(po, () => kitchenApi.updatePurchaseOrder(po.id, { status: 'sent' }))}>Mark sent</Button>}
+                {['draft', 'sent', 'partially_received'].includes(po.status) && (can('inventory.receive_deliveries') || can('inventory.purchase_orders')) && (
+                  <Button variant="success" className="!py-1.5 !text-xs" busy={action.busy === po.id} onClick={() => act(po, () => kitchenApi.receivePurchaseOrder(po.id))}><PackageCheck className="w-4 h-4" /> Received everything</Button>
+                )}
+                {['draft', 'sent'].includes(po.status) && can('inventory.purchase_orders') && <Button variant="danger" className="!py-1.5 !text-xs" onClick={() => window.confirm(`Cancel ${po.number}?`) && act(po, () => kitchenApi.updatePurchaseOrder(po.id, { status: 'cancelled' }))}>Cancel</Button>}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+      {creating && <PurchaseOrderForm onClose={() => setCreating(false)} onSaved={() => { setCreating(false); reload(); }} />}
+    </div>
+  );
+}
+
+function PurchaseOrderForm({ onClose, onSaved }) {
+  const { data: stock } = useLoad(() => kitchenApi.inventory(), [], { intervalMs: 120000 });
+  const { data: suppliers } = useLoad(() => kitchenApi.suppliers(), [], { intervalMs: 120000 });
+  const [supplierId, setSupplierId] = useState('');
+  const [lines, setLines] = useState([{ item_id: '', quantity: '', unit_cost_rwf: '' }]);
+  const action = useAction();
+  const items = stock?.items || [];
+  const setLine = (i, key, value) => setLines(lines.map((l, j) => (j === i ? { ...l, [key]: value } : l)));
+  return (
+    <Modal title="New purchase order" onClose={onClose} wide>
+      <div className="space-y-3">
+        <Field label="Supplier">
+          <select className={inputClass} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+            <option value="">None</option>
+            {(suppliers?.suppliers || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </Field>
+        {lines.map((l, i) => (
+          <div key={i} className="grid grid-cols-3 gap-2">
+            <select className={inputClass} value={l.item_id} onChange={(e) => { const item = items.find((x) => x.id === e.target.value); setLines(lines.map((x, j) => (j === i ? { ...x, item_id: e.target.value, unit_cost_rwf: x.unit_cost_rwf || item?.cost_per_unit_rwf || '' } : x))); }}>
+              <option value="">Item…</option>
+              {items.map((x) => <option key={x.id} value={x.id}>{x.name} ({x.department_name})</option>)}
+            </select>
+            <input className={inputClass} type="number" step="any" min="0" placeholder="Quantity" value={l.quantity} onChange={(e) => setLine(i, 'quantity', e.target.value)} />
+            <input className={inputClass} type="number" min="0" placeholder="Cost per unit (RWF)" value={l.unit_cost_rwf} onChange={(e) => setLine(i, 'unit_cost_rwf', e.target.value)} />
+          </div>
+        ))}
+        <Button variant="secondary" onClick={() => setLines([...lines, { item_id: '', quantity: '', unit_cost_rwf: '' }])}><Plus className="w-4 h-4" /> Another item</Button>
+        <ErrorNote message={action.error} />
+        <Button
+          className="w-full"
+          busy={action.busy === 's'}
+          onClick={() => action.run('s', async () => {
+            await kitchenApi.createPurchaseOrder({
+              supplier_id: supplierId || undefined,
+              lines: lines.filter((l) => l.item_id && Number(l.quantity)).map((l) => ({ item_id: l.item_id, quantity: Number(l.quantity), unit_cost_rwf: Number(l.unit_cost_rwf || 0) })),
+            });
+            onSaved();
+          })}
+        >
+          Create purchase order
+        </Button>
       </div>
     </Modal>
   );

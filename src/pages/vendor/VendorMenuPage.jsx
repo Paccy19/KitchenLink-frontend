@@ -7,6 +7,7 @@ import ConfirmDialog from '../../components/vendor-dashboard/ConfirmDialog';
 import EmptyState from '../../components/common/EmptyState';
 import FadeImage from '../../components/common/FadeImage';
 import MenuPhotosCard from '../../components/vendor-dashboard/MenuPhotosCard';
+import MyCategoriesCard from '../../components/vendor-dashboard/MyCategoriesCard';
 
 export default function VendorMenuPage() {
   const { vendor, menuItems, categoryNames, addMenuItem, updateMenuItem, deleteMenuItem, toggleItemAvailability } = useVendor();
@@ -95,6 +96,7 @@ export default function VendorMenuPage() {
       </div>
 
       <MenuPhotosCard />
+      <MyCategoriesCard />
 
       {isPending && (
         <div className="flex items-start gap-3 rounded-2xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-900">

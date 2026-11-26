@@ -60,12 +60,29 @@ export default function VendorTablesPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {can('tables.qr') && (
+                {(can('tables.qr_generate') || can('tables.qr_download') || can('tables.qr_print')) && (
                   <Button variant="soft" className="flex-1 !py-2 !text-xs" onClick={() => setQrTable(table)}>
                     <QrCode className="w-4 h-4" /> QR code
                   </Button>
                 )}
-                {can('tables.edit') && (
+                {can('tables.merge') && table.occupied && (
+                  <Button
+                    variant="secondary"
+                    className="!py-2 !px-3 !text-xs"
+                    title="Bring another table's orders and bill here"
+                    onClick={() => {
+                      const others = tables.filter((t) => t.id !== table.id && t.occupied);
+                      if (!others.length) return window.alert('No other table has orders or a bill.');
+                      const label = window.prompt(`Merge which table into ${table.label}? (${others.map((t) => t.label).join(', ')})`, others[0].label);
+                      const from = others.find((t) => t.label.toLowerCase() === String(label || '').trim().toLowerCase());
+                      if (from) action.run(`m:${table.id}`, async () => { await kitchenApi.mergeTables(table.id, from.id); reload(); });
+                      return null;
+                    }}
+                  >
+                    Merge
+                  </Button>
+                )}
+                {(can('tables.edit') || can('tables.activate') || can('service.assign_servers')) && (
                   <Button variant="secondary" className="!py-2 !px-3" aria-label={`Edit ${table.label}`} onClick={() => setEditing(table)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
@@ -87,7 +104,7 @@ export default function VendorTablesPage() {
         </div>
       )}
       {editing && <TableForm table={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
-      {qrTable && <QrModal table={qrTable} kitchenName={vendor?.name} canRotate={can('tables.qr')} onClose={() => setQrTable(null)} onRotated={(t) => { setQrTable(t); reload(); }} />}
+      {qrTable && <QrModal table={qrTable} kitchenName={vendor?.name} canRotate={can('tables.qr_regenerate')} onClose={() => setQrTable(null)} onRotated={(t) => { setQrTable(t); reload(); }} />}
     </div>
   );
 }

@@ -6,7 +6,7 @@ our own backend does, and a new one built from this document will too.
 
 - 223 endpoints: 60 for the customer website, 45 for the kitchen
   dashboard, 27 for the delivery worker app, 91 for the admin panel —
-  plus 3 for table QR ordering and 60 for kitchen operations (departments,
+  plus 5 for table QR ordering and well over 100 for kitchen operations (departments,
   staff, tables, preparation, service, invoices, stock, reports), listed in
   their own sections below.
 - Generated from the website's own code (`src/api/`) and checked against the
@@ -443,6 +443,65 @@ Called from `src/api/kitchenApi.js` with the kitchen session. Responses are raw 
 | GET | `/vendor/reports/export` | `reports.sales` / `reports.departments` | `reportCsv` | Same query; a CSV file. |
 
 The menu endpoints also take `department_id` (`''` = the whole kitchen) and `preparation_notes`, and return `department_id`, `preparation_notes` and `recipe`. `GET /vendors/:vendorId` returns the kitchen's active `departments` and its `menu_photos`. `POST /vendor/auth/change-password { current_password, new_password }` also lets an employee change their own password.
+
+### More kitchen tools
+
+| Method | Path | Permission | Website function | Notes |
+| --- | --- | --- | --- | --- |
+| PATCH | `/vendor/orders/:id/priority` | orders.priorities | `orderPriority` | `{ priority: normal|high|urgent }`; urgent orders go first in queues. |
+| PATCH | `/vendor/orders/:id/assign` | orders.assign_employees / service.assign_servers (transfer: service.transfer_servers) | `assignOrder` | `{ staff_id }` (null = nobody). |
+| POST | `/vendor/orders/:id/items` | orders.add_items / orders.edit | `addOrderItem` | `{ menu_item_id, quantity, option_ids, note }`. Bills paid in person, before payment; the bill follows. |
+| PATCH | `/vendor/orders/:id/items/:itemId` | orders.quantities / orders.edit | `setOrderItemQuantity` | `{ quantity }` (items not yet prepared). |
+| DELETE | `/vendor/orders/:id/items/:itemId` | orders.remove_items / orders.edit | `removeOrderItem` |  |
+| PATCH | `/vendor/orders/:id/items/:itemId/department` | orders.assign_departments | `moveOrderItem` | `{ department_id }`: the item moves to that department's ticket. |
+| POST | `/vendor/orders/:id/reopen` | orders.reopen / kitchen.completed | `reopenOrder` | Served dine-in orders (24 h), or cancelled unpaid in-person ones. |
+| GET | `/vendor/orders/:id/history` | audit.order_history / orders.details | `orderHistory` | Status changes, ticket steps and staff actions in one timeline. |
+| PUT | `/vendor/orders/:id/table` | tables.assign_orders / tables.transfer_orders | `setOrderTable` | `{ table_id }`; its bill lines move to that table's bill. |
+| POST | `/vendor/orders/:id/claim` | service.accept_collection | `claimOrder` | Takes the collection task. |
+| PUT / DELETE | `/vendor/orders/:id/courier` | delivery.assign_workers / create / change / cancel_assignments | `setCourier / cancelCourier` | The kitchen's own courier for orders it delivers itself. |
+| PATCH | `/vendor/orders/:id/courier/status` | the courier, or delivery.change_assignments / delivery.track | `courierOnTheWay` | `{ status: on_the_way }`. |
+| PATCH | `/vendor/kitchen/orders/:o/tickets/:t/pause` | kitchen.pause | `pauseTicket` | `{ paused, reason }`; a paused ticket can't move. |
+| POST | `/vendor/kitchen/orders/:o/tickets/:t/cancel` | kitchen.cancel_tasks | `cancelTicket` | `{ reason }`; in-person bills only (its items leave the bill). |
+| PATCH | `/vendor/kitchen/orders/:o/tickets/:t/assign` | kitchen.assign_tasks | `assignTicket` | `{ staff_id }`. |
+| POST | `/vendor/tables/:id/merge` | tables.merge | `mergeTables` | `{ from_table_id }`: orders and the open bill (payments included) join this table. |
+| POST | `/vendor/invoices/:id/split` | invoices.split / tables.split_bills | `splitInvoice` | `{ line_ids }` → `{ original, created }`. |
+| POST | `/vendor/invoices/:id/cancel` | invoices.cancel | `cancelInvoice` | `{ reason }`; table bills with nothing paid. Orders still in progress are cancelled. |
+| POST | `/vendor/invoices/:id/apply-code` | invoices.discounts / promotions.manual_discounts | `applyCode` | `{ code }`. |
+| PUT | `/vendor/invoices/:id/customer` | invoices.edit / customers.loyalty / customers.discounts | `setInvoiceCustomer` | `{ customer_id }`: their standing discount applies; points are earned when paid. |
+| POST | `/vendor/invoices/:id/redeem-points` | customers.loyalty | `redeemPoints` | `{ points }`. |
+| GET / PATCH | `/vendor/service/requests(/:id)` | service.customer_requests | `serviceRequests / updateServiceRequest` | Guests asking from the table; `{ status: acknowledged|done }`. |
+| GET / POST | `/vendor/cashier/sessions` | invoices.cashier_sessions (or a cashier) | `cashierSessions / openTill` | `{ opening_float_rwf }`; one open till per person. |
+| POST | `/vendor/cashier/sessions/:id/close` | the cashier, or invoices.cashier_sessions | `closeTill` | `{ counted_cash_rwf }` → expected, difference, totals by method. |
+| GET | `/vendor/cashier/report` | invoices.cashier_reports | `cashierReport` | What each cashier took. |
+| GET / POST / PATCH / DELETE | `/vendor/finance/expenses(/:id)` | finance.expenses_view / record / edit / delete | `expenses …` | `{ date, category, description, amount_rwf, department_id, supplier_id, payment_method, reference }`. |
+| GET | `/vendor/finance/profit-loss` | finance.profit_loss | `profitLoss` | Query like reports (`period`, `date`). |
+| GET | `/vendor/finance/transactions` | finance.transactions | `transactions` | Payments, refunds and expenses, newest first. |
+| PATCH | `/vendor/inventory/categories` | inventory.categories | `renameStockCategory` | `{ from, to }` (empty `to` removes it). |
+| POST | `/vendor/inventory/:id/transfer` | inventory.transfers (both departments) | `transferStock` | `{ to_department_id, quantity, note }`. |
+| GET / POST / PATCH | `/vendor/purchase-orders(/:id)` | inventory.purchase_orders | `purchaseOrders …` | Lines `{ item_id, quantity, unit_cost_rwf }`; `status: sent|cancelled`. |
+| POST | `/vendor/purchase-orders/:id/receive` | inventory.receive_deliveries | `receivePurchaseOrder` | Adds the stock and records the expense. |
+| GET / POST | `/vendor/customers` | customers.view / customers.manage | `customers / createCustomer` | App customers appear by themselves; regulars can be added. |
+| GET / PATCH | `/vendor/customers/:id` | customers.profiles / customers.manage / customers.discounts | `customer / updateCustomer` | Profile with orders (customers.order_history), loyalty history, feedback. |
+| POST | `/vendor/customers/:id/points` | customers.loyalty | `adjustPoints` | `{ points, reason }`. |
+| POST | `/vendor/customers/notify` | notifications.customer | `notifyCustomers` | `{ title, body, customer_ids? }`; 3 a day. |
+| GET / POST | `/vendor/feedback(/:id/reply)` | customers.feedback / customers.reviews / customers.complaints | `feedback / replyFeedback` | `?public=true` for reviews. |
+| GET / POST / PATCH | `/vendor/reservations(/:id)` | reservations.view / create / edit / cancel / assign_tables / extend_close | `reservations …` | No double booking of a table. |
+| GET | `/vendor/reservations/availability` | reservations.table_availability | `tableAvailability` | Query `at`, `party_size`, `duration_minutes`. |
+| GET | `/vendor/sessions` | reservations.active_sessions | `diningSessions` | Tables with an open bill, seated guests or open orders. |
+| GET / POST / PATCH / DELETE | `/vendor/promotions(/:id)` | promotions.* (+ codes / campaigns / products / departments) | `promotions …` | Codes and automatic campaigns on table bills. |
+| GET / POST | `/vendor/inbox` | signed in / notifications.internal | `inbox / sendMessage` | `{ title, body, to: { all, role_ids, department_ids, staff_ids } }`. |
+| POST | `/vendor/inbox/read-all, /vendor/inbox/:id/read` | signed in | `readAllMessages / readMessage` |  |
+| GET / PUT | `/vendor/inbox/preferences` | notifications.preferences | `inboxPreferences / saveInboxPreferences` | `{ muted: [alert types] }`. |
+| POST | `/vendor/staff/:id/invite` | staff.invite | `inviteStaff` | Sends a new username/password by SMS/email; returns them once. |
+| POST | `/vendor/staff/:id/sign-out` | audit.revoke_sessions | `signOutStaff` |  |
+| GET / POST / PATCH / DELETE | `/vendor/shifts(/:id)` | staff.schedules (everyone sees their own) | `shifts …` |  |
+| GET / PATCH | `/vendor/attendance(/:id)` | staff.attendance | `attendance / editAttendance` |  |
+| GET / POST | `/vendor/attendance/me, clock-in, clock-out` | signed-in employee | `myAttendance / clockIn / clockOut` | Late is measured against the shift. |
+| PATCH / DELETE | `/vendor/menu/categories/:id` | menu.categories_edit / menu.categories_delete | `renameMenuCategory / deleteMenuCategory` | Only categories this kitchen created, while no other kitchen uses them. |
+| POST / GET | `/tables/:token/requests` | Public | `sendTableRequest / fetchTableRequests` | `{ kind: call_waiter|request_bill|other, note }`. |
+| POST | `/tables/:token/orders/:id/feedback` | Public (X-Guest-Key) | `sendTableFeedback` | `{ rating 1-5, comment, is_public }`, once. |
+
+The permission list is in 20 groups (`GET /vendor/permissions`). Permissions marked `admin_only` (creating and editing roles, giving permissions and roles, choosing managers and administrators, the wallet) are only ever held by kitchen administrators. `/vendor/workspace` also returns `clock` and `counts.requests` / `counts.inbox`; `/tables/:token` returns `promotions`; `/vendors/:vendorId` returns `reviews`.
 
 ## Delivery worker app
 

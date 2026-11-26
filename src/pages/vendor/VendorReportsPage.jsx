@@ -80,7 +80,9 @@ export default function VendorReportsPage() {
 
 function ReportBody({ report }) {
   const s = report.summary;
-  const maxSeries = Math.max(1, ...report.series.map((p) => p.sales_rwf));
+  const showMoney = report.summary.sales_rwf != null;
+  const metric = (p) => (showMoney ? p.sales_rwf : p.orders) || 0;
+  const maxSeries = Math.max(1, ...report.series.map(metric));
   const maxDept = Math.max(1, ...report.departments.map((d) => d.sales_rwf));
   return (
     <div className="space-y-5">
@@ -97,19 +99,19 @@ function ReportBody({ report }) {
       </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Stat label="Sales" value={money(s.sales_rwf)} hint={report.change?.sales_percent != null ? `${report.change.sales_percent >= 0 ? '+' : ''}${report.change.sales_percent}% vs ${report.previous?.label}` : undefined} />
+        <Stat label="Sales" value={s.sales_rwf == null ? '—' : money(s.sales_rwf)} hint={report.change?.sales_percent != null ? `${report.change.sales_percent >= 0 ? '+' : ''}${report.change.sales_percent}% vs ${report.previous?.label}` : undefined} />
         <Stat label="Orders" value={s.orders_placed} hint={`${s.orders_completed} completed · ${s.orders_cancelled} cancelled`} />
-        <Stat label="Average order" value={money(s.average_order_rwf)} hint={`${s.items_sold} items sold`} />
+        <Stat label="Average order" value={s.average_order_rwf == null ? '—' : money(s.average_order_rwf)} hint={`${s.items_sold} items sold`} />
         <Stat label="Ready in" value={s.avg_prep_minutes != null ? `${s.avg_prep_minutes} min` : '—'} hint={s.busiest_hour ? `Busiest ${s.busiest_hour}` : undefined} />
       </div>
 
       {report.series.length > 0 && (
         <Card>
-          <h3 className="font-black text-sm mb-3">Sales over time</h3>
+          <h3 className="font-black text-sm mb-3">{showMoney ? 'Sales over time' : 'Orders over time'}</h3>
           <div className="flex items-end gap-1 h-40" role="img" aria-label="Sales over time">
             {report.series.map((p) => (
-              <div key={p.key} className="flex-1 flex flex-col items-center gap-1 min-w-0" title={`${p.key}: ${money(p.sales_rwf)} · ${p.orders} orders`}>
-                <div className="w-full rounded-t-md bg-[#c08a63]" style={{ height: `${Math.max(4, (p.sales_rwf / maxSeries) * 100)}%` }} />
+              <div key={p.key} className="flex-1 flex flex-col items-center gap-1 min-w-0" title={`${p.key}: ${showMoney ? `${money(p.sales_rwf)} · ` : ''}${p.orders} orders`}>
+                <div className="w-full rounded-t-md bg-[#c08a63]" style={{ height: `${Math.max(4, (metric(p) / maxSeries) * 100)}%` }} />
                 <span className="text-[9px] text-stone-400 truncate w-full text-center">{p.key.slice(-5)}</span>
               </div>
             ))}
@@ -150,14 +152,14 @@ function ReportBody({ report }) {
           <h3 className="font-black text-sm mb-3">How customers ordered</h3>
           <ul className="space-y-1 text-sm">
             {Object.entries(report.by_fulfillment).map(([k, v]) => (
-              <li key={k} className="flex justify-between"><span>{FULFILMENT[k] || k}</span><span className="font-bold">{v.orders} · {money(v.sales_rwf)}</span></li>
+              <li key={k} className="flex justify-between"><span>{FULFILMENT[k] || k}</span><span className="font-bold">{v.orders}{v.sales_rwf != null ? ` · ${money(v.sales_rwf)}` : ''}</span></li>
             ))}
             {!Object.keys(report.by_fulfillment).length && <li className="text-stone-500">—</li>}
           </ul>
           {report.tables.length > 0 && (
             <>
               <h4 className="text-[11px] font-black uppercase text-stone-400 mt-4 mb-1">Tables</h4>
-              <ul className="space-y-1 text-sm">{report.tables.slice(0, 6).map((t) => <li key={t.table} className="flex justify-between"><span>{t.table}</span><span className="font-bold">{money(t.sales_rwf)}</span></li>)}</ul>
+              <ul className="space-y-1 text-sm">{report.tables.slice(0, 6).map((t) => <li key={t.table} className="flex justify-between"><span>{t.table}</span><span className="font-bold">{t.sales_rwf != null ? money(t.sales_rwf) : `${t.orders} orders`}</span></li>)}</ul>
             </>
           )}
         </Card>
@@ -168,7 +170,7 @@ function ReportBody({ report }) {
               <li className="flex justify-between"><span>Taken in person</span><b>{money(report.payments.collected_in_person_rwf)}</b></li>
               {report.payments.collected_by_method.map((m) => <li key={m.method} className="flex justify-between text-stone-500 pl-3"><span>{m.method}</span><span>{money(m.amount_rwf)}</span></li>)}
               <li className="flex justify-between"><span>Paid in the app</span><b>{money(report.payments.paid_online_rwf)}</b></li>
-              {report.sales.commission_rwf > 0 && <li className="flex justify-between text-stone-500"><span>KitchenLink commission</span><span>−{money(report.sales.commission_rwf)}</span></li>}
+              {report.sales?.commission_rwf > 0 && <li className="flex justify-between text-stone-500"><span>KitchenLink commission</span><span>−{money(report.sales.commission_rwf)}</span></li>}
               <li className="flex justify-between"><span>Refunded</span><b>{money(report.payments.refunded_in_person_rwf + report.payments.refunded_online_rwf)}</b></li>
               <li className={`flex justify-between ${report.payments.outstanding_rwf ? 'text-amber-700' : ''}`}><span>Still unpaid</span><b>{money(report.payments.outstanding_rwf)}</b></li>
             </ul>
@@ -176,12 +178,26 @@ function ReportBody({ report }) {
         )}
         <Card>
           <h3 className="font-black text-sm mb-3">Stock</h3>
-          <p className="text-sm">{report.inventory.movements} changes · value {money(report.inventory.stock_value_rwf)}</p>
+          <p className="text-sm">{report.inventory.hidden ? 'Not part of your role.' : `${report.inventory.movements} changes · value ${money(report.inventory.stock_value_rwf)}`}</p>
           {report.inventory.most_used.length > 0 && <ul className="mt-2 space-y-1 text-sm">{report.inventory.most_used.slice(0, 5).map((i) => <li key={i.name} className="flex justify-between"><span>{i.name}</span><span>{i.used} {i.unit}</span></li>)}</ul>}
           {report.inventory.low_stock.length > 0 && <p className="text-[11px] font-bold text-amber-700 mt-3">Low: {report.inventory.low_stock.map((i) => i.name).join(', ')}</p>}
         </Card>
       </div>
 
+      {report.customers && (
+        <Card>
+          <h3 className="font-black text-sm mb-3">Customers</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+            <Stat label="App customers" value={report.customers.customers} />
+            <Stat label="New" value={report.customers.new_customers} />
+            <Stat label="Returning" value={report.customers.returning_customers} />
+            <Stat label="Table guests" value={report.customers.table_guests} />
+          </div>
+          {report.customers.top.length > 0 && (
+            <ol className="text-sm space-y-1">{report.customers.top.map((c, i) => <li key={c.customer_id} className="flex justify-between"><span><b>{i + 1}.</b> {c.name} · {c.orders} order{c.orders === 1 ? '' : 's'}</span><span className="font-bold">{money(c.spent_rwf)}</span></li>)}</ol>
+          )}
+        </Card>
+      )}
       {report.staff && report.staff.length > 0 && (
         <Card className="!p-0 overflow-x-auto">
           <h3 className="font-black text-sm px-5 pt-4 pb-2">Team</h3>

@@ -13,6 +13,13 @@ const AREAS = [
   { id: 'inventory', label: 'Stock' },
   { id: 'table', label: 'Tables' },
   { id: 'department', label: 'Departments' },
+  { id: 'order', label: 'Orders' },
+  { id: 'customer', label: 'Customers' },
+  { id: 'reservation', label: 'Reservations' },
+  { id: 'promotion', label: 'Promotions' },
+  { id: 'expense', label: 'Expenses' },
+  { id: 'cashier', label: 'Tills' },
+  { id: 'security', label: 'Sign-ins & security' },
 ];
 
 /** Who did what in the kitchen, newest first (never edited). */

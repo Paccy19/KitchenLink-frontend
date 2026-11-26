@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Phone, MapPin, Check, X as XIcon, Clock, CreditCard, FileText } from 'lucide-react';
 import OrderStatusBadge from './OrderStatusBadge';
 import ConfirmPickupForm from './ConfirmPickupForm';
+import OrderTools from './OrderTools';
 import { READY_ORDER_NOTE, orderActions } from '../../data/vendorOptions';
 import { formatScheduledFor } from '../../utils/schedule';
 
@@ -188,6 +189,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
             </p>
           </div>
         </div>
+
+        {order.backendId && <OrderTools orderId={order.backendId} />}
 
         {order.status === 'Ready' && !order.usesCode && (
           <p className="mx-5 sm:mx-6 mb-4 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">

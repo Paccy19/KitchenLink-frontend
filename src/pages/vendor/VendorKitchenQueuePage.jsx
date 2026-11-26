@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChefHat, Clock, Lock, UtensilsCrossed, Bike, ShoppingBag } from 'lucide-react';
+import { ChefHat, Clock, Lock, UtensilsCrossed, Bike, ShoppingBag, Pause, Play, XCircle, UserPlus } from 'lucide-react';
 import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, DepartmentTabs, useLoad, useAction, minutesAgo, when } from '../../components/vendor-dashboard/ops/ui';
@@ -13,7 +13,8 @@ const FULFILMENT_ICON = { dine_in: UtensilsCrossed, pickup: ShoppingBag, deliver
  * its own stages. The order's overall status follows from all its tickets.
  */
 export default function VendorKitchenQueuePage() {
-  const { workspace } = useVendor();
+  const { workspace, can } = useVendor();
+  const { data: staffData } = useLoad(() => (can('kitchen.assign_tasks') && can('staff.view') ? kitchenApi.staff({ status: 'active' }) : Promise.resolve({ staff: [] })), [], { intervalMs: 120000 });
   const [department, setDepartment] = useState('');
   const [view, setView] = useState('live');
   const { data, error, loading } = useLoad(
@@ -34,6 +35,19 @@ export default function VendorKitchenQueuePage() {
   );
 
   const move = (ticket, status) => action.run(`${ticket.id}:${status}`, () => kitchenApi.advanceTicket(ticket.order.id, ticket.id, status));
+  const tools = {
+    pause: (ticket) => {
+      const reason = ticket.paused ? '' : window.prompt('Why is it paused? (optional)', '') ?? null;
+      if (reason === null) return;
+      action.run(`${ticket.id}:pause`, () => kitchenApi.pauseTicket(ticket.order.id, ticket.id, !ticket.paused, reason));
+    },
+    cancel: (ticket) => {
+      const reason = window.prompt(`Cancel the ${ticket.department_name} part of ${ticket.order.order_number}? Say why:`, '');
+      if (reason) action.run(`${ticket.id}:cancel`, () => kitchenApi.cancelTicket(ticket.order.id, ticket.id, reason));
+    },
+    assign: (ticket, staffId) => action.run(`${ticket.id}:assign`, () => kitchenApi.assignTicket(ticket.order.id, ticket.id, staffId)),
+    staff: staffData?.staff || [],
+  };
 
   return (
     <div className="space-y-5">
@@ -75,7 +89,7 @@ export default function VendorKitchenQueuePage() {
                 <Badge tone={STAGE_TONE[stage]}>{columns[stage]?.length || 0}</Badge>
               </div>
               {(columns[stage] || []).map((ticket) => (
-                <TicketCard key={ticket.id} ticket={ticket} busy={action.busy} onMove={move} />
+                <TicketCard key={ticket.id} ticket={ticket} busy={action.busy} onMove={move} tools={tools} can={can} />
               ))}
             </div>
           ))}
@@ -85,7 +99,7 @@ export default function VendorKitchenQueuePage() {
   );
 }
 
-function TicketCard({ ticket, onMove, busy }) {
+function TicketCard({ ticket, onMove, busy, tools, can = () => false }) {
   const Icon = FULFILMENT_ICON[ticket.order.fulfillment] || UtensilsCrossed;
   const where = ticket.order.table_label || ticket.order.fulfillment_label;
   return (
@@ -95,8 +109,16 @@ function TicketCard({ ticket, onMove, busy }) {
           <p className="font-black text-gray-900">{ticket.code}</p>
           <p className="text-[11px] text-stone-500 font-semibold truncate">{ticket.department_name} · {ticket.order.order_number}</p>
         </div>
-        <Badge tone={STAGE_TONE[ticket.status]}>{ticket.status_label}</Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge tone={STAGE_TONE[ticket.status]}>{ticket.status_label}</Badge>
+          {ticket.order.priority && ticket.order.priority !== 'normal' && <Badge tone={ticket.order.priority === 'urgent' ? 'red' : 'amber'}>{ticket.order.priority}</Badge>}
+        </div>
       </div>
+      {ticket.paused && (
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-2 py-1.5">
+          <Pause className="w-3.5 h-3.5" /> Paused{ticket.pause_reason ? `: ${ticket.pause_reason}` : ''}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-stone-600">
         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#faf6f2] text-[#6d391d]">
           <Icon className="w-3.5 h-3.5" /> {where}
@@ -120,7 +142,7 @@ function TicketCard({ ticket, onMove, busy }) {
           <Lock className="w-3.5 h-3.5" /> Waiting for payment before preparation
         </p>
       )}
-      {onMove && ticket.allowed_next_statuses.length > 0 && !ticket.payment_hold && (
+      {onMove && ticket.allowed_next_statuses.length > 0 && !ticket.payment_hold && !ticket.paused && (
         <div className="flex flex-wrap gap-2">
           {ticket.allowed_next_statuses.map((next, index) => (
             <Button
@@ -136,6 +158,27 @@ function TicketCard({ ticket, onMove, busy }) {
         </div>
       )}
       {ticket.assigned_staff_name && <p className="text-[11px] text-stone-400">By {ticket.assigned_staff_name}</p>}
+      {tools && ticket.status !== 'ready' && (
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-stone-100">
+          {can('kitchen.pause', ticket.department_id) && (
+            <button type="button" className="text-[11px] font-bold text-stone-600 inline-flex items-center gap-1" onClick={() => tools.pause(ticket)}>
+              {ticket.paused ? <><Play className="w-3.5 h-3.5" /> Resume</> : <><Pause className="w-3.5 h-3.5" /> Pause</>}
+            </button>
+          )}
+          {can('kitchen.cancel_tasks', ticket.department_id) && (
+            <button type="button" className="text-[11px] font-bold text-red-600 inline-flex items-center gap-1" onClick={() => tools.cancel(ticket)}><XCircle className="w-3.5 h-3.5" /> Cancel part</button>
+          )}
+          {can('kitchen.assign_tasks', ticket.department_id) && tools.staff.length > 0 && (
+            <label className="text-[11px] font-bold text-stone-600 inline-flex items-center gap-1">
+              <UserPlus className="w-3.5 h-3.5" />
+              <select className="bg-transparent text-[11px]" value={ticket.assigned_staff_id || ''} onChange={(e) => tools.assign(ticket, e.target.value)}>
+                <option value="">Give to…</option>
+                {tools.staff.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
     </div>
   );
 }

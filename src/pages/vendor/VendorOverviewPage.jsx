@@ -35,7 +35,7 @@ const money = (value) => `${value.toLocaleString()} RWF`;
 export default function VendorOverviewPage() {
   const { workspace, can } = useVendor();
   if (!workspace) return null;
-  if (!can('reports.sales')) return <StaffOverview />;
+  if (!can('overview.dashboard')) return <StaffOverview />;
   return <OwnerOverview />;
 }
 
@@ -319,7 +319,37 @@ function StaffOverview() {
           ))}
         </div>
       )}
+      <ClockCard />
       <ChangeMyPassword />
+    </div>
+  );
+}
+
+/** Clocking in and out, and the next shift (attendance). */
+function ClockCard() {
+  const { workspace, refreshWorkspace } = useVendor();
+  const [state, setState] = useState({ busy: false, error: '' });
+  const clock = workspace?.clock;
+  if (!clock || workspace?.actor?.type !== 'staff') return null;
+  const hm = (d) => new Date(d).toLocaleString('en-GB', { timeZone: 'Africa/Kigali', weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  const press = async () => {
+    setState({ busy: true, error: '' });
+    try {
+      await vendorRequest(clock.clocked_in ? '/vendor/attendance/clock-out' : '/vendor/attendance/clock-in', { method: 'POST', body: {} });
+      await refreshWorkspace();
+      setState({ busy: false, error: '' });
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  };
+  return (
+    <div className="max-w-sm rounded-2xl bg-white border border-stone-200/80 p-4 space-y-2">
+      <p className="font-black text-sm">{clock.clocked_in ? `Working since ${hm(clock.entry.clock_in_at)}` : 'Not clocked in'}</p>
+      {clock.next_shift && <p className="text-xs text-stone-500">Shift: {hm(clock.next_shift.starts_at)} – {hm(clock.next_shift.ends_at)}</p>}
+      {state.error && <p role="alert" className="text-xs font-semibold text-red-600">{state.error}</p>}
+      <button type="button" disabled={state.busy} onClick={press} className={`w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60 ${clock.clocked_in ? 'bg-stone-700' : 'bg-emerald-600'}`}>
+        {state.busy ? 'Please wait…' : clock.clocked_in ? 'Clock out' : 'Clock in'}
+      </button>
     </div>
   );
 }
