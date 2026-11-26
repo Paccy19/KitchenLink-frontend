@@ -1,7 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader2, Minus, Plus, ShoppingBag, UtensilsCrossed, CheckCircle2, Clock, X, Receipt } from 'lucide-react';
-import { fetchTableMenu, openTableSession, placeTableOrder, fetchTableOrder } from '../api/tableApi';
+import { Loader2, Minus, Plus, ShoppingBag, UtensilsCrossed, CheckCircle2, Clock, X, Receipt, Users, ShieldCheck } from 'lucide-react';
+import {
+  fetchTableMenu,
+  openTableSession,
+  placeTableOrder,
+  fetchTableOrder,
+  fetchTablePaymentSeats,
+  authorizeTablePayment,
+  acceptTablePaymentAuthorization,
+  revokeTablePaymentAuthorization,
+  startTablePayment,
+  checkTablePayment,
+} from '../api/tableApi';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import ModalPortal from '../components/common/ModalPortal';
 import MenuPhotos from '../components/common/MenuPhotos';
@@ -52,7 +63,7 @@ export default function TableMenuPage() {
       .then(async (result) => {
         if (cancelled) return;
         setMenu(result);
-        if (!result.table.seat || !result.ordering.can_order) return;
+        if (!result.table.seat) return;
         try {
           const savedKey = localStorage.getItem(sessionKey(token)) || '';
           const session = await openTableSession(token, {}, savedKey);
@@ -142,6 +153,9 @@ export default function TableMenuPage() {
       </header>
 
       {myOrders.length > 0 && <MyOrders token={token} orders={myOrders} />}
+      {table.seat && seatSession && (
+        <SeatPaymentPanel token={token} sessionKey={seatSession.session_key || localStorage.getItem(sessionKey(token)) || ''} ownSeatNumber={seatSession.seat_number} />
+      )}
 
       <MenuPhotos photos={kitchen.menu_photos || []} />
 
@@ -347,6 +361,303 @@ function MyOrders({ token, orders }) {
           <span className="font-black">{bill.balance_due_rwf > 0 ? `${money(bill.balance_due_rwf)} to pay` : 'Paid — thank you'}</span>
         </div>
       )}
+    </section>
+  );
+}
+
+const SEAT_PAYMENT_STATUS = {
+  unpaid: 'Unpaid',
+  partially_paid: 'Partially paid',
+  payment_pending: 'Payment pending',
+  paid: 'Paid',
+  staff_reconciliation_required: 'Ask the cashier to reconcile this bill',
+};
+
+function SeatPaymentPanel({ token, sessionKey, ownSeatNumber }) {
+  const [seats, setSeats] = useState([]);
+  const [selected, setSelected] = useState({});
+  const [phone, setPhone] = useState('');
+  const [authorizationCode, setAuthorizationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState(null);
+  const [activePayment, setActivePayment] = useState(null);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const result = await fetchTablePaymentSeats(token, sessionKey);
+    setSeats(result.seats || []);
+    setError('');
+    setLoading(false);
+  }, [token, sessionKey]);
+
+  useEffect(() => {
+    let active = true;
+    fetchTablePaymentSeats(token, sessionKey)
+      .then((result) => {
+        if (active) {
+          setSeats(result.seats || []);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+    return () => { active = false; };
+  }, [token, sessionKey]);
+  useAutoRefresh(() => load().catch((err) => setError(err.message)), { intervalMs: 10000 });
+
+  useEffect(() => {
+    if (activePayment?.status !== 'processing') return undefined;
+    let active = true;
+    let timer;
+    const poll = async () => {
+      try {
+        const result = await checkTablePayment(token, activePayment.id, sessionKey);
+        if (!active) return;
+        setActivePayment(result);
+        if (result.status !== 'processing') {
+          sessionStorage.removeItem(`ofk_table_payment_attempt_${token}`);
+          setMessage(result.status === 'successful'
+            ? `Payment confirmed. Reference: ${result.reference}`
+            : 'Payment failed. Your seat balances are still due.');
+          await load();
+          return;
+        }
+      } catch (err) {
+        if (active) setError(`${err.message} The payment is still being checked; do not submit it again.`);
+      }
+      if (active) timer = window.setTimeout(poll, 5000);
+    };
+    timer = window.setTimeout(poll, 4000);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [activePayment?.id, activePayment?.status, token, sessionKey, load]);
+
+  const total = seats.reduce((sum, seat) => (
+    selected[seat.customer_session_id]
+      ? sum + (Number(selected[seat.customer_session_id]) || 0)
+      : sum
+  ), 0);
+
+  const toggleSeat = (seat) => {
+    setSelected((current) => {
+      if (current[seat.customer_session_id]) {
+        const next = { ...current };
+        delete next[seat.customer_session_id];
+        return next;
+      }
+      return { ...current, [seat.customer_session_id]: seat.balance_rwf };
+    });
+  };
+
+  const createAuthorization = async () => {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await authorizeTablePayment(token, sessionKey);
+      setGeneratedCode(result);
+      setMessage('Share this one-time code with the person you authorize. It expires in 15 minutes.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const joinAuthorization = async () => {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      await acceptTablePaymentAuthorization(token, authorizationCode.trim(), sessionKey);
+      setAuthorizationCode('');
+      setMessage('Permission accepted. The authorized seat is now available in the payment list.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revokeAuthorization = async () => {
+    if (!generatedCode?.authorization_id) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      await revokeTablePaymentAuthorization(token, generatedCode.authorization_id, sessionKey);
+      setGeneratedCode(null);
+      setMessage('Payment permission revoked.');
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const paySelectedSeats = async () => {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const paymentSeats = seats
+        .filter((seat) => selected[seat.customer_session_id])
+        .map((seat) => ({
+          customer_session_id: seat.customer_session_id,
+          amount_rwf: Number(selected[seat.customer_session_id]),
+          balance_version: seat.balance_version,
+        }));
+      const body = {
+        seats: paymentSeats,
+        payment_details: { phone },
+      };
+      const fingerprint = JSON.stringify({ seats: paymentSeats, phone: phone.trim() });
+      const attemptKey = `ofk_table_payment_attempt_${token}`;
+      let savedAttempt = null;
+      try {
+        savedAttempt = JSON.parse(sessionStorage.getItem(attemptKey) || 'null');
+      } catch {
+        savedAttempt = null;
+      }
+      const idempotencyKey = savedAttempt?.fingerprint === fingerprint
+        ? savedAttempt.key
+        : (window.crypto?.randomUUID?.() || `seat-${Date.now()}-${Math.random().toString(36).slice(2, 18)}`);
+      sessionStorage.setItem(attemptKey, JSON.stringify({ fingerprint, key: idempotencyKey }));
+      const result = await startTablePayment(token, { ...body, idempotency_key: idempotencyKey }, sessionKey);
+      setActivePayment(result);
+      if (result.status === 'successful') {
+        sessionStorage.removeItem(attemptKey);
+        setMessage(`Payment confirmed. Reference: ${result.reference}`);
+        await load();
+      } else if (result.status === 'failed') {
+        sessionStorage.removeItem(attemptKey);
+        setMessage('Payment failed. Your seat balances are still due.');
+      } else {
+        setMessage(`Payment prompt sent. Approve it on your phone. Reference: ${result.reference}`);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mb-5 rounded-2xl bg-white border border-stone-200 p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <Users className="w-5 h-5 mt-0.5 text-[#c2410c]" />
+        <div>
+          <h2 className="font-black text-gray-900">Pay for Others</h2>
+          <p className="text-xs text-stone-500 mt-1">Choose your seat or a seat that has explicitly authorized you. Only seat balances and payment status are shown.</p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid sm:grid-cols-2 gap-3">
+        <div className="rounded-xl border border-stone-200 p-3">
+          <p className="text-xs font-black text-gray-900">Allow someone to pay your bill</p>
+          <p className="text-[11px] text-stone-500 mt-1">A one-time code links permission to this active seat session.</p>
+          <button type="button" disabled={busy} onClick={createAuthorization} className="mt-2 px-3 py-2 rounded-lg bg-stone-100 text-xs font-bold disabled:opacity-50">
+            Create authorization code
+          </button>
+          {generatedCode && (
+            <div className="mt-2">
+              <p className="rounded-lg bg-amber-50 px-3 py-2 font-mono text-sm font-bold text-amber-900 break-all">
+                {generatedCode.code}
+              </p>
+              {generatedCode.authorization_id && (
+                <button type="button" disabled={busy} onClick={revokeAuthorization} className="mt-2 text-xs font-bold text-red-700 disabled:opacity-50">
+                  Revoke permission
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="rounded-xl border border-stone-200 p-3">
+          <p className="text-xs font-black text-gray-900">Enter a code from another seat</p>
+          <div className="mt-2 flex gap-2">
+            <input aria-label="Payment authorization code" className="min-w-0 flex-1 px-3 py-2 rounded-lg border border-stone-200 text-sm" value={authorizationCode} onChange={(event) => setAuthorizationCode(event.target.value)} maxLength={80} />
+            <button type="button" disabled={busy || authorizationCode.trim().length < 24} onClick={joinAuthorization} className="px-3 py-2 rounded-lg bg-stone-100 text-xs font-bold disabled:opacity-50">Authorize</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-black text-gray-900">Choose who you want to pay for</h3>
+          <button type="button" onClick={() => load().catch((err) => setError(err.message))} className="text-xs font-bold text-[#9a3412]">Refresh</button>
+        </div>
+        {loading && <p className="mt-2 text-xs text-stone-500">Loading seat balances…</p>}
+        {!loading && seats.length === 0 && <p className="mt-2 text-xs text-stone-500">No active seats with a bill are available.</p>}
+        <div className="mt-2 space-y-2">
+          {seats.map((seat) => (
+            <div key={seat.customer_session_id} className="rounded-xl border border-stone-200 px-3 py-2.5">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  aria-label={`Select seat ${seat.seat_number}`}
+                  checked={Boolean(selected[seat.customer_session_id])}
+                  disabled={!seat.payable || busy || activePayment?.status === 'processing'}
+                  onChange={() => toggleSeat(seat)}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900">Seat {seat.seat_number}{seat.is_you ? ' · You' : ''}</p>
+                  <p className="text-[11px] text-stone-500">{SEAT_PAYMENT_STATUS[seat.payment_status] || seat.payment_status}</p>
+                </div>
+                <span className="text-sm font-black">{money(seat.balance_rwf)}</span>
+              </div>
+              {selected[seat.customer_session_id] && (
+                <label className="mt-2 ml-7 flex items-center justify-between gap-3 text-xs text-stone-600">
+                  Amount to pay (RWF)
+                  <input
+                    type="number"
+                    min="1"
+                    max={seat.balance_rwf}
+                    step="1"
+                    value={selected[seat.customer_session_id]}
+                    onChange={(event) => setSelected((current) => ({ ...current, [seat.customer_session_id]: event.target.value }))}
+                    className="w-32 px-2 py-1.5 rounded-lg border border-stone-200 text-right font-bold text-gray-900"
+                  />
+                </label>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-stone-100 pt-3">
+        <h3 className="text-sm font-black">Payment breakdown</h3>
+        {seats.filter((seat) => selected[seat.customer_session_id]).map((seat) => (
+          <div key={seat.customer_session_id} className="mt-1 flex justify-between text-xs text-stone-600">
+            <span>Seat {seat.seat_number}{seat.is_you ? ' · You' : ''}</span>
+            <span>{money(selected[seat.customer_session_id])}</span>
+          </div>
+        ))}
+        <div className="mt-2 flex justify-between font-black text-gray-900">
+          <span>Total</span><span>{money(total)}</span>
+        </div>
+        <label className="block mt-3 text-xs font-bold text-stone-600">
+          Mobile money number
+          <input type="tel" inputMode="tel" autoComplete="tel" placeholder="+250 78 123 4567" value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm font-normal" />
+        </label>
+        <p className="mt-2 text-[11px] text-stone-500">Paypack will send a payment prompt to this number. Seats are settled only after the backend verifies the provider result.</p>
+        {message && <p role="status" className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"><ShieldCheck className="inline w-4 h-4 mr-1" />{message}</p>}
+        {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{error}</p>}
+        {activePayment?.status === 'processing' && <p className="mt-2 text-xs font-bold text-amber-700">Payment pending — approve the prompt on your phone. Do not submit another payment.</p>}
+        <button type="button" disabled={busy || total <= 0 || !phone.trim() || activePayment?.status === 'processing' || seats.some((seat) => selected[seat.customer_session_id] && Number(selected[seat.customer_session_id]) > seat.balance_rwf)} onClick={paySelectedSeats} className="mt-3 w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-[#2b1206] text-white text-sm font-black disabled:opacity-50">
+          {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+          Pay selected seats · {money(total)}
+        </button>
+      </div>
     </section>
   );
 }

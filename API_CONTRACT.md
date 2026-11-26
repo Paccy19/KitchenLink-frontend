@@ -6,7 +6,7 @@ our own backend does, and a new one built from this document will too.
 
 - 223 endpoints: 60 for the customer website, 45 for the kitchen
   dashboard, 27 for the delivery worker app, 91 for the admin panel —
-  plus 4 for table QR ordering and 62 for kitchen operations (departments,
+  plus 10 for table QR ordering and 65 for kitchen operations (departments,
   staff, tables, preparation, service, invoices, stock, reports), listed in
   their own sections below.
 - Generated from the website's own code (`src/api/`) and checked against the
@@ -231,6 +231,12 @@ Called from `src/api/tableApi.js`. A table's QR code opens `/menu/:token` on the
 | GET | `/tables/:token` | Public | `fetchTableMenu` | `{ table, kitchen (the storefront, dishes carry department_id), departments, ordering }`. Seat QR tokens include `table.seat.number`; legacy table tokens remain supported. |
 | POST | `/tables/:token/session` | Public (customer optional) | `openTableSession` | Seat QR only. Opens or recovers an independently owned customer session. Guest recovery uses `X-Dining-Session-Key`; sessions expire after six hours. A seat already owned by another active session returns `409 SEAT_SESSION_OCCUPIED`. |
 | POST | `/tables/:token/orders` | Public (customer optional) | `placeTableOrder` | Body `{ items: [{ menu_item_id, quantity, option_ids, note }], guest_name, note }`. Seat QR orders require the session's `X-Dining-Session-Key` (or its authenticated customer); legacy table QR orders remain compatible. The server prices the order, splits it into one ticket per department and adds it to the table's open bill. Returns `{ order, guest_key }`; 10 a minute per network. |
+| GET | `/tables/:token/payment-seats` | Public (customer optional) | `fetchTablePaymentSeats` | Requires the active seat session. Returns only the caller's seat and seats with active consent, with balance/status/version only; never other customers' order lines or account details. |
+| POST | `/tables/:token/payment-authorizations` | Public (customer optional) | `authorizeTablePayment` | Requires the caller's active seat session. Creates a short-lived, single-use consent code for another customer to enter. |
+| POST | `/tables/:token/payment-authorizations/join` | Public (customer optional) | `acceptTablePaymentAuthorization` | `{ code }`. Requires the payer's active seat session; consumes the consent code once. |
+| DELETE | `/tables/:token/payment-authorizations/:authorization_id` | Public (customer optional) | `revokeTablePaymentAuthorization` | Revokes consent from the granting seat session before payment is committed. |
+| POST | `/tables/:token/payments` | Public (customer optional) | `startTablePayment` | `{ idempotency_key, payment_details: { phone }, seats: [{ customer_session_id, amount_rwf, balance_version }] }`. The server validates current balances and consent, then initiates the existing Paypack flow. |
+| POST | `/tables/:token/payments/:paymentId/check` | Public (customer optional) | `checkTablePayment` | `{}`. Verifies a pending attempt with Paypack; client redirects are not proof of payment. Successful payments are allocated to their selected seats only. |
 | GET | `/tables/:token/orders/:orderId` | Public (`X-Guest-Key` header) | `fetchTableOrder` | The order with each department's progress (`departments[]`) and the bill. The key must be sent as a header, never in the URL. |
 
 ### /wishlist
@@ -410,6 +416,9 @@ Called from `src/api/kitchenApi.js` with the kitchen session. Responses are raw 
 | PATCH | `/vendor/tables/:id` | `tables.edit` / `tables.assign` | `updateTable` | `is_active: false` stops its QR code. |
 | DELETE | `/vendor/tables/:id` | `tables.delete` | `deleteTable` | Refused while it has open orders. |
 | POST | `/vendor/tables/:id/session/close` | `tables.edit` / `tables.assign` | `closeDiningSession` | Ends active seat sessions only after all parent orders are completed and paid; unserved and unpaid orders are refused. |
+| GET | `/vendor/tables/:id/seat-balances` | `invoices.view` | `seatBalances` | Cashier view of active seat identifiers, balances, payment status and balance versions; no other customer's order-line details. |
+| POST | `/vendor/tables/:id/seat-payments` | `invoices.process_payment` | `recordSeatPayment` | `{ idempotency_key, method, reference, seats: [{ customer_session_id, amount_rwf, balance_version }] }`. Records one staff payment and allocates it to selected seats. |
+| POST | `/vendor/tables/:id/seats/:seat_number/release` | `tables.assign` | `releaseSeat` | Releases a settled seat; unpaid exceptional release requires authorized staff and an audit reason. |
 | GET | `/vendor/tables/:id/qr` | `tables.qr` | `tableQr` | Query `format=svg|png`, optional `seat={seat_number}`, `download=1`. The image, not JSON. |
 | POST | `/vendor/tables/:id/qr/rotate` | `tables.qr` | `rotateTableQr` | Rotates the legacy table QR. |
 | POST | `/vendor/tables/:id/seats/:seat_number/qr/rotate` | `tables.qr` | `rotateSeatQr` | Rotates one seat QR. The old code remains usable only to recover its active session for up to six hours. |
@@ -422,8 +431,8 @@ Called from `src/api/kitchenApi.js` with the kitchen session. Responses are raw 
 | POST | `/vendor/invoices` | `invoices.generate` | `generateInvoice` | `{ order_id }`. Invoices are made automatically; this opens the order's one. |
 | GET | `/vendor/invoices/:id` | `invoices.view` | `invoice` | Lines with departments, department totals, payments, refunds, kitchen details for the receipt. |
 | PATCH | `/vendor/invoices/:id` | `invoices.edit` | `editInvoice` | `{ discount_rwf, notes, customer_name }` (open table bills only). |
-| POST | `/vendor/invoices/:id/payments` | `invoices.process_payment` | `recordPayment` | `{ amount_rwf, method: cash|mobile_money|card|other, reference }`. Partial payments allowed, never above the balance. Paid in full → its dine-in orders are paid. |
-| POST | `/vendor/invoices/:id/refunds` | `invoices.refund` | `refundInvoice` | `{ amount_rwf, method, reason }`. Only money taken in person. |
+| POST | `/vendor/invoices/:id/payments` | `invoices.process_payment` | `recordPayment` | `{ amount_rwf, method: cash|mobile_money|card|other, reference, idempotency_key }`. Reuse the key for retries of the same attempt; duplicate requests do not record twice. Partial payments cannot exceed the balance. Paid in full → its dine-in orders are paid. |
+| POST | `/vendor/invoices/:id/refunds` | `invoices.refund` | `refundInvoice` | `{ amount_rwf, method, reason }`. Only money taken in person. Seat-allocated payments are blocked from invoice-wide refunds until a seat-level refund workflow is available. |
 | POST | `/vendor/invoices/:id/close` | `invoices.edit` / `tables.assign` | `closeInvoice` | Ends the table session: new orders at the table start a new bill. |
 | GET | `/vendor/inventory` | `inventory.view` | `inventory` | Query `department_id` (or `none`), `q`, `low=true`. With `summary`. |
 | POST | `/vendor/inventory` | `inventory.add` | `createStockItem` | `{ name, unit, quantity, low_stock_threshold, cost_per_unit_rwf, department_id, supplier_id, sku }`. |
