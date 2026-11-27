@@ -50,6 +50,8 @@ export default function CheckoutPage() {
   // Pickup: the customer collects the food at the kitchen — no delivery fee,
   // no delivery worker, and the kitchen confirms with the customer's code.
   const isPickup = fulfillment === 'pickup';
+  // Eating in is ordered from the table's QR menu, so it never reaches checkout's payment.
+  const [eatHere, setEatHere] = useState(false);
 
   // Selected address state
   const [selectedAddressId, setSelectedAddressId] = useState(() => {
@@ -222,9 +224,6 @@ export default function CheckoutPage() {
           <h1 className="font-display text-3xl sm:text-4xl text-[#2b1206]">
             Checkout & Confirmation
           </h1>
-          <p className="text-xs text-stone-500 font-medium">
-            Choose delivery or pickup, review timing and pay safely in escrow
-          </p>
         </div>
       </div>
 
@@ -234,9 +233,10 @@ export default function CheckoutPage() {
         <div className="lg:col-span-7 space-y-6">
 
           <FulfillmentSection
-            fulfillment={fulfillment}
+            fulfillment={eatHere ? 'dine_in' : fulfillment}
             onFulfillmentChange={(value) => {
-              setFulfillment(value);
+              setEatHere(value === 'dine_in');
+              if (value !== 'dine_in') setFulfillment(value);
               setErrorMsg('');
             }}
             activeVendor={activeVendor}
@@ -248,6 +248,7 @@ export default function CheckoutPage() {
             onError={setErrorMsg}
           />
 
+          {!eatHere && (<>
           <ScheduleSection
             orderType={orderType}
             isPickup={isPickup}
@@ -279,10 +280,12 @@ export default function CheckoutPage() {
               className="w-full text-xs p-3 rounded-xl border border-stone-200 outline-none focus:border-[#542813] focus:ring-2 focus:ring-[#542813]/15 transition resize-none"
             />
           </div>
+          </>)}
 
         </div>
 
         {/* Right Column: Order Summary & Placement */}
+        {!eatHere && (
         <div className="lg:col-span-5">
           <OrderSummary
             activeVendor={activeVendor}
@@ -302,6 +305,7 @@ export default function CheckoutPage() {
             disabled={isSubmitting || isSyncing || deliveryQuote.isLoading}
           />
         </div>
+        )}
 
       </div>
 

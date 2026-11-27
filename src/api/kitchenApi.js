@@ -29,6 +29,8 @@ export const kitchenApi = {
   departments: () => vendorRequest('/vendor/departments'),
   department: (departmentId) => vendorRequest(`/vendor/departments/${id(departmentId)}`),
   createDepartment: (body) => vendorRequest('/vendor/departments', { method: 'POST', body }),
+  // One step: the departments to have and which one makes each dish.
+  setupDepartments: (body) => vendorRequest('/vendor/departments/setup', { method: 'POST', body }),
   updateDepartment: (departmentId, body) => vendorRequest(`/vendor/departments/${id(departmentId)}`, { method: 'PATCH', body }),
   deleteDepartment: (departmentId) => vendorRequest(`/vendor/departments/${id(departmentId)}`, { method: 'DELETE' }),
   setDepartmentStaff: (departmentId, staffIds) =>

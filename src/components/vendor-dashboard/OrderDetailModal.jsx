@@ -152,14 +152,17 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
                     </p>
                     {entry.options && <p className="text-[11px] text-stone-400">{entry.options}</p>}
                   </div>
-                  <span className="text-sm font-bold text-stone-800 flex-shrink-0">
-                    {(entry.price * entry.quantity).toLocaleString()} RWF
-                  </span>
+                  {!order.departmentOnly && (
+                    <span className="text-sm font-bold text-stone-800 flex-shrink-0">
+                      {(entry.price * entry.quantity).toLocaleString()} RWF
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
+          {!order.departmentOnly && (
           <div className="rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-4 space-y-2 text-sm">
             <div className="flex justify-between text-stone-600">
               <span>Subtotal</span>
@@ -189,6 +192,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onAdvance, on
             )}
 
           </div>
+          )}
         </div>
 
         {order.backendId && <OrderTools orderId={order.backendId} />}

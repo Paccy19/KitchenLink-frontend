@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Layers, Plus, Pencil, Trash2, Users, UtensilsCrossed, ChefHat } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, Users, UtensilsCrossed, ChefHat, Wand2 } from 'lucide-react';
+import { vendorApi } from '../../api/vendorApi';
+import { KINDS, guessKind } from '../../components/vendor-dashboard/ops/departmentKinds';
 import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
 import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, Modal, Field, inputClass, useLoad, useAction } from '../../components/vendor-dashboard/ops/ui';
@@ -13,8 +15,10 @@ export default function VendorDepartmentsPage() {
   const { can, allowed } = useVendor();
   const { data, error, loading, reload } = useLoad(() => kitchenApi.departments(), []);
   const [editing, setEditing] = useState(null);
+  const [sorting, setSorting] = useState(false);
   const action = useAction();
   const departments = data?.departments || [];
+  const canSort = can('departments.create') && (can('menu.assign_departments') || can('menu.edit'));
 
   return (
     <div className="space-y-5">
@@ -23,6 +27,15 @@ export default function VendorDepartmentsPage() {
         actions={can('departments.create') && <Button onClick={() => setEditing('new')}><Plus className="w-4 h-4" /> Create department</Button>}
       />
       <ErrorNote message={error || action.error} />
+      {data && canSort && (departments.length === 0 || data.unassigned_products > 0) && (
+        <button type="button" onClick={() => setSorting(true)} className="kl-rise w-full flex items-center justify-between gap-3 rounded-3xl bg-gradient-to-r from-[#2b1206] to-[#6d391d] text-white px-5 py-4 text-left shadow-md">
+          <span>
+            <span className="block font-bold">{departments.length === 0 ? 'Send each dish to the right team' : `${data.unassigned_products} dish${data.unassigned_products === 1 ? '' : 'es'} in no department`}</span>
+            <span className="block text-xs text-white/75 mt-0.5">Pilau to the kitchen, cake to the baker, coffee to the barista. One bill for the customer.</span>
+          </span>
+          <Wand2 className="w-5 h-5 flex-shrink-0" />
+        </button>
+      )}
       {loading && !data ? (
         <Loading />
       ) : departments.length === 0 ? (
@@ -72,6 +85,7 @@ export default function VendorDepartmentsPage() {
           ))}
         </div>
       )}
+      {sorting && <SortDishes departments={departments} onClose={() => setSorting(false)} onSaved={() => { setSorting(false); reload(); }} />}
       {editing && (
         <DepartmentForm
           department={editing === 'new' ? null : editing}
@@ -198,6 +212,56 @@ function DepartmentForm({ department, categories, onClose, onSaved }) {
         )}
         <ErrorNote message={action.error} />
         <Button className="w-full" busy={action.busy === 'save'} onClick={save}>{isNew ? 'Create department' : 'Save changes'}</Button>
+      </div>
+    </Modal>
+  );
+}
+
+/** Choose the departments, then which one makes each dish (a guess from the name to start). */
+function SortDishes({ departments, onClose, onSaved }) {
+  const menu = useLoad(() => vendorApi.listMenu({ limit: 100 }), []);
+  const dishes = menu.data?.items || [];
+  const existing = departments.map((d) => d.category).filter((c) => KINDS.some((k) => k.id === c));
+  const [kinds, setKinds] = useState(existing.length ? [...new Set(existing)] : ['restaurant']);
+  const [picked, setPicked] = useState({});
+  const action = useAction();
+  const categoryOf = (dish) => {
+    if (picked[dish.id] && kinds.includes(picked[dish.id])) return picked[dish.id];
+    const current = departments.find((d) => d.id === dish.department_id)?.category;
+    return current && kinds.includes(current) ? current : guessKind(dish.name, kinds);
+  };
+  const toggle = (id) => setKinds((list) => (list.includes(id) ? (list.length > 1 ? list.filter((k) => k !== id) : list) : [...list, id]));
+  const save = () => action.run('save', async () => {
+    await kitchenApi.setupDepartments({ departments: kinds, dishes: dishes.map((d) => ({ menu_item_id: d.id, category: categoryOf(d) })) });
+    onSaved();
+  });
+
+  return (
+    <Modal title="Who makes what" onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-stone-500 mb-2">Your teams</p>
+          <div className="flex flex-wrap gap-2">
+            {KINDS.map((k) => (
+              <button key={k.id} type="button" onClick={() => toggle(k.id)} className={`px-3 py-1.5 rounded-full text-sm font-bold border ${kinds.includes(k.id) ? 'bg-[#2b1206] text-white border-[#2b1206]' : 'bg-white text-stone-700 border-stone-200'}`}>{k.label}</button>
+            ))}
+          </div>
+        </div>
+        {menu.loading && !menu.data ? <Loading /> : (
+          <div className="max-h-[45vh] overflow-y-auto divide-y divide-stone-100 rounded-2xl border border-stone-200">
+            {dishes.map((dish) => (
+              <div key={dish.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                <span className="text-sm font-semibold text-gray-900 truncate">{dish.name}</span>
+                <select className={`${inputClass} !w-auto !py-1.5 text-sm`} value={categoryOf(dish)} onChange={(e) => setPicked((p) => ({ ...p, [dish.id]: e.target.value }))}>
+                  {KINDS.filter((k) => kinds.includes(k.id)).map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
+                </select>
+              </div>
+            ))}
+            {!dishes.length && <p className="px-3 py-4 text-sm text-stone-500">Add dishes to your menu first.</p>}
+          </div>
+        )}
+        <ErrorNote message={menu.error || action.error} />
+        <Button className="w-full" busy={action.busy === 'save'} disabled={!dishes.length} onClick={save}>Save</Button>
       </div>
     </Modal>
   );

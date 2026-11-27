@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Loader2, Minus, Plus, ShoppingBag, UtensilsCrossed, CheckCircle2, Clock, X, Receipt, BellRing, Star, Tag, Users, ShieldCheck } from 'lucide-react';
+import { Loader2, Minus, Plus, ShoppingBag, UtensilsCrossed, CheckCircle2, Clock, X, Receipt, BellRing, Star, Tag, Users, ShieldCheck, Link2 } from 'lucide-react';
 import {
   fetchTableMenu,
   openTableSession,
@@ -19,6 +19,7 @@ import {
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import ModalPortal from '../components/common/ModalPortal';
 import MenuPhotos from '../components/common/MenuPhotos';
+import { useCart } from '../context/CartContext';
 
 const money = (value) => `RWF ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
 const cartKey = (token) => `ofk_table_cart_${token}`;
@@ -31,6 +32,34 @@ const read = (key, fallback) => {
     return fallback;
   }
 };
+/**
+ * "Keep this link": a guest's orders (and seat session) in the link's #part,
+ * which browsers never send to the server. Opening it on any phone adds them
+ * to that phone's list, so a guest without an account can follow the order there.
+ */
+const keepLink = (token, orders, seatKey) => {
+  const data = { o: orders.map((o) => [o.id, o.key, o.number]), ...(seatKey ? { s: seatKey } : {}) };
+  const packed = btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${window.location.origin}/menu/${token}#keep=${packed}`;
+};
+const importKeptLink = (token) => {
+  const match = window.location.hash.match(/^#keep=([A-Za-z0-9_-]+)$/);
+  if (!match) return;
+  try {
+    const data = JSON.parse(decodeURIComponent(escape(atob(match[1].replace(/-/g, '+').replace(/_/g, '/')))));
+    const saved = read(ordersKey(token), []);
+    const known = new Set(saved.map((o) => o.id));
+    const added = (Array.isArray(data.o) ? data.o : [])
+      .filter((row) => Array.isArray(row) && typeof row[0] === 'string' && typeof row[1] === 'string' && !known.has(row[0]))
+      .map(([id, key, number]) => ({ id, key, number: typeof number === 'string' ? number : '' }));
+    localStorage.setItem(ordersKey(token), JSON.stringify([...saved, ...added].slice(-10)));
+    if (typeof data.s === 'string' && data.s && !localStorage.getItem(sessionKey(token))) localStorage.setItem(sessionKey(token), data.s);
+  } catch {
+    // A damaged link: ignore it.
+  }
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+};
+
 const STATUS_TONE = {
   pending: 'bg-amber-50 text-amber-800 border-amber-200',
   accepted: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -52,7 +81,10 @@ export default function TableMenuPage() {
   const [seatSessionError, setSeatSessionError] = useState('');
   const [department, setDepartment] = useState('');
   const [cart, setCart] = useState(() => read(cartKey(token), []));
-  const [myOrders, setMyOrders] = useState(() => read(ordersKey(token), []));
+  const [myOrders, setMyOrders] = useState(() => {
+    importKeptLink(token);
+    return read(ordersKey(token), []);
+  });
   const [choosing, setChoosing] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -83,6 +115,7 @@ export default function TableMenuPage() {
     return () => { cancelled = true; };
   }, [token]);
   useEffect(() => {
+    importKeptLink(token);
     setCart(read(cartKey(token), []));
     setMyOrders(read(ordersKey(token), []));
     setDepartment('');
@@ -113,6 +146,22 @@ export default function TableMenuPage() {
   const count = cart.reduce((s, l) => s + l.quantity, 0);
   const estimate = cart.reduce((s, l) => s + l.unit * l.quantity, 0);
   const canOrder = Boolean(orderingCanOrder(menu) && (!menu?.table?.seat || seatSession));
+
+  // A basket started on the marketplace for this kitchen can come to the table.
+  const marketplace = useCart();
+  const basket = menu && marketplace.activeVendor?.id === menu.kitchen.id ? marketplace.cartItems : [];
+  const bringBasket = () => {
+    const items = new Map((menu.kitchen.menu || []).flatMap((g) => g.items).map((item) => [String(item.id), item]));
+    for (const line of basket) {
+      const item = items.get(String(line.dishId ?? line.id));
+      if (!item) continue;
+      const chosen = Object.values(line.selectedOptions || {});
+      const ids = (item.options || []).filter((o) => chosen.includes(o.name)).map((o) => o.id);
+      for (let i = 0; i < line.quantity; i += 1) addLine(item, ids, line.specialInstructions || '');
+    }
+    marketplace.clearCart();
+    setCartOpen(true);
+  };
 
   if (error && !menu) {
     return (
@@ -155,6 +204,13 @@ export default function TableMenuPage() {
         )}
       </header>
 
+      {ordering.can_order && basket.length > 0 && (
+        <button type="button" onClick={bringBasket} className="mb-4 w-full flex items-center justify-between rounded-2xl bg-[#2b1206] text-white px-4 py-3 text-sm font-bold">
+          <span className="flex items-center gap-2"><ShoppingBag className="w-4 h-4" /> Add your basket to this table ({basket.reduce((n, l) => n + l.quantity, 0)} items)</span>
+          <Plus className="w-4 h-4" />
+        </button>
+      )}
+
       {ordering.can_order && <TableRequests token={token} />}
 
       {(menu.promotions || []).length > 0 && (
@@ -170,7 +226,7 @@ export default function TableMenuPage() {
         </div>
       )}
 
-      {myOrders.length > 0 && <MyOrders token={token} orders={myOrders} />}
+      {myOrders.length > 0 && <MyOrders token={token} orders={myOrders} seatKey={seatSession?.session_key || localStorage.getItem(sessionKey(token)) || ''} />}
       {table.seat && seatSession && (
         <SeatPaymentPanel token={token} sessionKey={seatSession.session_key || localStorage.getItem(sessionKey(token)) || ''} ownSeatNumber={seatSession.seat_number} />
       )}
@@ -409,8 +465,24 @@ function RateOrder({ token, order, guestKey }) {
   );
 }
 
-function MyOrders({ token, orders }) {
+function MyOrders({ token, orders, seatKey }) {
   const [views, setViews] = useState({});
+  const [kept, setKept] = useState('');
+  const keep = async () => {
+    const url = keepLink(token, orders, seatKey);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'My order', url });
+        setKept('Link shared. Open it on any phone to follow your order.');
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setKept('Link copied. Open it on any phone to follow your order.');
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      window.prompt('Copy this link to follow your order on any phone:', url);
+    }
+  };
   const load = useCallback(async () => {
     const results = await Promise.all(orders.map((o) => fetchTableOrder(token, o.id, o.key).then((r) => [o.id, r.order]).catch(() => [o.id, null])));
     setViews(Object.fromEntries(results));
@@ -446,6 +518,12 @@ function MyOrders({ token, orders }) {
           {order.status === 'delivered' && <RateOrder token={token} order={order} guestKey={orders.find((o) => o.id === order.id)?.key} />}
         </div>
       ))}
+      <div>
+        <button type="button" onClick={keep} className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-[#2b1206] text-[#2b1206] px-4 py-2.5 text-sm font-bold hover:bg-[#2b1206] hover:text-white transition">
+          <Link2 className="w-4 h-4" /> Keep this link
+        </button>
+        <p className="text-[11px] text-stone-500 text-center mt-1">{kept || 'Follow your order on any phone, no account needed. Keep it private.'}</p>
+      </div>
       {bill && (
         <div className="rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] p-4 flex items-center justify-between text-sm">
           <span className="flex items-center gap-2 font-bold"><Receipt className="w-4 h-4" /> Your bill {bill.invoice_number}</span>

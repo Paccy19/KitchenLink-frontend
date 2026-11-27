@@ -268,6 +268,28 @@ export function kitchenOpsRoutes({ getState, me, fail, nextId, nowIso, findVendo
       log(o, `Created the ${d.name} department`, 'department.created');
       return deptView(o, d);
     }],
+    // One step: the departments to have (one per kind) and which makes each dish.
+    ['POST', '/vendor/departments/setup', (r) => {
+      const o = mine(r);
+      const kinds = Array.isArray(r.body.departments) ? r.body.departments : [];
+      if (!kinds.length) fail(400, 'Choose the kinds of department this kitchen has.');
+      const names = { restaurant: 'Kitchen', coffee: 'Coffee', bakery: 'Bakery', bar: 'Bar', desserts: 'Desserts', juice_bar: 'Juice bar', fast_food: 'Fast food', catering: 'Catering' };
+      const byKind = {};
+      for (const kind of kinds) {
+        let d = o.departments.find((x) => x.category === kind);
+        if (!d) {
+          d = { id: nextId('dep'), name: names[kind] || kind, category: kind, custom_category: '', description: '', code_prefix: CATEGORIES.find((c) => c.id === kind)?.prefix || 'X', is_active: true, workflow: {}, stations: [], manager_staff_ids: [], image_url: null };
+          o.departments.push(d);
+          log(o, `Created the ${d.name} department`, 'department.created');
+        }
+        byKind[kind] = d.id;
+      }
+      for (const dish of r.body.dishes || []) {
+        const m = (getState().menuItems || []).find((x) => x.id === dish.menu_item_id);
+        if (m) m.department_id = byKind[dish.category] || null;
+      }
+      return { departments: o.departments.map((d) => deptView(o, d)), categories: CATEGORIES, unassigned_products: 0 };
+    }],
     ['PATCH', '/vendor/departments/:id', (r, p) => {
       const o = mine(r);
       const d = find(o.departments, p.id, 'Department');

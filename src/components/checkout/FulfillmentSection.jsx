@@ -1,12 +1,77 @@
-import React, { useState } from 'react';
-import { AlertTriangle, Bike, MapPin, Plus, Store } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, ArrowRight, Bike, Camera, MapPin, Plus, QrCode, Store, UtensilsCrossed } from 'lucide-react';
+import TableQrScanner from './TableQrScanner';
 import StepCard from './StepCard';
 import KitchenLocationFields from '../vendor-dashboard/KitchenLocationFields';
 
 const FULFILLMENT_OPTIONS = [
   { id: 'delivery', label: 'Deliver to me', hint: 'A delivery worker brings it', icon: Bike },
   { id: 'pickup', label: "I'll pick it up", hint: 'Collect at the kitchen · no delivery fee', icon: Store },
+  { id: 'dine_in', label: "I'm at the restaurant", hint: 'Served at your table', icon: UtensilsCrossed },
 ];
+
+/** The table token from a scanned table link (…/menu/<token>) or a bare code. */
+const tableToken = (text) => {
+  const value = String(text || '').trim();
+  const match = value.match(/\/menu\/([A-Za-z0-9_-]+)/);
+  if (match) return match[1];
+  return /^[A-Za-z0-9_-]{6,}$/.test(value) ? value : '';
+};
+
+/**
+ * Eating in: the table's QR code is what tells the kitchen where you sit, so
+ * the order is placed from the table's menu. The basket comes along.
+ */
+function DineInPanel({ activeVendor }) {
+  const navigate = useNavigate();
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const open = (text) => {
+    const token = tableToken(text);
+    if (!token) {
+      setError("That isn't a table code. Scan the QR code on your table.");
+      return false;
+    }
+    navigate(`/menu/${token}`);
+    return true;
+  };
+  const onScanned = useCallback((text) => {
+    setScanning(false);
+    open(text);
+  }, []);
+  return (
+    <div className="p-4 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] space-y-3 text-xs">
+      <div className="flex items-start gap-3">
+        <QrCode className="w-6 h-6 text-[#8a5332] flex-shrink-0" />
+        <div>
+          <p className="font-bold text-sm text-[#3d1b0c]">Scan the QR code on your table</p>
+          <p className="text-stone-600 mt-0.5">
+            It opens {activeVendor?.name || 'the kitchen'}'s menu for your table, with your basket.
+          </p>
+        </div>
+      </div>
+      <button type="button" onClick={() => { setError(''); setScanning(true); }} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-[#2b1206] text-white text-sm font-bold">
+          <Camera className="w-4 h-4" /> Scan with camera
+        </button>
+      <form onSubmit={(e) => { e.preventDefault(); open(code); }} className="flex gap-2">
+        <input
+          type="text"
+          value={code}
+          onChange={(e) => { setCode(e.target.value); setError(''); }}
+          placeholder="Or paste the table link"
+          className={inputClass(Boolean(error))}
+        />
+        <button type="submit" className="px-3 rounded-xl border border-[#2b1206] text-[#2b1206] font-bold inline-flex items-center gap-1 flex-shrink-0">
+          Open <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </form>
+      {error && <p className="text-red-600 font-semibold">{error}</p>}
+      {scanning && <TableQrScanner onResult={onScanned} onClose={() => setScanning(false)} />}
+    </div>
+  );
+}
 
 /** The map pin of a saved address ({ lat, lng } numbers), or null when it has none. */
 export const addressPoint = (address) => {
@@ -25,7 +90,7 @@ const inputClass = (error) =>
   }`;
 
 /**
- * Checkout step 1: delivery or pickup, then where to deliver. Each delivery
+ * Checkout step 1: delivery, pickup or eating in, then where to deliver. Each delivery
  * address has a map pin (searched or tapped), and the delivery fee is priced
  * by road from the kitchen to that pin — not to wherever the customer's phone
  * is right now. Addresses saved before pins existed ask for one.
@@ -42,6 +107,7 @@ export default function FulfillmentSection({
   onError,
 }) {
   const isPickup = fulfillment === 'pickup';
+  const isDineIn = fulfillment === 'dine_in';
 
   // The address form: a new address, or `editingId` when pinning a saved one.
   const [showForm, setShowForm] = useState(false);
@@ -114,9 +180,9 @@ export default function FulfillmentSection({
   return (
     <StepCard
       step={1}
-      title={isPickup ? 'Pickup at the kitchen' : 'Delivery Destination'}
+      title={isDineIn ? 'At the restaurant' : isPickup ? 'Pickup at the kitchen' : 'Delivery Destination'}
       action={
-        !isPickup && !showForm && (
+        !isPickup && !isDineIn && !showForm && (
           <button
             onClick={openNew}
             className="text-xs font-bold text-[#542813] hover:underline flex items-center gap-1 whitespace-nowrap flex-shrink-0"
@@ -127,7 +193,7 @@ export default function FulfillmentSection({
         )
       }
     >
-      <div role="radiogroup" aria-label="How do you want to get your order?" className="grid grid-cols-2 gap-2.5">
+      <div role="radiogroup" aria-label="How do you want to get your order?" className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         {FULFILLMENT_OPTIONS.map((option) => {
           const Icon = option.icon;
           const selected = fulfillment === option.id;
@@ -154,7 +220,9 @@ export default function FulfillmentSection({
         })}
       </div>
 
-      {isPickup ? (
+      {isDineIn ? (
+        <DineInPanel activeVendor={activeVendor} />
+      ) : isPickup ? (
         <div className="p-3.5 rounded-2xl bg-[#faf6f2] border border-[#ebd7c5] flex items-start gap-3 text-xs">
           <Store className="w-5 h-5 text-[#8a5332] flex-shrink-0 mt-0.5" />
           <div>

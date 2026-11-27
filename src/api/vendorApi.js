@@ -316,6 +316,8 @@ export function mapOrder(raw = {}) {
     notes: raw.cancel_reason || delivery.note || '',
     eta: raw.eta_minutes ? `${raw.eta_minutes} min` : '—',
     prepMinutes: raw.prep_minutes ?? null,
+    // A department's part of the order (a baker sees the cake): no prices or totals.
+    departmentOnly: raw.department_only === true,
     // Whether this person may enter the customer's code (owner: always).
     canHandOver: raw.can_hand_over !== false,
     // A scheduled order can be marked ready from this time (null = now / n/a).

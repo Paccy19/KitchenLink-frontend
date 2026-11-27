@@ -103,6 +103,36 @@ const sectionOf = (to) => {
 };
 const sectionName = (index) => SECTIONS[index]?.[0] || 'Settings';
 
+// Pages that only repeat what a person's own work page already shows. A
+// chef's orders are on Preparation, a packer's on Packing, a server's on
+// My tables; viewing orders or departments alone doesn't add a page for them.
+const VIEW_ONLY = {
+  '/vendor-dashboard/orders': ['orders.view', 'orders.details'],
+  '/vendor-dashboard/departments': ['departments.view'],
+};
+const ALWAYS = ['/vendor-dashboard', '/vendor-dashboard/inbox'];
+
+/**
+ * The dashboard pages this person gets, in sidebar order: only those their
+ * permissions are for. Overview stays: for staff it is their day (clocking in, their tasks).
+ */
+export function useVendorPages() {
+  const { workspace, can, allowed, routeAccess, isKitchenAdmin } = useVendor();
+  const held = Object.keys(workspace?.permissions || {});
+  const loads = (item) => (item.route && routeAccess ? allowed(item.route) : !item.perm || item.perm.some((permission) => can(permission)));
+  const pages = NAV.filter(loads);
+  if (!workspace || isKitchenAdmin || workspace.is_admin) return pages;
+  const strong = pages.filter((item) => {
+    const weak = VIEW_ONLY[item.to];
+    if (!weak) return true;
+    const group = item.to === '/vendor-dashboard/departments' ? 'departments.' : null;
+    return group ? held.some((p) => p.startsWith(group) && !weak.includes(p)) : item.perm.some((p) => !weak.includes(p) && can(p));
+  });
+  // With nothing else to do, the view-only pages stay (someone who may only view orders).
+  const work = strong.filter((item) => !ALWAYS.includes(item.to));
+  return work.length ? strong : pages;
+}
+
 export default function VendorLayout() {
   const {
     vendor,
@@ -128,7 +158,7 @@ export default function VendorLayout() {
   // Unread customer messages.
   const chatUnread = useSupportUnread(vendorApi.chats, { enabled: Boolean(hasToken && isAuthenticated && canChats) });
   // A page shows when the person may load it: the server's own rule for its main request.
-  const visibleNav = NAV.filter((item) => (item.route && routeAccess ? allowed(item.route) : !item.perm || item.perm.some((permission) => can(permission))))
+  const visibleNav = useVendorPages()
     .map((item, order) => ({ ...item, section: sectionOf(item.to), order }))
     .sort((a, b) => a.section - b.section || a.order - b.order);
   const staffName = workspace?.actor?.type === 'staff' ? workspace.actor.name : '';

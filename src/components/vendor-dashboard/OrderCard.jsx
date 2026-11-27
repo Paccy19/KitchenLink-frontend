@@ -87,9 +87,11 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
               <span className="font-bold text-gray-900">{entry.quantity}×</span> {entry.name}
               {entry.options ? <span className="text-stone-400"> · {entry.options}</span> : null}
             </span>
-            <span className="font-bold text-stone-800 flex-shrink-0">
-              {(entry.price * entry.quantity).toLocaleString()} RWF
-            </span>
+            {!order.departmentOnly && (
+              <span className="font-bold text-stone-800 flex-shrink-0">
+                {(entry.price * entry.quantity).toLocaleString()} RWF
+              </span>
+            )}
           </div>
         ))}
         {remaining > 0 && (
@@ -99,7 +101,7 @@ export default function OrderCard({ order, onAdvance, onCancel, onView }) {
 
       <div className="flex items-center justify-between pt-3 border-t border-stone-100">
         <span className="text-[11px] text-stone-500 font-medium">
-          Total <span className="text-base font-black text-[#4e2410] ml-1">{order.total.toLocaleString()} RWF</span>
+          {order.departmentOnly ? 'Your part of this order' : <>Total <span className="text-base font-black text-[#4e2410] ml-1">{order.total.toLocaleString()} RWF</span></>}
         </span>
         <span
           className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

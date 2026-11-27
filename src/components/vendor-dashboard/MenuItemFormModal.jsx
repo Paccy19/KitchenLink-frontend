@@ -4,6 +4,8 @@ import { X, Upload, Plus, Trash2, ImageOff, Clock, Sparkles } from 'lucide-react
 import { useVendor } from '../../context/VendorContext';
 import FadeImage from '../common/FadeImage';
 import { suggestedCategories, vendorTypeLabel } from '../../data/vendorTypes';
+import { kitchenApi } from '../../api/kitchenApi';
+import { KINDS, guessKind } from './ops/departmentKinds';
 
 const EMPTY = {
   name: '',
@@ -87,8 +89,22 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
       setCategoryBusy(false);
     }
   };
-  const { workspace, can } = useVendor();
+  const { workspace, can, refreshWorkspace } = useVendor();
   const departments = (workspace?.departments || []).filter((d) => (item ? ['menu.edit', 'menu.assign_departments'] : ['menu.create']).some((p) => can(p, d.id)));
+  // Who makes the dish: a department, or a kind of team not created yet
+  // (made on save), so its orders go straight to that team.
+  const canAddTeam = can('departments.create');
+  const missingKinds = canAddTeam ? KINDS.filter((k) => !(workspace?.departments || []).some((d) => d.category === k.id)) : [];
+  const [who, setWho] = useState(null); // null = not chosen yet: guessed from the name
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const guessedWho = () => {
+    const kind = guessKind(form.name);
+    const existing = departments.find((d) => d.category === kind);
+    if (existing) return `d:${existing.id}`;
+    if (missingKinds.some((k) => k.id === kind)) return `k:${kind}`;
+    return departments.length ? `d:${departments[0].id}` : '';
+  };
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const fileRef = useRef(null);
@@ -106,6 +122,8 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
   useEffect(() => {
     if (!isOpen) return;
     setErrors({});
+    setSaveError('');
+    setWho(item ? (item.departmentId ? `d:${item.departmentId}` : '') : null);
     if (item) {
       setForm({
         ...EMPTY,
@@ -176,9 +194,25 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (!validate()) return;
+    const choice = who ?? guessedWho();
+    let departmentId = choice.startsWith('d:') ? choice.slice(2) : '';
+    if (choice.startsWith('k:')) {
+      // A new team: create it first (the Baker, Barista… roles follow it).
+      setSaving(true);
+      try {
+        const result = await kitchenApi.setupDepartments({ departments: [choice.slice(2)] });
+        departmentId = (result.departments || []).find((d) => d.category === choice.slice(2))?.id || '';
+        refreshWorkspace?.();
+      } catch (err) {
+        setSaveError(err?.message || 'Could not add that team.');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
+    }
     onSubmit({
       name: form.name.trim(),
       category: form.category,
@@ -191,8 +225,8 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
       isPreorder: form.isPreorder,
       preorderCutoff: form.isPreorder ? form.preorderCutoff.trim() : '',
       popular: form.popular,
-      // Only when the picker was shown (kitchens with departments).
-      departmentId: departments.length ? form.departmentId || '' : undefined,
+      // Only when the picker was shown.
+      departmentId: departments.length || missingKinds.length ? departmentId : undefined,
       preparationNotes: form.preparationNotes.trim(),
       options: form.options
         .filter((option) => option.name.trim() && option.choicesText.trim())
@@ -425,20 +459,31 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
               {errors.prepTime && <p className="text-[11px] text-red-500 font-semibold mt-1">{errors.prepTime}</p>}
             </div>
 
-            {departments.length > 0 && (
+            {(departments.length > 0 || missingKinds.length > 0) && (
               <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-stone-500 block mb-1.5">Department (who prepares it)</label>
-                <select
-                  value={form.departmentId || ''}
-                  onChange={(event) => update({ departmentId: event.target.value })}
-                  className={inputClass('departmentId')}
-                >
-                  <option value="">Whole kitchen</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-stone-400 mt-1">Orders for this dish go to that department's preparation queue.</p>
+                <label className="text-xs font-bold text-stone-500 block mb-1.5">Who makes it?</label>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Who makes it?">
+                  {[
+                    ...departments.map((d) => [`d:${d.id}`, d.name]),
+                    ...missingKinds.map((k) => [`k:${k.id}`, k.label]),
+                    ['', 'Everyone'],
+                  ].map(([value, label]) => {
+                    const selected = (who ?? guessedWho()) === value;
+                    return (
+                      <button
+                        key={value || 'all'}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setWho(value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition ${selected ? 'bg-[#2b1206] text-white border-[#2b1206]' : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-50'}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-stone-400 mt-1">Orders for this dish go only to that team.</p>
               </div>
             )}
 
@@ -556,6 +601,7 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
         </div>
 
         <div className="sticky bottom-0 bg-white/95 backdrop-blur border-t border-stone-100 px-5 sm:px-6 py-4 flex items-center justify-end gap-2">
+          {saveError && <p className="mr-auto text-xs font-semibold text-red-600">{saveError}</p>}
           <button
             type="button"
             onClick={onClose}
@@ -565,7 +611,8 @@ export default function MenuItemFormModal({ isOpen, item, onClose, onSubmit }) {
           </button>
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95"
+            disabled={saving}
+            className="disabled:opacity-60 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#2b1206] via-[#481f0d] to-[#200d05] hover:from-[#3d1b0c] text-white font-bold text-sm shadow-md transition active:scale-95"
           >
             {item ? 'Save Changes' : 'Add Dish'}
           </button>
