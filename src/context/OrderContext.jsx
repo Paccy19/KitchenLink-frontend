@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { cancelRemoteOrder, createOrder as createRemoteOrder, fetchOrder, fetchOrders } from '../api/endpoints';
+import { cancelRemoteOrder, respondToOrderIssue, createOrder as createRemoteOrder, fetchOrder, fetchOrders } from '../api/endpoints';
 import { normalizeOrder } from '../api/normalize';
 import { useAuth } from './AuthContext';
 import useAutoRefresh from '../hooks/useAutoRefresh';
@@ -143,6 +143,14 @@ export const OrderProvider = ({ children }) => {
     }
   };
 
+  /** The customer answers the kitchen about a missing dish; throws so the screen can show why. */
+  const respondToIssue = async (orderId, issueId, choice) => {
+    const result = await respondToOrderIssue(orderId, issueId, choice);
+    const updated = normalizeOrder(result);
+    setOrders((current) => current.map((order) => (order.id === orderId ? updated : order)));
+    return updated;
+  };
+
   const getOrderById = (id) => orders.find((order) => order.id === id);
 
   const value = useMemo(() => ({
@@ -151,6 +159,7 @@ export const OrderProvider = ({ children }) => {
     setActiveTrackingOrderId,
     placeOrder,
     cancelOrder,
+    respondToIssue,
     getOrderById,
     refreshOrders,
     refreshOrder,

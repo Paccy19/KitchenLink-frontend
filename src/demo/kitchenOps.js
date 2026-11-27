@@ -647,6 +647,8 @@ export function kitchenOpsRoutes({ getState, me, fail, nextId, nowIso, findVendo
       ['POST', '/vendor/packing/:id/pack'], ['POST', '/vendor/packing/:id/handover'], ['POST', '/vendor/packing/:id/issue'],
       ['POST', '/vendor/orders/:id/leftovers'], ['POST', '/vendor/orders/:id/takeaway'],
       ['POST', '/vendor/kitchen/orders/:o/tickets/:t/flags'], ['POST', '/vendor/kitchen/orders/:o/tickets/:t/flags/:i/resolve'],
+      // A customer answering the kitchen about a dish it can't make.
+      ['POST', '/orders/:id/issues/:issueId/respond'], ['POST', '/tables/:token/orders/:id/issues/:issueId/respond'],
       ['POST', '/vendor/reservations/:id/confirm'], ['POST', '/vendor/reservations/:id/reject'], ['POST', '/vendor/reservations/:id/arrive'],
       ['POST', '/vendor/reservations/:id/seat'], ['POST', '/vendor/reservations/:id/cancel'], ['POST', '/vendor/reservations/:id/no-show'], ['POST', '/vendor/reservations/:id/deposit'],
       ['POST', '/bookings/kitchens/:id'], ['POST', '/bookings/manage/cancel'],

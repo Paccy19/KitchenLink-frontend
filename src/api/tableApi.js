@@ -41,6 +41,9 @@ export const fetchTableOrder = (token, orderId, guestKey) =>
   apiGet(`/tables/${t(token)}/orders/${encodeURIComponent(orderId)}`, {}, guestKey ? { 'X-Guest-Key': guestKey } : {});
 
 /** POST /tables/:token/requests — "Call the waiter" / "Bring the bill" ({ kind, note }). */
+/** A guest answers the kitchen about a dish it can't make: { choice: remove | swap | cancel }. */
+export const respondTableIssue = (token, orderId, issueId, guestKey, choice) =>
+  apiJson('POST', `/tables/${t(token)}/orders/${encodeURIComponent(orderId)}/issues/${encodeURIComponent(issueId)}/respond`, { choice }, guestKey ? { 'X-Guest-Key': guestKey } : {});
 export const sendTableRequest = (token, body) => apiJson('POST', `/tables/${t(token)}/requests`, body);
 export const fetchTableRequests = (token) => apiGet(`/tables/${t(token)}/requests`);
 

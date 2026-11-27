@@ -41,7 +41,11 @@ import {
   HandPlatter,
   PackageOpen,
   Bike,
+  BellRing,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
+import useNewWorkChime from '../../hooks/useNewWorkChime';
 import { useVendor } from '../../context/VendorContext';
 import { vendorApi } from '../../api/vendorApi';
 import useSupportUnread from '../../hooks/useSupportUnread';
@@ -162,6 +166,10 @@ export default function VendorLayout() {
     .map((item, order) => ({ ...item, section: sectionOf(item.to), order }))
     .sort((a, b) => a.section - b.section || a.order - b.order);
   const staffName = workspace?.actor?.type === 'staff' ? workspace.actor.name : '';
+  // New orders and tickets nobody has accepted: a repeating chime and a banner.
+  const newWork = workspace?.counts?.new_work || 0;
+  const chime = useNewWorkChime(newWork);
+  const workPage = visibleNav.some((item) => item.to === '/vendor-dashboard/kitchen') ? '/vendor-dashboard/kitchen' : '/vendor-dashboard/orders';
   const [drawerOpen, setDrawerOpen] = useState(false);
   // The Settings group stays open while one of its pages is showing.
   const { pathname } = useLocation();
@@ -406,6 +414,20 @@ export default function VendorLayout() {
                   You can already add your menu — customers will see your kitchen and dishes once you're approved.
                   Orders, wallet and opening your store unlock after approval.
                 </p>
+              </div>
+            )}
+            {newWork > 0 && (
+              <div className={`mb-5 flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3 text-sm ${chime.ringing ? 'bg-[#2b1206] text-white shadow-lg animate-pulse' : 'bg-white border border-stone-200 text-stone-700'}`} role="status">
+                <BellRing className="w-5 h-5 flex-shrink-0" />
+                <span className="font-bold flex-1 min-w-[10rem]">
+                  {newWork} new {newWork === 1 ? 'order' : 'orders'} waiting to be accepted
+                </span>
+                <NavLink to={workPage} onClick={chime.acknowledge} className={`px-3 py-1.5 rounded-full text-xs font-bold ${chime.ringing ? 'bg-white text-[#2b1206]' : 'bg-[#2b1206] text-white'}`}>Open</NavLink>
+                {chime.ringing && <button type="button" onClick={chime.acknowledge} className="px-3 py-1.5 rounded-full text-xs font-bold border border-white/60">Got it</button>}
+                <button type="button" onClick={chime.toggleSound} aria-label={chime.soundOn ? 'Turn the sound off' : 'Turn the sound on'} className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold ${chime.ringing ? 'border border-white/60' : 'border border-stone-200'}`}>
+                  {chime.soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                  {chime.soundOn ? 'Sound on' : 'Turn on sound'}
+                </button>
               </div>
             )}
             <Outlet />

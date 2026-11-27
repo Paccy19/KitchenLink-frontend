@@ -20,6 +20,7 @@ import {
   Store,
   Navigation,
 } from 'lucide-react';
+import OrderIssues from '../components/order/OrderIssues';
 import { useOrders, ORDER_STATUSES, PICKUP_ORDER_STATUSES, KITCHEN_DELIVERY_ORDER_STATUSES } from '../context/OrderContext';
 import RefundCard from '../components/orders/RefundCard';
 import DeliveryCodeCard from '../components/orders/DeliveryCodeCard';
@@ -50,6 +51,7 @@ export default function OrderTrackingPage() {
     orders, 
     activeTrackingOrderId, 
     cancelOrder,
+    respondToIssue,
     apiEnabled,
     apiError,
     refreshOrder,
@@ -227,6 +229,11 @@ export default function OrderTrackingPage() {
             </span>
             <ContactKitchen order={order} className="mt-2 sm:justify-end" />
           </div>
+        </div>
+
+        {/* The kitchen's news: a dish running late, or one it can't make (with choices). */}
+        <div className="mt-4">
+          <OrderIssues issues={order.issues || []} onRespond={(issueId, choice) => respondToIssue(order.id, issueId, choice)} />
         </div>
 
         {order.payment.status === 'pending' && ['processing', 'failed'].includes(order.payment.attempt) && !isCancelled && (

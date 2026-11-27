@@ -218,6 +218,9 @@ export const createEventOrder = (payload) => apiJson('POST', '/orders/event-chec
 // Big events: pay the second half (due a day before the event).
 export const payEventBalance = (orderId, payload = {}) =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/pay-balance`, payload);
+// The kitchen can't make a dish: { choice: 'remove' | 'cancel' } (what the order offers).
+export const respondToOrderIssue = (orderId, issueId, choice) =>
+  apiJson('POST', `/orders/${encodeURIComponent(orderId)}/issues/${encodeURIComponent(issueId)}/respond`, { choice });
 export const cancelRemoteOrder = (orderId, reason = '') =>
   apiJson('POST', `/orders/${encodeURIComponent(orderId)}/cancel`, { reason });
 export const payRemoteOrder = (orderId, payload = {}) =>

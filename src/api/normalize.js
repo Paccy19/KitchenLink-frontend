@@ -289,6 +289,8 @@ export function normalizeOrder(raw = {}) {
     // acknowledged, collected, in_transit, delivered, failed, customer_unavailable, returned.
     // How long this order takes to prepare (its slowest dish), from the server.
     prepMinutes: raw.prep_minutes ?? null,
+    // What the kitchen told the customer (a delay, a dish it can't make) and the choices.
+    issues: Array.isArray(raw.issues) ? raw.issues : [],
     kitchenCourier: raw.kitchen_courier
       ? { name: toText(raw.kitchen_courier.name), status: toText(raw.kitchen_courier.status), updatedAt: raw.kitchen_courier.updated_at ?? null }
       : null,

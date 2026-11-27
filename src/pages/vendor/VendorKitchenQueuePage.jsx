@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ChefHat, Clock, Lock, UtensilsCrossed, Bike, ShoppingBag, Pause, Play, XCircle, UserPlus, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { kitchenApi } from '../../api/kitchenApi';
 import { useVendor } from '../../context/VendorContext';
-import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, DepartmentTabs, useLoad, useAction, minutesAgo, when } from '../../components/vendor-dashboard/ops/ui';
+import { PageHeader, Card, Button, Badge, ErrorNote, Empty, Loading, DepartmentTabs, Modal, inputClass, useLoad, useAction, minutesAgo, when } from '../../components/vendor-dashboard/ops/ui';
 
 const STAGE_TONE = { pending: 'amber', accepted: 'blue', preparing: 'brown', ready: 'emerald', cancelled: 'red' };
 const FULFILMENT_ICON = { dine_in: UtensilsCrossed, pickup: ShoppingBag, delivery: Bike, vendor_delivery: Bike };
@@ -23,6 +23,7 @@ export default function VendorKitchenQueuePage() {
     { intervalMs: 8000 },
   );
   const action = useAction();
+  const [flagging, setFlagging] = useState(null); // { ticket, kind }
   const tickets = data?.tickets || [];
   const columns = useMemo(() => {
     const groups = { pending: [], accepted: [], preparing: [], ready: [] };
@@ -46,12 +47,8 @@ export default function VendorKitchenQueuePage() {
       if (reason) action.run(`${ticket.id}:cancel`, () => kitchenApi.cancelTicket(ticket.order.id, ticket.id, reason));
     },
     assign: (ticket, staffId) => action.run(`${ticket.id}:assign`, () => kitchenApi.assignTicket(ticket.order.id, ticket.id, staffId)),
-    // A problem for the server and the floor: late, an item we can't make, or we need help.
-    flag: (ticket, kind) => {
-      const note = window.prompt({ delayed: 'Running late: by how long / why? (optional)', unavailable: 'Which item can you not make, and is there an alternative?', assistance: 'What do you need?' }[kind], '');
-      if (note === null) return;
-      action.run(`${ticket.id}:flag`, () => kitchenApi.flagTicket(ticket.order.id, ticket.id, { kind, note }));
-    },
+    // A problem: late or a dish we can't make (the customer is told), or we need help (the floor).
+    flag: (ticket, kind) => setFlagging({ ticket, kind }),
     resolve: (ticket, index) => action.run(`${ticket.id}:resolve`, () => kitchenApi.resolveTicketFlag(ticket.order.id, ticket.id, index)),
     staff: staffData?.staff || [],
   };
@@ -101,7 +98,73 @@ export default function VendorKitchenQueuePage() {
           ))}
         </div>
       )}
+      {flagging && (
+        <FlagDialog
+          {...flagging}
+          onClose={() => setFlagging(null)}
+          onSend={(body) => action.run(`${flagging.ticket.id}:flag`, async () => {
+            await kitchenApi.flagTicket(flagging.ticket.order.id, flagging.ticket.id, body);
+            setFlagging(null);
+          })}
+          busy={action.busy === `${flagging.ticket.id}:flag`}
+          error={action.error}
+        />
+      )}
     </div>
+  );
+}
+
+const FLAG_TITLES = { delayed: 'Running late', unavailable: "Can't make a dish", assistance: 'Need help' };
+
+/** Running late (how long), a dish we can't make (which), or help: the customer hears the first two. */
+function FlagDialog({ ticket, kind, onClose, onSend, busy, error }) {
+  const pending = (ticket.items || []).filter((i) => i.service_status === 'pending');
+  const [minutes, setMinutes] = useState(10);
+  const [items, setItems] = useState(pending.length === 1 ? [pending[0].id] : []);
+  const [note, setNote] = useState('');
+  const toggle = (id) => setItems((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
+  const send = () =>
+    onSend({
+      kind,
+      note: note.trim(),
+      ...(kind === 'delayed' ? { minutes } : {}),
+      ...(kind === 'unavailable' ? { item_ids: items } : {}),
+    });
+  return (
+    <Modal title={`${FLAG_TITLES[kind]}: ${ticket.order.table_label || ticket.order.order_number}`} onClose={onClose}>
+      <div className="space-y-4">
+        {kind === 'delayed' && (
+          <div>
+            <p className="text-xs font-bold text-stone-500 mb-2">About how many more minutes?</p>
+            <div className="flex flex-wrap gap-2">
+              {[5, 10, 15, 20, 30, 45].map((m) => (
+                <button key={m} type="button" onClick={() => setMinutes(m)} className={`px-3 py-2 rounded-full text-sm font-bold border ${minutes === m ? 'bg-[#2b1206] text-white border-[#2b1206]' : 'bg-white border-stone-200 text-stone-700'}`}>{m} min</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {kind === 'unavailable' && (
+          <div>
+            <p className="text-xs font-bold text-stone-500 mb-2">Which dish can't you make?</p>
+            <div className="space-y-1.5">
+              {pending.map((i) => (
+                <label key={i.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={items.includes(i.id)} onChange={() => toggle(i.id)} className="accent-[#2b1206]" />
+                  {i.quantity}× {i.name}
+                </label>
+              ))}
+              {!pending.length && <p className="text-sm text-stone-500">Every dish on this ticket is already made.</p>}
+            </div>
+          </div>
+        )}
+        <textarea className={`${inputClass} min-h-[70px]`} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} placeholder={kind === 'assistance' ? 'What do you need?' : 'A word for the customer (optional): "Fresh batch coming", "We have chocolate cake instead"'} />
+        <p className="text-[11px] text-stone-500">
+          {kind === 'assistance' ? 'The server and the floor are alerted.' : kind === 'delayed' ? 'The customer sees how long, and the server is alerted.' : 'The customer chooses: continue without it, choose something else, or cancel. You and the server see the answer.'}
+        </p>
+        <ErrorNote message={error} />
+        <Button className="w-full" busy={busy} disabled={kind === 'unavailable' && !items.length} onClick={send}>Send</Button>
+      </div>
+    </Modal>
   );
 }
 

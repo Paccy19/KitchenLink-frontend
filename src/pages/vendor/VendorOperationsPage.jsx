@@ -17,7 +17,7 @@ export default function VendorOperationsPage() {
     action.run('save', async () => {
       const body = {};
       if (can('settings.payment_preferences') || can('finance.settings')) body.payment_timing = settings.payment_timing;
-      if (can('settings.operational_rules')) Object.assign(body, { table_ordering_enabled: settings.table_ordering_enabled, allow_partial_service: settings.allow_partial_service, inventory_auto_deduct: settings.inventory_auto_deduct, require_packing: settings.require_packing, session_close: settings.session_close });
+      if (can('settings.operational_rules')) Object.assign(body, { table_ordering_enabled: settings.table_ordering_enabled, allow_partial_service: settings.allow_partial_service, inventory_auto_deduct: settings.inventory_auto_deduct, require_packing: settings.require_packing, session_close: settings.session_close, escalate_after_minutes: Number(settings.escalate_after_minutes ?? 5) });
       if (settings.reservations && (can('settings.operational_rules') || can('reservations.edit'))) {
         const r = settings.reservations;
         body.reservations = {
@@ -87,8 +87,15 @@ export default function VendorOperationsPage() {
       )}
       {can('settings.operational_rules') && settings.session_close && (
         <Card className="space-y-3">
-          <p className="font-black text-gray-900">Packing and closing tables</p>
+          <p className="font-black text-gray-900">New orders, packing and closing tables</p>
           <Toggle on={settings.require_packing} onClick={() => toggle('require_packing')} title="Pack delivery and pickup orders before they leave" />
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span>
+              <span className="font-bold text-gray-900 block">Warn the managers when an order waits</span>
+              <span className="text-[11px] text-stone-500">Minutes nobody accepts a new order before an urgent alert (and an SMS). 0 = off.</span>
+            </span>
+            <input type="number" min="0" max="60" value={settings.escalate_after_minutes ?? 5} onChange={(e) => setSettings((st) => ({ ...st, escalate_after_minutes: e.target.value }))} className="w-20 rounded-xl border border-stone-200 px-3 py-2 text-sm font-bold text-right" />
+          </label>
           <p className="text-xs font-bold text-stone-500 pt-2">A table can close when…</p>
           {[
             ['orders_complete', 'Every order is served or cancelled'],

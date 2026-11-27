@@ -13,6 +13,7 @@ import {
   authorizeTablePayment,
   acceptTablePaymentAuthorization,
   revokeTablePaymentAuthorization,
+  respondTableIssue,
   startTablePayment,
   checkTablePayment,
 } from '../api/tableApi';
@@ -20,6 +21,7 @@ import useAutoRefresh from '../hooks/useAutoRefresh';
 import ModalPortal from '../components/common/ModalPortal';
 import MenuPhotos from '../components/common/MenuPhotos';
 import { useCart } from '../context/CartContext';
+import OrderIssues from '../components/order/OrderIssues';
 
 const money = (value) => `RWF ${Math.round(Number(value) || 0).toLocaleString('en-US')}`;
 const cartKey = (token) => `ofk_table_cart_${token}`;
@@ -231,6 +233,7 @@ export default function TableMenuPage() {
         <SeatPaymentPanel token={token} sessionKey={seatSession.session_key || localStorage.getItem(sessionKey(token)) || ''} ownSeatNumber={seatSession.seat_number} />
       )}
 
+      <div id="table-menu" className="scroll-mt-20" />
       <MenuPhotos photos={kitchen.menu_photos || []} />
 
       {departments.length > 1 && (
@@ -515,6 +518,19 @@ function MyOrders({ token, orders, seatKey }) {
               </div>
             ))}
           </div>
+          {order.issues?.length > 0 && (
+            <div className="mt-3">
+              <OrderIssues
+                issues={order.issues}
+                onRespond={async (issueId, choice) => {
+                  const key = orders.find((o) => o.id === order.id)?.key;
+                  const result = await respondTableIssue(token, order.id, issueId, key, choice);
+                  setViews((current) => ({ ...current, [order.id]: result.order }));
+                }}
+                onSwap={() => document.getElementById('table-menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              />
+            </div>
+          )}
           {order.status === 'delivered' && <RateOrder token={token} order={order} guestKey={orders.find((o) => o.id === order.id)?.key} />}
         </div>
       ))}

@@ -231,8 +231,8 @@ export default function FulfillmentSection({
               {activeVendor?.location ? ` · ${activeVendor.location}` : ''}
             </p>
             <p className="text-stone-600 mt-0.5">
-              When your food is ready we'll send you a 6-digit pickup code (it also shows on your order page).
-              Give it to the kitchen when you collect your order.
+              Your 6-digit pickup code shows on your order page as soon as you order. We tell you when the food
+              is ready; give the code at the counter to collect it.
             </p>
           </div>
         </div>
